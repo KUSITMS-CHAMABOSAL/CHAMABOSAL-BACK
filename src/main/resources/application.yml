@@ -10,3 +10,10 @@ discord:
   webhook:
     # 비어 있으면(로컬 등) 에러 알림을 보내지 않는다.
     error-url: ${DISCORD_ERROR_WEBHOOK_URL:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 배포 헬스체크용 health만 노출한다.
+        include: health
