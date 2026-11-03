@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+tone_instructions: "친절하고 간결하게, 한국어로 리뷰해줘."
+
+reviews:
+  poem: false
+  auto_review:
+    # 작업 브랜치 PR은 dev로 올리므로 dev도 자동 리뷰 대상에 포함
+    base_branches:
+      - "dev"
+  path_instructions:
+    - path: "**/*.java"
+      instructions: >
+        이 프로젝트는 Java 21 / Spring Boot 4다. 줄바꿈·공백 같은 사소한 스타일보다
+        로직, 트랜잭션 경계, 동시성, 예외 처리 같은 설계 이슈에 집중해라.
+        현재 시각은 LocalDateTime.now()를 직접 쓰지 말고 주입받은 Clock(ClockConfig, KST)을
+        사용해야 한다.
+    - path: "**/controller/**/*.java"
+      instructions: >
+        컨트롤러는 클래스에 @Tag, 메서드에 @Operation을 붙이고,
+        에러 응답은 @ApiResponses와 ErrorResponse 스키마로 문서화해야 한다.
+        요청 바디는 Spring의 @RequestBody만 쓰고
+        io.swagger.v3.oas.annotations.parameters.RequestBody는 쓰지 않는다.
+        성공 응답은 ResponseEntity<Response<T>>로 반환하고 Response.ok() / Response.created()만 쓴다.
+        생성은 201, 조회·수정은 200으로 HTTP 상태코드를 명시한다.
+        실패 응답을 컨트롤러에서 직접 만들지 말고 예외를 던져야 한다.
+    - path: "**/dto/**/*.java"
+      instructions: >
+        요청·응답 DTO는 record로 작성하고, 검증 어노테이션은 record 필드에 바로 붙인다.
+        이름은 {도메인}{동작}Request / {도메인}{동작}Response 형식이며,
+        엔티티 → 응답 DTO 변환은 응답 DTO의 정적 팩토리 메서드 from()을 쓴다.
+    - path: "**/entity/**/*.java"
+      instructions: >
+        JPA 엔티티는 createdAt/updatedAt을 직접 선언하지 말고
+        global.common.entity.BaseEntity를 상속해 auditing을 써야 한다.
+        enum 필드는 @Enumerated(EnumType.STRING)으로 저장한다.
+        테이블·컬럼명은 snake_case다.
+    - path: "**/exception/**/*.java"
+      instructions: >
+        도메인 에러는 ErrorCode를 구현하는 {도메인}ErrorCode enum에 추가하고,
+        code는 {DOMAIN}_{nnn} 형식(예: MEETUP_001)이다. 이미 정해진 code는 프론트와의 약속이라
+        바꾸면 안 된다. 예외는 BaseException(ErrorCode)으로 던지고,
+        GlobalExceptionHandler가 ErrorResponse로 변환한다.
+    - path: "**/repository/**/*.java"
+      instructions: >
+        Repository 메서드는 Spring Data 규칙(findBy..., existsBy...)을 따른다.
+        N+1 문제가 생길 수 있는 조회는 지적해라.
+    - path: "**/service/**/*.java"
+      instructions: >
+        조회 전용 메서드는 @Transactional(readOnly = true)를 쓴다.
+        "확인 후 저장"(인원 수·중복 확인 등)이 동시 요청에서 깨질 수 있는 코드는
+        락이나 UNIQUE 제약으로 막혀 있는지 확인해라.
+        외부 API(앱인토스, Discord) 호출을 트랜잭션 안에서 하고 있으면 지적해라.
+  finishing_touches:
+    docstrings:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: off
