@@ -1,6 +1,8 @@
 spring:
   application:
     name: chamabosal
+  jpa:
+    open-in-view: false
   task:
     execution:
       # 전용 실행기 빈(AsyncConfig)이 있어도 기본 실행기 자동 구성을 유지한다.
