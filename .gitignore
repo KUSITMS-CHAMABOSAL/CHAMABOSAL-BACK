@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment variables ###
+.env
+.env.*
+
+### Local application configuration ###
+src/main/resources/application-local.yml
