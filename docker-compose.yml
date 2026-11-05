@@ -1,0 +1,48 @@
+services:
+  app:
+    image: ghcr.io/kusitms-chamabosal/chamabosal-back:${IMAGE_TAG:-latest}
+    container_name: chamabosal-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # 마이그레이션 도구가 없어 출시 전까지 스키마를 자동 반영한다. 출시 시 제거해 validate로 돌린다.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      DB_URL: jdbc:mysql://db:3306/chamabosal?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DISCORD_ERROR_WEBHOOK_URL: ${DISCORD_ERROR_WEBHOOK_URL}
+    ports:
+      # 외부 요청은 Nginx를 거치도록 서버 내부에만 연다.
+      - "127.0.0.1:8080:8080"
+    # 서버 메모리가 4GB이고 swap이 없어 OS·Nginx 몫을 남긴다.
+    mem_limit: 2g
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  db:
+    image: mysql:8.4
+    container_name: chamabosal-db
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+      MYSQL_DATABASE: chamabosal
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    healthcheck:
+      # 초기화 중에는 TCP가 닫혀 있으므로 127.0.0.1로 확인해야 준비 완료를 구분할 수 있다.
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    mem_limit: 1g
+    logging: *logging
