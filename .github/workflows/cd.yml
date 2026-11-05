@@ -136,6 +136,7 @@ jobs:
                 printf "%s='%s'\n" "$name" "$(printenv "$name")"
               done
             } > .env
+            chmod 600 .env
 
             docker compose pull
             if ! docker compose up -d; then
