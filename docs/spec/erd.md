@@ -59,11 +59,11 @@ erDiagram
 | 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | id | BIGINT | PK | |
-| toss_anon_key | VARCHAR(255) | UK, NOT NULL | 앱인토스 익명 사용자 식별키 (API 필드 `anonKey`). 나중에 토스 로그인을 붙이면 `toss_user_key`를 옆에 추가 |
+| toss_anon_key | VARCHAR(255) | UK, NULL | 앱인토스 익명 사용자 식별키 (API 필드 `anonKey`). 정리된 사용자는 NULL. 나중에 토스 로그인을 붙이면 `toss_user_key`를 옆에 추가 |
 | last_viewed_room_id | BIGINT | FK rooms, NULL | 앱을 열 때 보여줄 방. ⚠️ 프론트 협의 필요: 기기 저장(앱인토스 Storage)으로 처리하면 컬럼 삭제 |
 | is_poke_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 콕 알림 |
 | is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
-| deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 정리하고 신규 사용자로 처리 |
+| deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 행은 남기고 키를 비운 뒤 신규 사용자로 처리 |
 
 - 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: `CERT_REMINDER`는 `push_agreements` 동의 **그리고** 인증·투표 알림 토글 `true` / 나머지는 해당 토글만 `true`면 발송
   - 사용자가 토스 앱 설정(서비스별 알림)에서 끄면 서버는 알 수 없음 → 발송 응답의 `fail`로만 확인
@@ -407,7 +407,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | 나간 멤버의 사진 | 나가기 즉시 | 같은 방식 |
 | 나간 멤버의 한 줄·금액 | `left_at` + 6개월 | `memo`, `spent_amount` NULL ([미정] Q-19 삭제 범위) |
 | 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
-| 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행 정리(`toss_anon_key` 삭제), `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
+| 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행은 남기고 `toss_anon_key` NULL, `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
 | 빈 방 | 주기적 | 현재 멤버 0명인 방 `deleted_at` 기록 |
 | 인증에 안 쓰인 업로드 사진 | 업로드 + 1일 | S3 `tmp/` 경로 수명 주기 규칙으로 자동 삭제 (서버 작업 없음) |
 

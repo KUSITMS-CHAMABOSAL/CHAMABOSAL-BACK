@@ -99,16 +99,16 @@
 - `CLAUDE.md`, `docs/CONVENTION.md` 위반: 없음
 
 ## 할 일
-- [ ] 의존성, 환경 설정, 인증서 파일 제외 규칙
-- [ ] `User` 엔티티와 Repository
-- [ ] `AuthErrorCode`, `TossAuthClient`, mTLS 연결
-- [ ] JWT 발급·검증
-- [ ] 로그인 서비스: 생성, 복구, 정리, 동시 요청 처리
-- [ ] `POST /api/auth/login`
-- [ ] Spring Security, 인증 필터, 에러 응답, CORS 이전, Swagger Bearer 설정
-- [ ] `POST /api/auth/test-token`
-- [ ] `docker-compose.yml`, `cd.yml` 배포 설정
-- [ ] 테스트: AUTH-01-1 ~ AUTH-01-7, AUTH-02-1 ~ AUTH-02-4, AUTH-03-1 ~ AUTH-03-4, 기존 CORS 테스트
+- [x] 의존성, 환경 설정, 인증서 파일 제외 규칙
+- [x] `User` 엔티티와 Repository
+- [x] `AuthErrorCode`, `TossAuthClient`, mTLS 연결
+- [x] JWT 발급·검증
+- [x] 로그인 서비스: 생성, 복구, 정리, 동시 요청 처리
+- [x] `POST /api/auth/login`
+- [x] Spring Security, 인증 필터, 에러 응답, CORS 이전, Swagger Bearer 설정
+- [x] `POST /api/auth/test-token`
+- [x] `docker-compose.yml`, `cd.yml` 배포 설정
+- [x] 테스트: AUTH-01-1 ~ AUTH-01-7, AUTH-02-1 ~ AUTH-02-4, AUTH-03-1 ~ AUTH-03-4, 기존 CORS 테스트
 
 ## 열린 질문
 - Q-16 액세스 토큰만 사용: 프론트 답변 대기. 구현을 막지는 않지만, 재로그인 때 동의 화면이 뜨면 재검토
@@ -116,4 +116,19 @@
 - 프론트 로컬 환경의 인증 코드 발급 가능 여부: 답변 대기. 테스트 토큰은 백엔드 테스트에도 필요해 답변과 관계없이 구현
 
 ## 자기 점검
-`/spec-build`가 구현 후 작성합니다.
+
+| 시나리오 | 테스트 |
+| --- | --- |
+| AUTH-01-1 ~ AUTH-01-7 | `AuthLoginTest` |
+| AUTH-02-1 ~ AUTH-02-4 | `AuthTokenTest` |
+| AUTH-03-1 ~ AUTH-03-3 | `AuthTestTokenEnabledTest` |
+| AUTH-03-4 | `AuthTestTokenDisabledTest` |
+
+- 테스트가 없는 시나리오: 없음
+- 시나리오가 없는 처리 규칙: AUTH-01 규칙 2, 4는 받는 값이 없다는 규칙이라 DTO 구조로 지킴. AUTH-03 규칙 4는 `AuthTestTokenServiceTest`로 확인
+- 명세에 없는 규칙: 없음. 6개월 경계와 `users` 정리는 명세에 반영
+- 재시도 없이는 AUTH-01-7과 `AuthServiceTest`가 실패하는 것을 확인
+- 공양미, 아이템, 방어권 유지: 아직 테이블이 없어 같은 사용자 행 복구까지만 확인. 해당 기능 구현 때 다시 확인
+- 앱인토스 실제 호출: 일회용 인증서로 `prod` 기동만 확인. 실제 교환은 배포 후 확인 필요
+- 코드리뷰 반영: preflight 캐시 복구, 필터의 DB 장애 처리, 배포 전 인증서 읽기 검사, 테스트 토큰 재시도 공유, JWT 파서 재사용, 공개 경로의 405 응답, 검증 메시지
+- 본문 형식 검사가 테스트 토큰 확인보다 먼저 실행되는 동작은 AUTH-03 규칙 6으로 명세에 반영
