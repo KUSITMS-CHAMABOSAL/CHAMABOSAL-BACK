@@ -16,4 +16,5 @@ disable-model-invocation: true
 4. `docs/plans/TEMPLATE.md` 양식으로 `docs/plans/<기능 ID>.md`를 작성합니다.
    - 시나리오는 번호만 적고 Given/When/Then을 복사하지 않습니다.
    - 범위는 기능 ID 1~3개입니다. 할 일이 10개를 넘으면 쪼개자고 제안합니다.
+   - 여러 기능을 묶으면 대표 기능 ID로 파일 이름을 짓고, `범위`에 모든 기능 ID를 적습니다.
 5. 계획서 요약과 열린 질문을 보고하고, 사람의 확인을 기다립니다.
