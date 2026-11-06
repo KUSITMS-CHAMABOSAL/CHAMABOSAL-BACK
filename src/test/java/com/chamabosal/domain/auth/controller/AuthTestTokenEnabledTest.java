@@ -39,7 +39,7 @@ class AuthTestTokenEnabledTest {
         mockMvc.perform(request("a").header("X-Test-Token-Key", TEST_KEY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.data.expiresIn").value(3600));
+                .andExpect(jsonPath("$.data.expiresIn").value(86400));
 
         assertThat(userRepository.findByTossAnonKey("test-a")).isPresent();
     }

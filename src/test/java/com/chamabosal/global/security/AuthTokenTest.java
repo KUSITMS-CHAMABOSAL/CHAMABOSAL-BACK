@@ -85,6 +85,24 @@ class AuthTokenTest {
     }
 
     @Test
+    void 지정한_유효_시간_안의_토큰은_요청을_처리한다() throws Exception {
+        User user = userRepository.save(User.create("anon-key"));
+        Clock issuedClock = Clock.offset(clock, Duration.ofHours(-23));
+        String token = new JwtProvider(secret, issuedClock).createToken(user.getId(), Duration.ofHours(24).toSeconds());
+
+        requestWith(token).andExpect(status().isOk());
+    }
+
+    @Test
+    void 지정한_유효_시간이_지난_토큰이면_COMMON_008을_돌려준다() throws Exception {
+        User user = userRepository.save(User.create("anon-key"));
+        Clock issuedClock = Clock.offset(clock, Duration.ofHours(-25));
+        String token = new JwtProvider(secret, issuedClock).createToken(user.getId(), Duration.ofHours(24).toSeconds());
+
+        assertUnauthenticated(requestWith(token));
+    }
+
+    @Test
     void 위조된_토큰이면_COMMON_008을_돌려준다() throws Exception {
         assertUnauthenticated(requestWith("forged.token.value"));
     }

@@ -33,11 +33,15 @@ public class JwtProvider {
     }
 
     public String createAccessToken(Long userId) {
+        return createToken(userId, EXPIRES_IN_SECONDS);
+    }
+
+    public String createToken(Long userId, long expiresInSeconds) {
         Instant now = clock.instant();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(EXPIRES_IN_SECONDS)))
+                .expiration(Date.from(now.plusSeconds(expiresInSeconds)))
                 .signWith(secretKey, Jwts.SIG.HS256)
                 .compact();
     }

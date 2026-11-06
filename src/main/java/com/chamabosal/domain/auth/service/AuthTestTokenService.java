@@ -17,6 +17,7 @@ public class AuthTestTokenService {
 
     private static final String TEST_USER_KEY_PREFIX = "test-";
     private static final int MIN_KEY_LENGTH = 32;
+    private static final long EXPIRES_IN_SECONDS = 86400;
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
@@ -46,6 +47,6 @@ public class AuthTestTokenService {
             throw new BaseException(BaseErrorCode.UNAUTHENTICATED);
         }
         AuthUser user = authService.findOrCreateUser(TEST_USER_KEY_PREFIX + testUser);
-        return new AuthTestTokenResponse(jwtProvider.createAccessToken(user.id()), JwtProvider.EXPIRES_IN_SECONDS);
+        return new AuthTestTokenResponse(jwtProvider.createToken(user.id(), EXPIRES_IN_SECONDS), EXPIRES_IN_SECONDS);
     }
 }
