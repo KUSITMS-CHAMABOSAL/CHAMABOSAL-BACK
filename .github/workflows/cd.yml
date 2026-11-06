@@ -129,8 +129,8 @@ jobs:
               exit 1
             fi
             test_token_enabled=$(printf '%s' "${AUTH_TEST_TOKEN_ENABLED:-}" | tr '[:upper:]' '[:lower:]')
-            if [ "$test_token_enabled" = "true" ] && [ -z "${AUTH_TEST_TOKEN_KEY:-}" ]; then
-              echo "테스트 토큰을 켜려면 AUTH_TEST_TOKEN_KEY가 필요합니다." >&2
+            if [ "$test_token_enabled" = "true" ] && [ "$(printf '%s' "${AUTH_TEST_TOKEN_KEY:-}" | wc -c)" -lt 32 ]; then
+              echo "테스트 토큰을 켜려면 32자 이상의 AUTH_TEST_TOKEN_KEY가 필요합니다." >&2
               exit 1
             fi
             if [ ! -d /etc/chamabosal/toss ]; then

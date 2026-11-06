@@ -16,6 +16,7 @@ import java.security.MessageDigest;
 public class AuthTestTokenService {
 
     private static final String TEST_USER_KEY_PREFIX = "test-";
+    private static final int MIN_KEY_LENGTH = 32;
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
@@ -28,8 +29,8 @@ public class AuthTestTokenService {
             @Value("${auth.test-token.enabled}") boolean enabled,
             @Value("${auth.test-token.key}") String key
     ) {
-        if (enabled && key.isBlank()) {
-            throw new IllegalStateException("테스트 토큰을 켜려면 AUTH_TEST_TOKEN_KEY가 필요합니다.");
+        if (enabled && key.strip().length() < MIN_KEY_LENGTH) {
+            throw new IllegalStateException("테스트 토큰을 켜려면 32자 이상의 AUTH_TEST_TOKEN_KEY가 필요합니다.");
         }
         this.authService = authService;
         this.jwtProvider = jwtProvider;

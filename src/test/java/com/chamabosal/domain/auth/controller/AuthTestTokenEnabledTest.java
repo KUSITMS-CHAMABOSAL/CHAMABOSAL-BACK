@@ -18,8 +18,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = {"auth.test-token.enabled=true", "auth.test-token.key=test-key"})
+@TestPropertySource(properties = {"auth.test-token.enabled=true", "auth.test-token.key=" + AuthTestTokenEnabledTest.TEST_KEY})
 class AuthTestTokenEnabledTest {
+
+    static final String TEST_KEY = "test-key-with-at-least-32-characters";
 
     @Autowired
     private MockMvc mockMvc;
@@ -34,7 +36,7 @@ class AuthTestTokenEnabledTest {
 
     @Test
     void AUTH_03_1_비밀값이_맞으면_테스트_사용자를_만들고_토큰을_발급한다() throws Exception {
-        mockMvc.perform(request("a").header("X-Test-Token-Key", "test-key"))
+        mockMvc.perform(request("a").header("X-Test-Token-Key", TEST_KEY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.data.expiresIn").value(3600));
@@ -44,8 +46,8 @@ class AuthTestTokenEnabledTest {
 
     @Test
     void AUTH_03_2_같은_이름으로_다시_요청하면_같은_사용자를_쓴다() throws Exception {
-        mockMvc.perform(request("a").header("X-Test-Token-Key", "test-key")).andExpect(status().isOk());
-        mockMvc.perform(request("a").header("X-Test-Token-Key", "test-key")).andExpect(status().isOk());
+        mockMvc.perform(request("a").header("X-Test-Token-Key", TEST_KEY)).andExpect(status().isOk());
+        mockMvc.perform(request("a").header("X-Test-Token-Key", TEST_KEY)).andExpect(status().isOk());
 
         assertThat(userRepository.count()).isEqualTo(1);
     }
@@ -68,7 +70,7 @@ class AuthTestTokenEnabledTest {
 
     @Test
     void 테스트_사용자_이름_형식이_틀리면_COMMON_002를_돌려준다() throws Exception {
-        mockMvc.perform(request("TOO-LONG-NAME").header("X-Test-Token-Key", "test-key"))
+        mockMvc.perform(request("TOO-LONG-NAME").header("X-Test-Token-Key", TEST_KEY))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_002"))
                 .andExpect(jsonPath("$.message").value("테스트 사용자 이름은 영문 소문자와 숫자 1~8자입니다."));
