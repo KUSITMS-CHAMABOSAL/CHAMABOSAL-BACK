@@ -7,3 +7,6 @@ docs
 *.md
 Dockerfile
 .dockerignore
+**/*.pem
+**/*.key
+**/*.crt

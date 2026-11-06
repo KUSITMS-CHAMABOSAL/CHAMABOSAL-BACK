@@ -40,5 +40,10 @@ out/
 .env
 .env.*
 
+### Certificates ###
+*.pem
+*.key
+*.crt
+
 ### Local application configuration ###
 src/main/resources/application-local.yml
