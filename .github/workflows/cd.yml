@@ -101,25 +101,44 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
           DISCORD_ERROR_WEBHOOK_URL: ${{ secrets.DISCORD_ERROR_WEBHOOK_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AUTH_TEST_TOKEN_ENABLED: ${{ secrets.AUTH_TEST_TOKEN_ENABLED }}
+          AUTH_TEST_TOKEN_KEY: ${{ secrets.AUTH_TEST_TOKEN_KEY }}
         with:
           host: ${{ secrets.GABIA_HOST }}
           username: ${{ secrets.GABIA_USERNAME }}
           key: ${{ secrets.GABIA_SSH_KEY }}
           port: ${{ secrets.GABIA_PORT }}
           fingerprint: ${{ secrets.GABIA_HOST_FINGERPRINT }}
-          envs: DEPLOY_DIR,IMAGE_TAG,DB_USERNAME,DB_PASSWORD,DB_ROOT_PASSWORD,DISCORD_ERROR_WEBHOOK_URL
+          envs: DEPLOY_DIR,IMAGE_TAG,DB_USERNAME,DB_PASSWORD,DB_ROOT_PASSWORD,DISCORD_ERROR_WEBHOOK_URL,JWT_SECRET,AUTH_TEST_TOKEN_ENABLED,AUTH_TEST_TOKEN_KEY
           script: |
             set -eu
             cd "$DEPLOY_DIR"
 
             # 값이 비었거나 작은따옴표가 있으면 기존 컨테이너를 건드리기 전에 중단한다.
-            required="DB_USERNAME DB_PASSWORD DB_ROOT_PASSWORD DISCORD_ERROR_WEBHOOK_URL"
+            required="DB_USERNAME DB_PASSWORD DB_ROOT_PASSWORD DISCORD_ERROR_WEBHOOK_URL JWT_SECRET"
+            optional="AUTH_TEST_TOKEN_ENABLED AUTH_TEST_TOKEN_KEY"
             for name in $required; do
-              value=$(printenv "$name" || true)
-              if [ -z "$value" ]; then
+              if [ -z "$(printenv "$name" || true)" ]; then
                 echo "$name 값이 비어 있습니다." >&2
                 exit 1
               fi
+            done
+            if [ "$(printf '%s' "$JWT_SECRET" | wc -c)" -lt 32 ]; then
+              echo "JWT_SECRET은 32바이트 이상이어야 합니다." >&2
+              exit 1
+            fi
+            test_token_enabled=$(printf '%s' "${AUTH_TEST_TOKEN_ENABLED:-}" | tr '[:upper:]' '[:lower:]')
+            if [ "$test_token_enabled" = "true" ] && [ "$(printf '%s' "${AUTH_TEST_TOKEN_KEY:-}" | wc -c)" -lt 32 ]; then
+              echo "테스트 토큰을 켜려면 32자 이상의 AUTH_TEST_TOKEN_KEY가 필요합니다." >&2
+              exit 1
+            fi
+            if [ ! -d /etc/chamabosal/toss ]; then
+              echo "mTLS 인증서 폴더가 없습니다." >&2
+              exit 1
+            fi
+            for name in $required $optional; do
+              value=$(printenv "$name" || true)
               case "$value" in
                 *\'*)
                   echo "$name 값에는 작은따옴표를 쓸 수 없습니다." >&2
@@ -132,13 +151,22 @@ jobs:
             umask 077
             {
               echo "IMAGE_TAG=$IMAGE_TAG"
-              for name in $required; do
-                printf "%s='%s'\n" "$name" "$(printenv "$name")"
+              for name in $required $optional; do
+                printf "%s='%s'\n" "$name" "$(printenv "$name" || true)"
               done
             } > .env
             chmod 600 .env
 
             docker compose pull
+
+            # 앱 사용자가 인증서를 읽지 못하면 기동에 실패하므로 컨테이너를 교체하기 전에 확인한다.
+            if ! docker run --rm --entrypoint sh -v /etc/chamabosal/toss:/app/toss:ro \
+              "ghcr.io/kusitms-chamabosal/chamabosal-back:$IMAGE_TAG" \
+              -c 'test -r /app/toss/chamabosal.crt && test -r /app/toss/chamabosal.key'; then
+              echo "앱 사용자가 mTLS 인증서를 읽을 수 없습니다." >&2
+              exit 1
+            fi
+
             if ! docker compose up -d; then
               docker compose logs --tail=100
               exit 1

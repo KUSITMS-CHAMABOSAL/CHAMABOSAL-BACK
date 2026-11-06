@@ -8,6 +8,15 @@ spring:
       # 전용 실행기 빈(AsyncConfig)이 있어도 기본 실행기 자동 구성을 유지한다.
       mode: force
 
+jwt:
+  # 로컬·테스트 전용 값이다. 운영은 application-prod.yml에서 JWT_SECRET을 필수로 받는다.
+  secret: ${JWT_SECRET:local-development-only-secret-key-do-not-use-in-production}
+
+auth:
+  test-token:
+    enabled: ${AUTH_TEST_TOKEN_ENABLED:false}
+    key: ${AUTH_TEST_TOKEN_KEY:}
+
 discord:
   webhook:
     # 비어 있으면(로컬 등) 에러 알림을 보내지 않는다.

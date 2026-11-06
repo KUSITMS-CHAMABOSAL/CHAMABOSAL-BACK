@@ -14,6 +14,14 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DISCORD_ERROR_WEBHOOK_URL: ${DISCORD_ERROR_WEBHOOK_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      TOSS_MTLS_CERT_PATH: /app/toss/chamabosal.crt
+      TOSS_MTLS_KEY_PATH: /app/toss/chamabosal.key
+      # 프론트 연동용 임시 기능이다. 출시 전에 끈다.
+      AUTH_TEST_TOKEN_ENABLED: ${AUTH_TEST_TOKEN_ENABLED:-false}
+      AUTH_TEST_TOKEN_KEY: ${AUTH_TEST_TOKEN_KEY:-}
+    volumes:
+      - /etc/chamabosal/toss:/app/toss:ro
     ports:
       # 외부 요청은 Nginx를 거치도록 서버 내부에만 연다.
       - "127.0.0.1:8080:8080"

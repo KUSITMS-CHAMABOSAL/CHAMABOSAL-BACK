@@ -1,16 +1,18 @@
 package com.chamabosal.global.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Spring Security 도입 시 필터가 MVC보다 먼저 실행되어 preflight가 막히므로 http.cors()로 옮긴다.
- */
+import java.util.List;
+
+/** Security 필터가 MVC보다 먼저 실행되므로 http.cors()가 읽는 CorsConfigurationSource로 등록한다. */
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    private static final String[] ALLOWED_ORIGINS = {
+    private static final List<String> ALLOWED_ORIGINS = List.of(
             // 앱인토스 미니앱 (정식 서비스, 콘솔 QR 테스트)
             "https://chamabosal.apps.tossmini.com",
             "https://chamabosal.private-apps.tossmini.com",
@@ -18,13 +20,19 @@ public class CorsConfig implements WebMvcConfigurer {
             "https://chamabosal.private-web.tossmini.com",
             // 프론트 로컬 개발 서버
             "http://localhost:5173"
-    };
+    );
+    private static final long PREFLIGHT_MAX_AGE_SECONDS = 1800;
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(ALLOWED_ORIGINS)
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*");
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(ALLOWED_ORIGINS);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setMaxAge(PREFLIGHT_MAX_AGE_SECONDS);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

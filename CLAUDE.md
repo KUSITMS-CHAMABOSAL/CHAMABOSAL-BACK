@@ -12,7 +12,8 @@
 
 - Java 21, Spring Boot 4, JPA, MySQL (테스트는 H2)
 - 테스트: `./gradlew test`
-- Spring Security는 아직 없음. 도입 시 `CorsConfig` 설정을 `http.cors()`로 옮긴다.
+- 인증은 Spring Security와 JWT를 쓴다. 공개 경로는 `SecurityConfig`에서 관리한다.
+- 앱인토스 로그인은 `prod`에서만 실제 호출한다. 로컬은 테스트 토큰을 쓴다.
 - 스키마 마이그레이션 도구는 쓰지 않는다.
 
 ## 작업 규칙
