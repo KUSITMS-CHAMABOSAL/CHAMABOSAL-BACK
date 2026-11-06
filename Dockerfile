@@ -14,7 +14,8 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-RUN groupadd --system spring && useradd --system --gid spring spring
+# 서버의 mTLS 키 파일 권한을 맞출 수 있게 UID·GID를 고정한다.
+RUN groupadd --system --gid 10001 spring && useradd --system --uid 10001 --gid spring spring
 COPY --from=builder /app/build/libs/app.jar app.jar
 USER spring
 
