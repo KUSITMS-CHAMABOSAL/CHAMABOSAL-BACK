@@ -412,7 +412,7 @@
 - Then `ALL_BOSAL`
 
 **RESULT-01-2 실제 투표자 기준 과반**
-- Given 명단 5명 중 3명 투표: 보살 2, A 1
+- Given 명단 4명 중 3명 투표: 보살 2, A 1
 - When 투표가 마감되면
 - Then `ALL_BOSAL`
 
