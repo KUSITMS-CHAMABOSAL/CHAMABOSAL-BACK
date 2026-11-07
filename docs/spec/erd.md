@@ -376,7 +376,7 @@ erDiagram
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | 받는 사람 |
 | type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_OPENED` / `VOTE_REMINDER` / `RESULT` |
-| room_id | BIGINT | FK rooms, NULL | 방 2개를 합친 리마인드는 NULL |
+| room_id | BIGINT | FK rooms, NULL | 인증 마감 리마인드(`CERT_REMINDER`)는 방 개수와 상관없이 항상 NULL |
 | round_date | DATE | NOT NULL | |
 | is_success | BOOLEAN | NOT NULL | 앱인토스 응답 결과 |
 
