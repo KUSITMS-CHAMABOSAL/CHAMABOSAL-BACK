@@ -23,6 +23,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
 
@@ -36,6 +37,7 @@ public class GlobalExceptionHandler {
             Set.of("AsyncRequestNotUsableException", "ClientAbortException");
 
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ErrorResponse> handleBaseException(BaseException e, HttpServletRequest request) {
@@ -157,7 +159,7 @@ public class GlobalExceptionHandler {
     private void publishServerError(HttpServletRequest request, int status, ErrorCode errorCode, Exception e) {
         try {
             eventPublisher.publishEvent(ServerErrorEvent.of(
-                    request.getMethod(), request.getRequestURI(), status, errorCode.getCode(), e, Instant.now()));
+                    request.getMethod(), request.getRequestURI(), status, errorCode.getCode(), e, Instant.now(clock)));
         } catch (Exception publishException) {
             log.warn("ServerErrorEvent 발행 실패: {}", publishException.getClass().getSimpleName());
         }
