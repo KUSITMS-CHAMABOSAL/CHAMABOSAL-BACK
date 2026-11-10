@@ -60,7 +60,6 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | toss_anon_key | VARCHAR(255) | UK, NULL | 앱인토스 익명 사용자 식별키 (API 필드 `anonKey`). 정리된 사용자는 NULL. 나중에 토스 로그인을 붙이면 `toss_user_key`를 옆에 추가 |
-| last_viewed_room_id | BIGINT | FK rooms, NULL | 앱을 열 때 보여줄 방. ⚠️ 프론트 협의 필요: 기기 저장(앱인토스 Storage)으로 처리하면 컬럼 삭제 |
 | is_poke_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 콕 알림 |
 | is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
 | deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 행은 남기고 키를 비운 뒤 신규 사용자로 처리 |
@@ -96,7 +95,8 @@ erDiagram
 | id | BIGINT | PK | |
 | name | VARCHAR(12) | NOT NULL | 방 이름, 수정 불가 |
 | goal | VARCHAR(20) | NOT NULL | `DELIVERY` / `CAFE` / `SHOPPING` / `ETC` |
-| owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL |
+| member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가 |
+| owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL. [미정] Q-37 |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
 | deleted_at | DATETIME | NULL | 마지막 멤버가 나가거나 빈 방 정리로 삭제 |
 
@@ -114,12 +114,11 @@ erDiagram
 | joined_at | DATETIME | NOT NULL | 방장 위임 순서("가장 먼저 들어온 멤버") 기준. 다시 들어오면 새로 기록 |
 | left_at | DATETIME | NULL | 나간 시각. NULL이면 현재 멤버 |
 | leave_type | VARCHAR(20) | NULL | `LEFT` / `KICKED` / `DATA_DELETED` |
-| is_push_card_closed | BOOLEAN | NOT NULL, 기본 false | 이 방에서 알림 동의 카드(WF 47)를 닫았는지. ⚠️ 프론트 협의 필요: 기기 저장(앱인토스 Storage)으로 처리하면 컬럼 삭제 |
 | invite_token | VARCHAR(64) | UK, NULL | 초대 링크 토큰. 처음 공유할 때 만들고 계속 재사용 (공유 전에는 NULL) |
 | seen_result_round_date | DATE | NULL | 결과 발표를 마지막으로 본 회차 날짜 |
 | seen_pot_count | INT | NOT NULL, 기본 0 | 한 솥 축하를 몇 번째 솥까지 봤는지 |
 | picked_streak | INT | NOT NULL, 기본 0 | 연속 지목 (방어 성공 포함). 다른 사람 지목·모두 무사·모두 보살·휴식 종료 시 0 |
-| resting_round_date | DATE | NULL | 휴식할 회차 날짜. 3연속이 되면 다음 회차 날짜 지정 → 그 회차 투표에서 후보 제외. 회차 행이 아직 없어도 되도록 FK 대신 날짜로 저장. [미정] Q-17 |
+| resting_round_date | DATE | NULL | 휴식할 회차 날짜. 3연속이 되면 다음 회차 날짜 지정 → 그 회차 투표에서 후보 제외. 회차 행이 아직 없어도 되도록 FK 대신 날짜로 저장 |
 
 - 나간 지 6개월 안에 다시 들어오면 예전 행을 다시 씀: `left_at`·`leave_type`을 비우고 `joined_at`을 새로 기록
   - 이번 달 지목 횟수는 저장하지 않고 `rounds`에서 집계 (`picked_user_id` + 회차 월 + `result_type = PICKED`)
@@ -134,7 +133,7 @@ erDiagram
 - 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지
 - 인덱스: `(room_id, left_at)` → 방의 현재 멤버 목록·인원 수 / `(user_id, left_at)` → 내가 참여 중인 방 목록·개수
   - 인원 수는 컬럼으로 저장하지 않고 매번 셈 (방당 최대 4명이라 인덱스로 몇 행만 읽음)
-  - 동시 입장으로 4명을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
+  - 동시 입장으로 `member_limit`을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
 - 참여 중인 방 개수: user_id 기준 `left_at IS NULL` 행 수 (삭제된 방 제외)
 - 초대 링크: `Share.createLink({ path: "intoss://{앱이름}/invite?token={invite_token}" })`
   - 링크로 들어오면 토큰으로 멤버를 찾고, 그 멤버의 `room_id`·`nickname`으로 미리보기("{닉네임} 님의 초대")
@@ -142,8 +141,8 @@ erDiagram
   - 만료는 방이 삭제될 때 (기획 확정). 만료 컬럼은 따로 없음. 6개월 안에 다시 들어오면 같은 행이라 토큰도 그대로, 지나서 오면 새 행이라 토큰도 새로 생김
   - 초대한 사람이 나갔을 때: 스스로 나감 → 링크 유지, 미리보기에 이름 없이 표시 / 내보내짐 → 링크 막음 (기획 확정)
 - 확인 여부 (결과 발표·한 솥 축하): 정책이 "안 본 것 중 최근 1개만, 한 번만"이라 회차별 기록 대신 "어디까지 봤는지" 값 하나로 처리
-  - 결과: 가장 최근 발표된 회차 날짜 > `seen_result_round_date`이면 결과 화면 표시 · 투표 탭 "결과 미확인" · 빨간 점 · 결과 알림 대상. 보면 그 회차 날짜로 업데이트. [미정] Q-17
-  - 한 솥: `rooms.pot_completed_count > seen_pot_count`이면 축하 화면 표시 · 빨간 점. 보면 `pot_completed_count`로 업데이트
+  - 결과: 가장 최근 발표된 회차 날짜 > `seen_result_round_date`이면 결과 화면 표시 · 투표 탭 "결과 미확인" · 빨간 점 · 결과 알림 대상. 보면 그 회차 날짜로 업데이트
+  - 한 솥: `rooms.pot_completed_count > seen_pot_count`이면 축하 화면 표시 · 빨간 점. 보면 클라이언트가 본 완성 횟수로 업데이트 (저장값보다 클 때만, ROOM-06)
   - **방에 들어올 때 두 값을 현재 상태로 채움** (들어오기 전 결과·축하가 뜨지 않게). 다시 들어올 때도 같은 처리
   - "누가 언제 봤는지" 기록은 남지 않음. 분석이 필요해지거나 "안 본 결과 전부 보여주기"로 정책이 바뀌면 테이블로 분리
 
@@ -159,7 +158,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | round_date | DATE | NOT NULL | 회차 날짜 (KST) |
 | status | VARCHAR(20) | NOT NULL | `CERTIFYING` / `VOTING` / `ANNOUNCED` / `NO_VOTE` |
-| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 자정. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
+| vote_started_at | DATETIME | NULL | 전원 인증 시각, 이전 회차 마감 시각 또는 자정. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
 | vote_closed_at | DATETIME | NULL | 전원 투표 시각 또는 정오 |
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
@@ -200,7 +199,7 @@ erDiagram
 | memo | VARCHAR(40) | NULL | 한 줄 기록. 6개월 정리 때 NULL |
 | spent_amount | INT | NULL | 쓴 금액, `FAILED`일 때 필수 (1~999,999) |
 | image_key | VARCHAR(255) | NULL | 인증 사진 S3 객체 키. presigned PUT URL로 업로드 후 키만 저장, 조회는 응답할 때마다 presigned GET URL 생성 (URL은 만료되므로 저장 안 함) |
-| image_deleted_at | DATETIME | NULL | 사진 삭제 시각 (투표 끝나고 7일 뒤 · 나가기 즉시) |
+| image_deleted_at | DATETIME | NULL | 사진 삭제 시각 (투표 끝나고 7일 뒤 · 내 데이터 삭제 즉시) |
 | certified_at | DATETIME | NOT NULL | 수정 가능 10분 기준 |
 | deleted_at | DATETIME | NULL | 소프트 삭제 (10분 안 본인 삭제) |
 
@@ -392,7 +391,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 
 | 테이블 | 인덱스 | 쓰이는 곳 |
 |---|---|---|
-| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 4명 확인) |
+| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
 | `certifications` | `(member_id)` | 이번 달 참은 횟수·연속 인증·인증 캘린더 (멤버 → 사용자 기준 집계) |
 | `rounds` | `(status, round_date)` | 자정·정오 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
@@ -403,12 +402,12 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 
 | 대상 | 시점 | 처리 |
 |---|---|---|
-| 인증 사진 | 회차 투표 종료 + 7일 ([미정] Q-18 `NO_VOTE` 회차 기준) | 파일 삭제, `image_deleted_at` 기록 |
-| 나간 멤버의 사진 | 나가기 즉시 | 같은 방식 |
-| 나간 멤버의 한 줄·금액 | `left_at` + 6개월 | `memo`, `spent_amount` NULL ([미정] Q-19 삭제 범위) |
-| 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
+| 인증 사진 | 회차 투표 종료 + 7일 (`NO_VOTE` 회차는 확정 시각(`vote_started_at`) + 7일, 삭제된 방의 마감되지 않은 회차는 방 삭제 시각 + 7일) | 파일 삭제, `image_deleted_at` 기록 |
+| 나간·내보내진 멤버의 사진 | 일반 사진과 같음 (나가도 즉시 삭제 안 함) | 같은 방식 |
+| 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
+| 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
 | 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행은 남기고 `toss_anon_key` NULL, `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
-| 빈 방 | 주기적 | 현재 멤버 0명인 방 `deleted_at` 기록 |
+| 빈 방 | 매일, 만든 지 24시간 지난 방 | 현재 멤버 0명인 방 `deleted_at` 기록 ([미정] Q-37) |
 | 인증에 안 쓰인 업로드 사진 | 업로드 + 1일 | S3 `tmp/` 경로 수명 주기 규칙으로 자동 삭제 (서버 작업 없음) |
 
 ---
