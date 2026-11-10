@@ -6,13 +6,15 @@
 
 - `common.md`: 용어, 시간 기준, 상태 등 공통 규칙
 - [`erd.md`](erd.md): 테이블 구조
+- [`api.md`](api.md): API 경로, 요청·응답 필드
 - `{도메인}.md`: 도메인별 기능 명세 (예: [`auth.md`](auth.md))
 - [`open-questions.md`](open-questions.md): 기획에 확인할 질문
 
 ## 기준 문서
 
-- 동작은 기능 명세, 테이블 구조는 `erd.md`를 기준으로 합니다.
-- 둘이 다르면 임의로 고르지 않고 `open-questions.md`에 올립니다.
+- 동작은 기능 명세, 테이블 구조는 `erd.md`, API 경로와 필드는 `api.md`를 기준으로 합니다.
+- 구현된 API는 Swagger가 기준입니다. 기능 명세를 바꾸면 `api.md`도 같은 PR에서 고칩니다.
+- 문서끼리 다르면 임의로 고르지 않고 `open-questions.md`에 올립니다.
 
 ## 작성 규칙
 
