@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.chamabosal.global.discord.ServerErrorEvent;
 import com.chamabosal.global.common.response.Response;
+import com.chamabosal.global.config.ClockConfig;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
@@ -35,7 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @WebMvcTest(GlobalExceptionHandlerTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandlerTest.TestController.class)
+@Import({GlobalExceptionHandlerTest.TestController.class, ClockConfig.class})
 @RecordApplicationEvents
 class GlobalExceptionHandlerTest {
 
