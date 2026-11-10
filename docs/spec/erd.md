@@ -95,6 +95,7 @@ erDiagram
 | id | BIGINT | PK | |
 | name | VARCHAR(12) | NOT NULL | 방 이름, 수정 불가 |
 | goal | VARCHAR(20) | NOT NULL | `DELIVERY` / `CAFE` / `SHOPPING` / `ETC` |
+| member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가 |
 | owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL. [미정] Q-37 |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
 | deleted_at | DATETIME | NULL | 마지막 멤버가 나가거나 빈 방 정리로 삭제 |
@@ -132,7 +133,7 @@ erDiagram
 - 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지
 - 인덱스: `(room_id, left_at)` → 방의 현재 멤버 목록·인원 수 / `(user_id, left_at)` → 내가 참여 중인 방 목록·개수
   - 인원 수는 컬럼으로 저장하지 않고 매번 셈 (방당 최대 4명이라 인덱스로 몇 행만 읽음)
-  - 동시 입장으로 4명을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
+  - 동시 입장으로 `member_limit`을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
 - 참여 중인 방 개수: user_id 기준 `left_at IS NULL` 행 수 (삭제된 방 제외)
 - 초대 링크: `Share.createLink({ path: "intoss://{앱이름}/invite?token={invite_token}" })`
   - 링크로 들어오면 토큰으로 멤버를 찾고, 그 멤버의 `room_id`·`nickname`으로 미리보기("{닉네임} 님의 초대")
@@ -390,7 +391,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 
 | 테이블 | 인덱스 | 쓰이는 곳 |
 |---|---|---|
-| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 4명 확인) |
+| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
 | `certifications` | `(member_id)` | 이번 달 참은 횟수·연속 인증·인증 캘린더 (멤버 → 사용자 기준 집계) |
 | `rounds` | `(status, round_date)` | 자정·정오 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
