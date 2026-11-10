@@ -1,22 +1,49 @@
 #!/usr/bin/env bash
 # Stop 훅: Claude가 응답을 끝내려 할 때 테스트를 돌리고, 실패하면 결과를 돌려줘 계속 고치게 한다.
+# - 현재 작업 위치(cwd)의 프로젝트를 검사한다. worktree에서 작업해도 그 worktree를 검사한다.
 # - 커밋되지 않은 코드 변경이 없거나, 같은 변경으로 이미 통과했으면 건너뛴다.
 # - 고친 뒤에도 같은 실패가 나오거나 MAX_BLOCKS번 막았으면 더 막지 않고 사용자에게 알린다.
 set -u
 
 MAX_BLOCKS=3
 
+# 결과에 영향을 주는 경로. 이 경로가 바뀌었을 때만 테스트를 돌린다.
+WATCHED_PATHS=(src build.gradle settings.gradle gradle.properties gradle gradlew gradlew.bat .claude/hooks)
+
 input=$(cat)
-session_id=$(printf '%s' "$input" | tr -d '\n' \
-  | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+# 훅 입력(JSON)에서 문자열 값을 꺼낸다. jq가 없으면 단순한 값만 읽는다.
+json_string() {
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$input" | jq -r --arg key "$1" '.[$key] // empty' 2>/dev/null
+  else
+    printf '%s' "$input" | tr -d '\n' \
+      | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"
+  fi
+}
+
+session_id=$(json_string session_id)
 if printf '%s' "$input" | grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
   active=true
 else
   active=false
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+# worktree로 옮겨 작업하면 CLAUDE_PROJECT_DIR는 시작 폴더에 남으므로,
+# 현재 작업 위치(cwd)의 git 루트를 먼저 쓴다. 이 프로젝트가 아니면 시작 폴더로 돌아간다.
+is_project_root() {
+  [ -n "$1" ] && [ -x "$1/gradlew" ] && [ -f "$1/.claude/hooks/run-tests.sh" ]
+}
+work_dir=""
+cwd=$(json_string cwd)
+if [ -n "$cwd" ]; then
+  work_dir=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+fi
+if ! is_project_root "$work_dir"; then
+  work_dir=$(git -C "${CLAUDE_PROJECT_DIR:-.}" rev-parse --show-toplevel 2>/dev/null)
+fi
+is_project_root "$work_dir" || exit 0
+cd "$work_dir" || exit 0
 
 state_dir="${TMPDIR:-/tmp}/chamabosal-harness/${session_id:-unknown}"
 mkdir -p "$state_dir" || exit 0
@@ -29,8 +56,8 @@ fi
 
 changes=$(
   {
-    git diff HEAD -- src build.gradle settings.gradle
-    git ls-files --others --exclude-standard -- src | while IFS= read -r file; do
+    git diff HEAD -- "${WATCHED_PATHS[@]}"
+    git ls-files --others --exclude-standard -- "${WATCHED_PATHS[@]}" | while IFS= read -r file; do
       printf '%s\n' "$file"
       cat "$file"
     done
@@ -38,7 +65,8 @@ changes=$(
 )
 [ -z "$changes" ] && exit 0
 
-fingerprint=$(printf '%s' "$changes" | git hash-object --stdin)
+# 같은 변경이라도 다른 worktree면 다시 돌리도록 폴더 경로를 함께 넣는다.
+fingerprint=$(printf '%s\n%s' "$work_dir" "$changes" | git hash-object --stdin)
 [ "$(cat "$state_dir/passed" 2>/dev/null)" = "$fingerprint" ] && exit 0
 
 if ./gradlew test --console=plain >"$log" 2>&1; then
