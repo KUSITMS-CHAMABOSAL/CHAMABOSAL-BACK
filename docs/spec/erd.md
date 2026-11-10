@@ -158,7 +158,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | round_date | DATE | NOT NULL | 회차 날짜 (KST) |
 | status | VARCHAR(20) | NOT NULL | `CERTIFYING` / `VOTING` / `ANNOUNCED` / `NO_VOTE` |
-| vote_started_at | DATETIME | NULL | 전원 인증 시각, 이전 회차 마감 시각 또는 자정. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
+| vote_started_at | DATETIME | NULL | 전원 인증 시각, 이전 회차 마감 시각 또는 자정. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
 | vote_closed_at | DATETIME | NULL | 전원 투표 시각 또는 정오 |
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
@@ -402,7 +402,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 
 | 대상 | 시점 | 처리 |
 |---|---|---|
-| 인증 사진 | 회차 투표 종료 + 7일 (`NO_VOTE` 회차는 확정 시각 + 7일, 삭제된 방의 마감되지 않은 회차는 방 삭제 시각 + 7일) | 파일 삭제, `image_deleted_at` 기록 |
+| 인증 사진 | 회차 투표 종료 + 7일 (`NO_VOTE` 회차는 확정 시각(`vote_started_at`) + 7일, 삭제된 방의 마감되지 않은 회차는 방 삭제 시각 + 7일) | 파일 삭제, `image_deleted_at` 기록 |
 | 나간·내보내진 멤버의 사진 | 일반 사진과 같음 (나가도 즉시 삭제 안 함) | 같은 방식 |
 | 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
 | 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
