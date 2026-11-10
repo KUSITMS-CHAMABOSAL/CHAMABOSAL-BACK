@@ -95,7 +95,7 @@ erDiagram
 | id | BIGINT | PK | |
 | name | VARCHAR(12) | NOT NULL | 방 이름, 수정 불가 |
 | goal | VARCHAR(20) | NOT NULL | `DELIVERY` / `CAFE` / `SHOPPING` / `ETC` |
-| owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL. [미정] Q-32 |
+| owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL. [미정] Q-37 |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
 | deleted_at | DATETIME | NULL | 마지막 멤버가 나가거나 빈 방 정리로 삭제 |
 
@@ -374,7 +374,7 @@ erDiagram
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | 받는 사람 |
 | type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_OPENED` / `VOTE_REMINDER` / `RESULT` |
-| room_id | BIGINT | FK rooms, NULL | 방 2개를 합친 리마인드는 NULL |
+| room_id | BIGINT | FK rooms, NULL | 인증 마감 리마인드(`CERT_REMINDER`)는 방 개수와 상관없이 항상 NULL |
 | round_date | DATE | NOT NULL | |
 | is_success | BOOLEAN | NOT NULL | 앱인토스 응답 결과 |
 
@@ -406,7 +406,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
 | 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
 | 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행은 남기고 `toss_anon_key` NULL, `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
-| 빈 방 | 매일, 만든 지 24시간 지난 방 | 현재 멤버 0명인 방 `deleted_at` 기록 ([미정] Q-32) |
+| 빈 방 | 매일, 만든 지 24시간 지난 방 | 현재 멤버 0명인 방 `deleted_at` 기록 ([미정] Q-37) |
 | 인증에 안 쓰인 업로드 사진 | 업로드 + 1일 | S3 `tmp/` 경로 수명 주기 규칙으로 자동 삭제 (서버 작업 없음) |
 
 ---

@@ -1,0 +1,15 @@
+# 프론트와 약속한 에러 code 목록입니다. ErrorCodeSnapshotTest가 현재 코드와 비교합니다.
+# 새 code를 추가하면 이 파일에도 추가합니다. 이미 있는 줄은 바꾸거나 지우지 않습니다.
+AUTH_001
+AUTH_002
+COMMON_001
+COMMON_002
+COMMON_003
+COMMON_004
+COMMON_005
+COMMON_006
+COMMON_007
+COMMON_008
+COMMON_009
+COMMON_010
+COMMON_999

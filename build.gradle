@@ -39,6 +39,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -47,6 +48,12 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 실패한 테스트의 메시지를 콘솔에 남겨, CI 로그와 Stop 훅에서 바로 원인을 읽을 수 있게 한다.
+	testLogging {
+		events 'failed'
+		exceptionFormat = 'full'
+		showStackTraces = false
+	}
 }
 
 // 배포 이미지에서 실행 jar 이름을 고정한다.
