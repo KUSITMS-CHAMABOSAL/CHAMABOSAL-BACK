@@ -3,7 +3,6 @@
 경로, 요청·응답 필드, 에러 code를 적은 문서입니다. 동작 규칙은 각 기능 명세를 따르고, 엔드포인트마다 기능 ID를 붙였습니다. 구현된 API는 Swagger가 기준입니다.
 
 - `[미정] Q-37`처럼 적힌 항목은 [`open-questions.md`](open-questions.md)의 답에 따라 바뀔 수 있습니다.
-- 투표·결과·톡톡·한 솥·방어권 API는 초안입니다. 담당자가 보완합니다.
 
 ## 0. 공통
 
@@ -721,12 +720,12 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
 - 에러: `POT_001` (404, 없거나 아직 다 채우지 않은 솥), `ROOM_002` (403), `ROOM_005` (404)
 
-## 11. 방어권 (초안)
+## 11. 방어권
 
 > 담당자 확인
 > - 디자인은 지목된 뒤 결과 화면에서 사용 (p92, p96). 이대로면 방 선택 API가 없어지고 사용 API·조건이 바뀜
 > - 곳간 조회의 `usingRoomName`, `isUsedThisWeek`는 이 흐름이 정해질 때 같이 정리
-> - [미정] Q-20, Q-21, Q-28, 에러 code 정하기
+> - [미정] Q-20, Q-21, Q-28
 
 ### POST /api/defense-tickets
 
@@ -737,7 +736,7 @@ SHIELD-01. 공양미 100석으로 방어권을 삽니다.
 { "riceBalance": 20 }
 ```
 
-- 에러: 공양미 부족 (`STORE_001`), 이미 보유
+- 에러: `STORE_001` (409, 공양미 부족), `DEFENSE_001` (409, 이미 보유)
 
 ### GET /api/defense-tickets/rooms
 
@@ -753,10 +752,12 @@ SHIELD-02. 방어권을 쓸 방을 고르는 화면입니다.
 ```
 
 - `status`: `AVAILABLE` `NOT_CERTIFIED` `VOTING` `USED_THIS_WEEK` `RESTING` `NO_VOTE_ROOM`
+- 방어권이 없어도 방 목록은 보내고, 쓰는 순간 `DEFENSE_002`로 막음
 
 ### POST /api/rooms/{roomId}/defenses
 
 SHIELD-02. 그 방의 현재 회차에 방어권을 씁니다. 쓰는 순간 소모됩니다.
 
 - 마지막 인증자의 유예 시간은 [미정] Q-28
-- 에러: 방어권 없음, 인증 전, 투표 중, 이번 주 사용 완료, 휴식 중, 3명 미만 방
+- 막힌 사유마다 code가 다르고, 방 선택 화면의 `status`와 짝을 이룸
+- 에러: `DEFENSE_002` (409, 방어권 없음), `DEFENSE_003` (409, 인증 전 = `NOT_CERTIFIED`), `DEFENSE_004` (409, 투표 중 = `VOTING`), `DEFENSE_005` (409, 이번 주 사용 완료 = `USED_THIS_WEEK`), `DEFENSE_006` (409, 휴식 중 = `RESTING`), `DEFENSE_007` (409, 3명 미만 방 = `NO_VOTE_ROOM`), `ROOM_002` (403), `ROOM_005` (404)
