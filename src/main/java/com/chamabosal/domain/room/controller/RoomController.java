@@ -47,6 +47,14 @@ public class RoomController {
                     )
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "COMMON_008 로그인 필요",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
                     responseCode = "409",
                     description = "ROOM_001 참여 중인 방이 2개",
                     content = @Content(
@@ -75,6 +83,14 @@ public class RoomController {
             @ApiResponse(
                     responseCode = "400",
                     description = "COMMON_002 입력값 오류",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "COMMON_008 로그인 필요",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)
