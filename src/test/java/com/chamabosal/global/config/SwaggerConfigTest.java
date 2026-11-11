@@ -32,6 +32,15 @@ class SwaggerConfigTest {
     }
 
     @Test
+    void Swagger에서_초안과_구현된_API를_고를_수_있다() throws Exception {
+        mockMvc.perform(get("/v3/api-docs/swagger-config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.urls[?(@.url == '/dev/openapi.yaml')]").exists())
+                .andExpect(jsonPath("$.urls[?(@.url == '/v3/api-docs')]").exists())
+                .andExpect(jsonPath("$['urls.primaryName']").value("API 초안 (구현 전)"));
+    }
+
+    @Test
     void OpenAPI_초안은_토큰_없이_볼_수_있다() throws Exception {
         mockMvc.perform(get("/dev/openapi.yaml"))
                 .andExpect(status().isOk());
