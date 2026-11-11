@@ -156,10 +156,10 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
-| round_date | DATE | NOT NULL | 회차 날짜 (KST) |
+| round_date | DATE | NOT NULL | 회차 날짜 (KST, 05:00부터 다음 날 04:59까지) |
 | status | VARCHAR(20) | NOT NULL | `CERTIFYING` / `VOTING` / `ANNOUNCED` / `NO_VOTE` |
-| vote_started_at | DATETIME | NULL | 전원 인증 시각, 이전 회차 마감 시각 또는 자정. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
-| vote_closed_at | DATETIME | NULL | 전원 투표 시각 또는 정오 |
+| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 다음 날 05:00. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
+| vote_closed_at | DATETIME | NULL | 투표권 있는 명단 전원 투표 시각 또는 다음 회차 투표 시작 시각 |
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
@@ -169,8 +169,8 @@ erDiagram
 - 회차 행은 그날 방에서 첫 동작(인증·콕 등)이 있을 때 만들거나, 자정 배치에서 미리 만든다 (🛠 구현 때 결정)
 - 득표수는 `votes`에서 집계
 - `version` (낙관적 락): JPA 엔티티 필드에 `@Version`만 붙이면 저장할 때마다 version을 올리고, 읽었을 때와 값이 다르면 저장을 실패시켜 줌 (`OptimisticLockException`)
-  - 예) 23:59:59 마지막 인증(이벤트)과 자정 배치가 같은 회차를 동시에 투표 시작 → 먼저 저장한 쪽만 성공, 나중 쪽은 실패 → "이미 처리됨"으로 보고 넘어감
-  - 투표 마감(전원 투표 이벤트 vs 정오 배치)도 같은 방식. 없으면 명단 스냅샷·알림·결과 판정·공양미 지급이 두 번 일어날 수 있음
+  - 예) 04:59:59 마지막 인증(이벤트)과 05:00 배치가 같은 회차를 동시에 투표 시작 → 먼저 저장한 쪽만 성공, 나중 쪽은 실패 → "이미 처리됨"으로 보고 넘어감
+  - 투표 마감(전원 투표 이벤트 vs 다음 회차 투표 시작)도 같은 방식. 없으면 명단 스냅샷·알림·결과 판정·공양미 지급이 두 번 일어날 수 있음
 
 ### round_participants
 
@@ -182,6 +182,7 @@ erDiagram
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | member_id | BIGINT | FK room_members, NOT NULL | |
 | is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함·휴식 중이면 false) |
+| can_vote | BOOLEAN | NOT NULL | 투표권. 투표 시작 시점까지 인증했으면 true (11/8 회의) |
 | is_resting | BOOLEAN | NOT NULL | 휴식 중 (후보 카드에 흐리게 표시) |
 | moktak_count | INT | NOT NULL | 투표 시작 시점 목탁 수 (후보 카드·동점 판정) |
 
@@ -394,7 +395,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
 | `certifications` | `(member_id)` | 이번 달 참은 횟수·연속 인증·인증 캘린더 (멤버 → 사용자 기준 집계) |
-| `rounds` | `(status, round_date)` | 자정·정오 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
+| `rounds` | `(status, round_date)` | 05:00 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
 
 ---
 
