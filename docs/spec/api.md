@@ -485,7 +485,7 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
 - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
 - `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
-- `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이면 전원 인증이어도 `false` (Q-17)
+- `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이었으면 어제 투표는 이때 닫힘
 - 에러: `CERT_001` (409, 이미 인증함), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 입력값 오류·없거나 만료된 `imageKey`)
 
 ### PATCH /api/certifications/{certificationId}
@@ -567,15 +567,15 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 - 받는 사람·방·회차 기준 처음 콕만 푸시를 보냄 (POKE-02). 이미 보낸 푸시의 숫자는 바꿀 수 없어서 늘어나는 횟수는 앱 안에서만 보임
 - 에러: `POKE_001` (400, 본인), `ROOM_009` (404, 받는 사람이 이 방 현재 멤버 아님), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, `count` 범위)
 
-## 9. 투표 · 결과 · 톡톡 (초안)
+## 9. 투표 · 결과 · 톡톡
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
 > - 동점이면 "뽑힌 보살이 없어요" (p97). 명세는 목탁 수로 지목 (RESULT-01)
-> - 결과 화면에 지목된 사람의 쓴 금액 표시 (p91)
-> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117)
+> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡을 직접 수행하는 이마받기 변경(기획 회의)은 아직 반영 전
 > - 방어권을 결과 화면에서 쓰는 흐름 (p96)
-> - `roundDate`를 화면에서 쓰는지, 에러 code 정하기
+> - 다음 회차 투표가 열려 닫힌 투표의 결과 화면 ([미정] Q-56)
+> - `roundDate`를 화면에서 쓰는지
 
 ### GET /api/rooms/{roomId}/vote
 
@@ -614,6 +614,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 - `candidates`: `VOTING`일 때만. `certification`이 `null`이면 인증 안 함
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
+- 에러: `ROOM_002` (403), `ROOM_005` (404)
 
 ### POST /api/rounds/{roundId}/votes
 
@@ -627,7 +628,8 @@ VOTE-03. 후보 또는 "오늘은 모두 보살"에 투표합니다. `targetMemb
 { "riceEarned": 5, "potEarned": 5, "isClosed": false }
 ```
 
-- 에러: 투표 중 아님, 명단 밖, 이미 투표, 본인 선택, 후보 아님
+- `isClosed`: 이 표로 투표권 있는 명단 전원이 투표해 마감됨
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `VOTE_001` (409, 투표 중 아님), `VOTE_002` (403, 명단 밖), `VOTE_003` (403, 투표권 없음), `VOTE_004` (409, 이미 투표함), `VOTE_005` (400, 본인 선택), `VOTE_006` (400, 선택할 수 없는 후보), `COMMON_002` (400)
 
 ### GET /api/rounds/{roundId}/result
 
@@ -636,7 +638,10 @@ RESULT-02. 결과 화면입니다.
 ```json
 {
   "roundId": 100, "roundDate": "2026-11-04", "resultType": "PICKED",
-  "picked": { "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "isLeft": false },
+  "picked": {
+    "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "isLeft": false,
+    "certificationResult": "FAILED", "spentAmount": 23000
+  },
   "voteCounts": [ { "memberId": 12, "nickname": "지수", "count": 3, "isLeft": false } ],
   "allBosalCount": 1,
   "isPickedMe": false,
@@ -650,6 +655,9 @@ RESULT-02. 결과 화면입니다.
 - 누가 누구에게 투표했는지는 보내지 않음
 - `canTap`: `PICKED`이고 내가 지목된 사람이 아니고 아직 톡톡하지 않음
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
+- `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
+- `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 아직 발표 전)
 - "모두 보살"이 과반이 아닐 때 지목은 [미정] Q-22
 
 ### POST /api/rounds/{roundId}/taps
@@ -661,7 +669,7 @@ RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보�
 ```
 
 - `count`: 0~10
-- 에러: 톡톡할 수 없는 결과·지목된 본인, 이미 톡톡함, 다음 투표가 열림
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 톡톡할 수 없는 결과), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
@@ -676,9 +684,15 @@ RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다
 }
 ```
 
+- `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
+
 ### PUT /api/rounds/{roundId}/taps/received/played
 
 RESULT-03. 받은 톡톡 재생 완료를 저장합니다.
+
+- 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
 
 ## 10. 한 솥 (초안)
 
