@@ -603,7 +603,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
   "candidates": [
     {
       "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [],
-      "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null },
+      "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" },
       "moktakCount": 2, "isSelectable": true, "isResting": false
     }
   ]
@@ -627,7 +627,8 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 |---|---|
 | `UNDER_THREE` | `memberCount`, `memberLimit` |
 | `BEFORE_FIRST_VOTE` | `uncertifiedCount`, `firstUncertifiedMember` |
-| `NOT_IN_LIST`, `NO_VOTING_RIGHT` | `roundId`, `roundDate`, `closesAt` |
+| `NOT_IN_LIST` | `roundId`, `roundDate`, `closesAt` |
+| `NO_VOTING_RIGHT` | `roundId`, `roundDate`, `closesAt`, `candidates` (투표 버튼만 막고 후보는 보여줌) |
 | `VOTING` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount`, `candidates` |
 | `VOTED` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount` |
 | `RESULT_UNSEEN`, `RESULT_SEEN` | `roundId`, `roundDate` (가장 최근 발표 회차. 내용은 `GET /api/rounds/{roundId}/result`) |
@@ -644,7 +645,8 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 - `uncertifiedCount`, `firstUncertifiedMember`: 나를 뺀 미인증 멤버 수와 그중 첫 번째 멤버. 미인증 멤버가 없으면 `0`, `null` (순서는 [미정] Q-25)
 - `closesAt`: 늦어도 닫히는 시각 (회차 날짜 이틀 뒤 05:00). 다음 회차가 먼저 전원 인증하면 그때 닫힘
 - `voterCount`: 투표권 있는 인원 (명단 중 인증한 멤버)
-- `candidates`: `certification`이 `null`이면 인증 안 함
+- `candidates`: `certification`이 `null`이면 인증 안 함. 투표권이 없는 사람(`NO_VOTING_RIGHT`)도 후보로 들어감 (CERT-05)
+- `certification.certifiedAt`: 후보 카드의 인증 시각 표시
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
 - 에러: `ROOM_002` (403), `ROOM_005` (404)

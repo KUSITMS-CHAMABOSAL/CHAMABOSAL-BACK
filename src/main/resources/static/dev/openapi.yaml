@@ -1662,7 +1662,7 @@ paths:
         | `UNDER_THREE` | 방 인원 3명 미만 | `memberCount`, `memberLimit` |
         | `BEFORE_FIRST_VOTE` | 지난 결과가 없고 투표 전 | `uncertifiedCount`, `firstUncertifiedMember` |
         | `NOT_IN_LIST` | 투표 시작 후 들어와 명단에 없음 | `roundId`, `roundDate`, `closesAt` |
-        | `NO_VOTING_RIGHT` | 명단에 있지만 인증하지 않아 투표권이 없음 | `roundId`, `roundDate`, `closesAt` |
+        | `NO_VOTING_RIGHT` | 명단에 있지만 인증하지 않아 투표권이 없음 | `roundId`, `roundDate`, `closesAt`, `candidates` |
         | `VOTING` | 투표 중, 아직 투표 안 함 | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount`, `candidates` |
         | `VOTED` | 투표한 뒤 마감 전 | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount` |
         | `RESULT_UNSEEN` | 마감 후 결과를 아직 안 봄 | `roundId`, `roundDate` |
@@ -1670,6 +1670,7 @@ paths:
 
         - `RESULT_UNSEEN`, `RESULT_SEEN`의 `roundId`는 가장 최근 발표 회차다. 내용은 `GET /api/rounds/{roundId}/result`
         - 투표 중 득표 수는 보내지 않는다.
+        - `NO_VOTING_RIGHT`도 후보 목록을 보여주고 투표 버튼만 막는다. 투표권이 없는 사람도 후보로 들어간다 (CERT-05).
       parameters:
       - *id001
       responses:
@@ -1710,6 +1711,7 @@ paths:
                           memo: 치킨 시켰어요
                           spentAmount: 23000
                           imageUrl: null
+                          certifiedAt: '2026-11-04T19:24:00'
                         moktakCount: 2
                         isSelectable: true
                         isResting: false
@@ -2659,6 +2661,7 @@ components:
       - memo
       - spentAmount
       - imageUrl
+      - certifiedAt
       properties:
         result:
           $ref: '#/components/schemas/CertificationResult'
@@ -2675,6 +2678,11 @@ components:
           type: string
           description: 만료 URL. 사진이 없거나 삭제됐으면 `null`
           nullable: true
+        certifiedAt:
+          type: string
+          description: 인증 시각
+          example: '2026-11-04T19:24:00'
+          format: date-time
     VoteCandidate:
       type: object
       required:
