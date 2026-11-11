@@ -4,6 +4,8 @@ info:
   version: 0.2.0
   description: 시각은 모두 KST. 실패 응답은 `ErrorResponse` 형식이고, 예상하지 못한 오류는 `COMMON_999`(500).
 servers:
+- url: /
+  description: 현재 서버 (Swagger를 연 서버)
 - url: https://api.chamabosal.com
   description: 개발 서버
 - url: http://localhost:8080
@@ -3775,31 +3777,31 @@ components:
       value:
         success: false
         code: CERT_001
-        message: 이미 인증했어요.
+        message: 이미 인증했습니다.
     CERT_002:
       summary: CERT_002 (404)
       value:
         success: false
         code: CERT_002
-        message: 존재하지 않는 인증이에요.
+        message: 존재하지 않는 인증입니다.
     CERT_003:
       summary: CERT_003 (403)
       value:
         success: false
         code: CERT_003
-        message: 본인 인증만 바꿀 수 있어요.
+        message: 본인 인증만 바꿀 수 있습니다.
     CERT_004:
       summary: CERT_004 (409)
       value:
         success: false
         code: CERT_004
-        message: 수정 시간이 지나서 인증을 바꿀 수 없어요
+        message: 수정 시간이 지나 인증을 바꿀 수 없습니다.
     CERT_005:
       summary: CERT_005 (409)
       value:
         success: false
         code: CERT_005
-        message: 투표가 시작돼서 인증을 바꿀 수 없어요
+        message: 투표가 시작되어 인증을 바꿀 수 없습니다.
     COMMON_001:
       summary: COMMON_001 (404)
       value:
@@ -3830,215 +3832,215 @@ components:
       value:
         success: false
         code: DEFENSE_001
-        message: 이미 방어권을 가지고 있어요.
+        message: 이미 방어권을 가지고 있습니다.
     DEFENSE_002:
       summary: DEFENSE_002 (409)
       value:
         success: false
         code: DEFENSE_002
-        message: 가지고 있는 방어권이 없어요.
+        message: 가지고 있는 방어권이 없습니다.
     DEFENSE_005:
       summary: DEFENSE_005 (409)
       value:
         success: false
         code: DEFENSE_005
-        message: 이번 주에 이미 방어권을 썼어요.
+        message: 이번 주에 이미 방어권을 썼습니다.
     DEFENSE_008:
       summary: DEFENSE_008 (403)
       value:
         success: false
         code: DEFENSE_008
-        message: 지목된 보살만 방어권을 쓸 수 있어요.
+        message: 지목된 보살만 방어권을 쓸 수 있습니다.
     DEFENSE_009:
       summary: DEFENSE_009 (409)
       value:
         success: false
         code: DEFENSE_009
-        message: 방어권을 쓸 수 있는 시간이 지났어요.
+        message: 방어권을 쓸 수 있는 시간이 지났습니다.
     POKE_001:
       summary: POKE_001 (400)
       value:
         success: false
         code: POKE_001
-        message: 나를 찌를 수는 없어요.
+        message: 나를 찌를 수 없습니다.
     POT_001:
       summary: POT_001 (404)
       value:
         success: false
         code: POT_001
-        message: 아직 다 채우지 않은 솥이에요.
+        message: 아직 다 채우지 않은 솥입니다.
     REACT_001:
       summary: REACT_001 (403)
       value:
         success: false
         code: REACT_001
-        message: 내 인증에는 리액션을 남길 수 없어요.
+        message: 내 인증에는 리액션을 남길 수 없습니다.
     REACT_002:
       summary: REACT_002 (409)
       value:
         success: false
         code: REACT_002
-        message: 투표가 시작돼서 리액션을 바꿀 수 없어요.
+        message: 투표가 시작되어 리액션을 바꿀 수 없습니다.
     RESULT_001:
       summary: RESULT_001 (409)
       value:
         success: false
         code: RESULT_001
-        message: 아직 발표된 결과가 없어요.
+        message: 아직 발표된 결과가 없습니다.
     ROOM_001:
       summary: ROOM_001 (409)
       value:
         success: false
         code: ROOM_001
-        message: 방은 2개까지 참여할 수 있어요.
+        message: 참여 중인 방이 2개입니다.
     ROOM_002:
       summary: ROOM_002 (403)
       value:
         success: false
         code: ROOM_002
-        message: 이 방의 멤버가 아니에요.
+        message: 이 방의 멤버가 아닙니다.
     ROOM_003:
       summary: ROOM_003 (409)
       value:
         success: false
         code: ROOM_003
-        message: 방이 가득 찼어요.
+        message: 방이 가득 찼습니다.
     ROOM_004:
       summary: ROOM_004 (409)
       value:
         success: false
         code: ROOM_004
-        message: 이미 쓰는 닉네임이에요.
+        message: 이미 쓰는 닉네임입니다.
         field: nickname
     ROOM_005:
       summary: ROOM_005 (404)
       value:
         success: false
         code: ROOM_005
-        message: 존재하지 않는 방이에요.
+        message: 없거나 삭제된 방입니다.
     ROOM_006:
       summary: ROOM_006 (403)
       value:
         success: false
         code: ROOM_006
-        message: 들어갈 수 없는 방이에요.
+        message: 들어갈 수 없는 방입니다.
     ROOM_007:
       summary: ROOM_007 (403)
       value:
         success: false
         code: ROOM_007
-        message: 방장만 할 수 있어요.
+        message: 방장만 할 수 있습니다.
     ROOM_008:
       summary: ROOM_008 (409)
       value:
         success: false
         code: ROOM_008
-        message: 투표 중에는 내보낼 수 없어요.
+        message: 투표 중에는 내보낼 수 없습니다.
     ROOM_009:
       summary: ROOM_009 (404)
       value:
         success: false
         code: ROOM_009
-        message: 이 방에 없는 멤버예요.
+        message: 이 방에 없는 멤버입니다.
     ROOM_010:
       summary: ROOM_010 (400)
       value:
         success: false
         code: ROOM_010
-        message: 나를 내보낼 수는 없어요.
+        message: 방장 본인은 내보낼 수 없습니다.
     ROUND_001:
       summary: ROUND_001 (404)
       value:
         success: false
         code: ROUND_001
-        message: 존재하지 않는 회차예요.
+        message: 존재하지 않는 회차입니다.
     STORE_001:
       summary: STORE_001 (409)
       value:
         success: false
         code: STORE_001
-        message: 공양미가 부족해요.
+        message: 공양미가 부족합니다.
     STORE_002:
       summary: STORE_002 (404)
       value:
         success: false
         code: STORE_002
-        message: 존재하지 않는 아이템이에요.
+        message: 존재하지 않는 아이템입니다.
     STORE_003:
       summary: STORE_003 (409)
       value:
         success: false
         code: STORE_003
-        message: 이미 가지고 있는 아이템이에요.
+        message: 이미 가지고 있는 아이템입니다.
     STORE_004:
       summary: STORE_004 (409)
       value:
         success: false
         code: STORE_004
-        message: 가지고 있지 않은 아이템이에요.
+        message: 가지고 있지 않은 아이템입니다.
     TAP_001:
       summary: TAP_001 (409)
       value:
         success: false
         code: TAP_001
-        message: 톡톡이 없는 결과예요.
+        message: 톡톡이 없는 결과입니다.
     TAP_002:
       summary: TAP_002 (403)
       value:
         success: false
         code: TAP_002
-        message: 지목된 보살은 톡톡할 수 없어요.
+        message: 지목된 보살은 톡톡할 수 없습니다.
     TAP_003:
       summary: TAP_003 (409)
       value:
         success: false
         code: TAP_003
-        message: 이미 톡톡했어요.
+        message: 이미 톡톡했습니다.
     TAP_004:
       summary: TAP_004 (409)
       value:
         success: false
         code: TAP_004
-        message: 톡톡 시간이 지났어요
+        message: 톡톡 시간이 지났습니다.
     TAP_005:
       summary: TAP_005 (403)
       value:
         success: false
         code: TAP_005
-        message: 지목된 보살만 볼 수 있어요.
+        message: 지목된 보살만 볼 수 있습니다.
     VOTE_001:
       summary: VOTE_001 (409)
       value:
         success: false
         code: VOTE_001
-        message: 지금은 투표 중이 아니에요.
+        message: 지금은 투표 중이 아닙니다.
     VOTE_002:
       summary: VOTE_002 (403)
       value:
         success: false
         code: VOTE_002
-        message: 이번 투표 명단에 없어요.
+        message: 이번 투표 명단에 없습니다.
     VOTE_003:
       summary: VOTE_003 (403)
       value:
         success: false
         code: VOTE_003
-        message: 오늘은 인증하지 않아서 투표권이 사라졌어요.
+        message: 오늘 인증하지 않아 투표권이 없습니다.
     VOTE_004:
       summary: VOTE_004 (409)
       value:
         success: false
         code: VOTE_004
-        message: 이미 투표했어요.
+        message: 이미 투표했습니다.
     VOTE_005:
       summary: VOTE_005 (400)
       value:
         success: false
         code: VOTE_005
-        message: 나에게는 투표할 수 없어요.
+        message: 나에게는 투표할 수 없습니다.
     VOTE_006:
       summary: VOTE_006 (400)
       value:
         success: false
         code: VOTE_006
-        message: 선택할 수 없는 후보예요.
+        message: 선택할 수 없는 후보입니다.
