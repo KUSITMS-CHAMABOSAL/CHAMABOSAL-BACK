@@ -4,11 +4,25 @@ tone_instructions: "친절하고 간결하게, 한국어로 리뷰해줘."
 
 reviews:
   poem: false
+  # 리뷰 코멘트와 무관한 부가 기능은 꺼서 리뷰 시간을 줄인다. 웹 검색은 최신 Spring 정보 확인에 쓰므로 유지한다.
+  sequence_diagrams: false
+  related_issues: false
+  related_prs: false
+  assess_linked_issues: false
+  suggested_labels: false
+  suggested_reviewers: false
+  tools:
+    languagetool:
+      enabled: false
   auto_review:
     # 작업 브랜치 PR은 dev로 올리므로 dev도 자동 리뷰 대상에 포함
     base_branches:
       - "dev"
   path_instructions:
+    - path: "docs/spec/**"
+      instructions: >
+        명세끼리 또는 명세와 코드가 서로 다른 규칙을 말할 때만 지적해라.
+        표현, 예시 값, 문장 다듬기는 지적하지 않는다.
     - path: "**/*.java"
       instructions: >
         이 프로젝트는 Java 21 / Spring Boot 4다. 줄바꿈·공백 같은 사소한 스타일보다
