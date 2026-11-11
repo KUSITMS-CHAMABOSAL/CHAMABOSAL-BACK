@@ -51,22 +51,22 @@
 - **색상:** 새 방은 멤버가 없으니 4종 중 랜덤. 랜덤은 주입 가능한 `RandomGenerator`(또는 색 선택기)로 분리해 테스트에서 고정한다.
 - **시각:** `joinedAt`은 주입받은 `Clock`으로 구한다. 6개월 비교도 같은 `Clock` 기준.
 - **에러 코드:** `BaseErrorCode`에 `// Room` 구역을 만들고 `ROOM_001`, `ROOM_002`, `ROOM_004`, `ROOM_005`를 추가한다. 스냅샷에도 추가한다.
-- **운영 DB:** `rooms`, `room_members` 생성 SQL을 PR에 첨부하고, 머지 전에 서버에서 실행한다 (`ddl-auto: validate`라 테이블이 없으면 배포가 뜨지 않음).
+- **운영 DB:** 배포 설정(`docker-compose.yml`)이 출시 전까지 `ddl-auto: update`라 배포할 때 테이블이 자동으로 만들어진다. 따로 SQL을 실행하지 않는다.
 - **OpenAPI 초안:** `servers` 맨 앞에 `url: /`(현재 서버)를 추가한다 (#53 리뷰 반영). 구현된 두 API는 `/v3/api-docs`에도 나타난다.
 
 ## 규칙 점검
 - `CLAUDE.md`, `docs/CONVENTION.md` 위반: 없음
 
 ## 할 일
-- [ ] 명세 변경: Q-37 결정, ROOM-01 11번, `erd.md` `owner_member_id`·생성 컬럼 UNIQUE 설명, CLEAN-03 삭제
-- [ ] `BaseErrorCode` `// Room` 구역과 `error-codes.snapshot`
-- [ ] 엔티티 `Room`, `RoomMember`와 enum `RoomGoal`, `BosalColor`, `LeaveType`, 리포지토리(락 조회 포함)
-- [ ] ROOM-01 서비스·컨트롤러·DTO (`POST /api/rooms`)
-- [ ] ROOM-04 서비스·컨트롤러·DTO (`PATCH /api/rooms/{roomId}/members/me/nickname`)
-- [ ] 테스트: ROOM-01-1 ~ ROOM-01-5, ROOM-01-7, ROOM-01-8
-- [ ] 테스트: ROOM-04-1 ~ ROOM-04-7
-- [ ] 운영 DB 생성 SQL 작성 (PR 첨부)
-- [ ] `openapi.yaml` `servers`에 현재 서버 추가
+- [x] 명세 변경: Q-37 결정, ROOM-01 11번, `erd.md` `owner_member_id`·생성 컬럼 UNIQUE 설명, CLEAN-03 삭제
+- [x] `BaseErrorCode` `// Room` 구역과 `error-codes.snapshot`
+- [x] 엔티티 `Room`, `RoomMember`와 enum `RoomGoal`, `BosalColor`, `LeaveType`, 리포지토리(락 조회 포함)
+- [x] ROOM-01 서비스·컨트롤러·DTO (`POST /api/rooms`)
+- [x] ROOM-04 서비스·컨트롤러·DTO (`PATCH /api/rooms/{roomId}/members/me/nickname`)
+- [x] 테스트: ROOM-01-1 ~ ROOM-01-5, ROOM-01-7, ROOM-01-8
+- [x] 테스트: ROOM-04-1 ~ ROOM-04-7
+- [x] 운영 DB 반영 방식 확인 (배포 시 자동 생성)
+- [x] `openapi.yaml` `servers`에 현재 서버 추가
 
 ## 열린 질문
 - 없음
@@ -74,4 +74,33 @@
   - 생성 컬럼 UNIQUE: 넣지 않고 락으로 지키기로 결정
 
 ## 자기 점검
-`/spec-build`가 구현 후 작성합니다.
+
+| 처리 규칙 | 시나리오 | 테스트 |
+| --- | --- | --- |
+| ROOM-01 1 (참여 방 2개면 불가) | ROOM-01-2 | `RoomCreateTest` |
+| ROOM-01 2 (앞뒤 띄어쓰기 제거) | ROOM-01-3 | `RoomCreateTest` |
+| ROOM-01 3 (방 이름 1~8자, 허용 문자) | ROOM-01-4 | `RoomCreateTest` |
+| ROOM-01 6 (닉네임 형식) | ROOM-01-5 | `RoomCreateTest` |
+| ROOM-01 7, 8 (방장 등록, 색 배정) | ROOM-01-1 | `RoomCreateTest` |
+| ROOM-01 10 (동시 요청) | ROOM-01-7 | `RoomCreateTest` |
+| ROOM-01 11 (한 번에 생성) | ROOM-01-1 | `RoomCreateTest` |
+| ROOM-01 12 (함께할 인원 2~4) | ROOM-01-8 | `RoomCreateTest` |
+| ROOM-04 2 (닉네임 형식) | ROOM-01-5와 같은 검증 | `RoomCreateTest` |
+| ROOM-04 3, 4 (6개월 중복, 대소문자 무시) | ROOM-04-2 ~ ROOM-04-4 | `RoomNicknameUpdateTest` |
+| ROOM-04 5 (내 행 제외) | ROOM-04-5 | `RoomNicknameUpdateTest` |
+| ROOM-04 6 (같은 닉네임은 그대로 성공) | ROOM-04-6 | `RoomNicknameUpdateTest` |
+| ROOM-04 7 (동시 요청) | ROOM-04-7 | `RoomNicknameUpdateTest` |
+| ROOM-04 1 (현재 멤버만) | 없음 | 없음 |
+
+- 테스트가 없는 시나리오: ROOM-01-6 (만든 날 첫 회차 인증). 회차를 첫 인증 때 만드는 구조라 CERT-01 구현 때 테스트한다. 범위에서 미리 뺐다. 그래서 ROOM-01은 `미구현`으로 두고 ROOM-04만 `구현됨`으로 바꿨다. CERT-01에서 ROOM-01-6 테스트를 만들면 ROOM-01도 `구현됨`으로 바꾼다.
+- 시나리오가 없는 처리 규칙
+  - ROOM-01 4 (방 이름 수정 불가), 12의 수정 불가: 수정 API가 없어서 지켜짐
+  - ROOM-01 5 (`ETC`는 입력 칸 없이 저장): 요청에 목표만 받아서 지켜짐
+  - ROOM-01 9 (만든 날 첫 회차): ROOM-01-6과 같은 이유로 CERT-01에서 확인
+  - ROOM-01 3의 9자 이상, ROOM-04 1(멤버가 아니면 `ROOM_002`), 삭제된 방(`ROOM_005`): 코드에는 있으나 시나리오가 없다. 명세에 시나리오를 추가할지는 사람이 정한다.
+- 명세에 없는 규칙을 만든 곳: 없음
+- 계획에 없던 변경
+  - `BaseException`에 `field`를 담는 `withField`를 추가하고 `GlobalExceptionHandler`가 응답에 싣게 했다. `ROOM_004`의 `field: nickname`과 방 이름 오류의 `field: name`에 필요했다.
+  - enum 컬럼을 `@Column(columnDefinition = "varchar(20)")`로 매핑했다. 기본 매핑은 MySQL `ENUM` 타입이고, `@JdbcTypeCode(VARCHAR)`도 값 목록 `CHECK`를 붙인다. 운영이 `ddl-auto: update`라 둘 다 enum 값을 추가하면 저장이 막힌다. 로컬 MySQL에서 `CHECK` 없이 `varchar(20)`으로 만들어지는 것을 확인했다. 전역 설정(`prefer_native_enum_types`)은 이 버전에서 적용되지 않았다.
+- 동시성 검증: 사용자·방 행 락을 빼면 ROOM-01-7, ROOM-04-7이 3번 모두 실패하고, 되돌리면 통과하는 것을 확인했다.
+- 운영 DB: 배포 설정이 `ddl-auto: update`라 자동 생성된다. 처음에는 `application-prod.yml`의 `validate`만 보고 SQL을 따로 만들었으나 필요 없어 쓰지 않는다.
