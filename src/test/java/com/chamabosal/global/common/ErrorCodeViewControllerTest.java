@@ -28,9 +28,16 @@ class ErrorCodeViewControllerTest {
     void ErrorCode_enum을_도메인별로_렌더링한다() throws Exception {
         mockMvc.perform(get("/docs/error-codes"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("COMMON (" + BaseErrorCode.values().length + ")")))
+                .andExpect(content().string(containsString("COMMON (")))
                 .andExpect(content().string(containsString("COMMON_001")))
                 .andExpect(content().string(containsString(BaseErrorCode.UNHANDLED_ERROR.getMessage())));
+    }
+
+    @Test
+    void 한_enum의_code를_도메인별로_나눠_보여준다() throws Exception {
+        mockMvc.perform(get("/docs/error-codes"))
+                .andExpect(content().string(containsString("AUTH (")))
+                .andExpect(content().string(containsString("AUTH_001")));
     }
 
     @Test

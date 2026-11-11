@@ -8,10 +8,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.chamabosal.domain.auth.client.TossAuthClient;
-import com.chamabosal.domain.auth.exception.AuthErrorCode;
 import com.chamabosal.domain.auth.service.AuthService;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
+import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -115,7 +115,7 @@ class AuthLoginTest {
     @Test
     void AUTH_01_5_잘못된_인증_코드는_AUTH_001을_돌려준다() throws Exception {
         given(tossAuthClient.exchangeAnonKey(anyString()))
-                .willThrow(new BaseException(AuthErrorCode.INVALID_AUTH_CODE));
+                .willThrow(new BaseException(BaseErrorCode.INVALID_AUTH_CODE));
 
         login()
                 .andExpect(status().isBadRequest())
@@ -127,7 +127,7 @@ class AuthLoginTest {
     @Test
     void AUTH_01_6_앱인토스_호출_실패는_AUTH_002를_돌려준다() throws Exception {
         given(tossAuthClient.exchangeAnonKey(anyString()))
-                .willThrow(new BaseException(AuthErrorCode.TOSS_API_FAILED));
+                .willThrow(new BaseException(BaseErrorCode.TOSS_API_FAILED));
 
         login()
                 .andExpect(status().isBadGateway())

@@ -1,6 +1,6 @@
 package com.chamabosal.domain.auth.client;
 
-import com.chamabosal.domain.auth.exception.AuthErrorCode;
+import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.http.MediaType;
@@ -26,15 +26,15 @@ public class TossApiAuthClient implements TossAuthClient {
     public String exchangeAnonKey(String authorizationCode) {
         ExchangeResponse response = exchange(authorizationCode);
         if (response == null) {
-            throw new BaseException(AuthErrorCode.TOSS_API_FAILED);
+            throw new BaseException(BaseErrorCode.TOSS_API_FAILED);
         }
         if (RESULT_SUCCESS.equals(response.resultType()) && response.hasAnonKey()) {
             return response.success().anonKey();
         }
         if (response.hasErrorCode(INVALID_CODE_ERROR)) {
-            throw new BaseException(AuthErrorCode.INVALID_AUTH_CODE);
+            throw new BaseException(BaseErrorCode.INVALID_AUTH_CODE);
         }
-        throw new BaseException(AuthErrorCode.TOSS_API_FAILED);
+        throw new BaseException(BaseErrorCode.TOSS_API_FAILED);
     }
 
     private ExchangeResponse exchange(String authorizationCode) {
@@ -46,7 +46,7 @@ public class TossApiAuthClient implements TossAuthClient {
                     .retrieve()
                     .body(ExchangeResponse.class);
         } catch (RestClientException e) {
-            throw new BaseException(AuthErrorCode.TOSS_API_FAILED, AuthErrorCode.TOSS_API_FAILED.getMessage(), e);
+            throw new BaseException(BaseErrorCode.TOSS_API_FAILED, BaseErrorCode.TOSS_API_FAILED.getMessage(), e);
         }
     }
 

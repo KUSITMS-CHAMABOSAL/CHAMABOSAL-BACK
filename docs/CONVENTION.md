@@ -224,21 +224,22 @@ return ResponseEntity.ok(Response.ok(response));   // 메시지 없이
 
 ### 에러코드
 
-- 공통 에러는 `BaseErrorCode`, 도메인 에러는 도메인별 `{도메인}ErrorCode` enum을 만들어 `ErrorCode`를 구현
-- 상수 이름은 의미가 드러나게, `code`는 `{DOMAIN}_{nnn}` 형식으로 작성 (예: `MEETUP_NOT_FOUND` / `MEETUP_001`)
+- 모든 에러코드는 `BaseErrorCode` 한 곳에 `// Common`, `// Auth`처럼 도메인 구역을 나눠 추가 (도메인과 API 수가 적어 한 파일로 관리)
+- 상수 이름은 의미가 드러나게, `code`는 `{DOMAIN}_{nnn}` 형식으로 작성 (예: `ROOM_NOT_FOUND` / `ROOM_005`)
 - `code`는 프론트와의 약속이므로 한 번 정하면 바꾸지 않고, 중복되면 서버가 기동되지 않음
-- 실패 시 `throw new BaseException(MeetupErrorCode.MEETUP_NOT_FOUND)`처럼 예외를 던짐
+- 실패 시 `throw new BaseException(BaseErrorCode.ROOM_NOT_FOUND)`처럼 예외를 던짐
 - 정의된 에러코드는 `/docs/error-codes` 페이지에서 자동으로 확인 가능 (별도 문서 수정 불필요)
 
 ```java
-@Getter
-@RequiredArgsConstructor
-public enum MeetupErrorCode implements ErrorCode {
+public enum BaseErrorCode implements ErrorCode {
+    // Common
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_002", "요청 값이 올바르지 않습니다."),
+    ...
 
-    MEETUP_NOT_FOUND(HttpStatus.NOT_FOUND, "MEETUP_001", "존재하지 않는 모임입니다.");
+    // Room
+    ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방입니다."),
 
-    private final HttpStatus httpStatus;
-    private final String code;
-    private final String message;
+    ;
+    ...
 }
 ```
