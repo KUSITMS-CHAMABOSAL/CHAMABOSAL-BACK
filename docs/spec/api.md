@@ -31,7 +31,7 @@
 - `memberId`는 방 안의 멤버 ID입니다. 사용자 ID는 응답에 내보내지 않습니다.
 - `riceBalance`는 화면 표시 잔액입니다. 실제 잔액이 음수면 0입니다. (RICE-01)
 - 사진 URL은 응답할 때마다 만드는 만료 URL입니다. 삭제된 사진은 `null`입니다. (CERT-04)
-- 인증 마감은 항상 회차 날짜 다음 날 0시(KST)라 응답에 넣지 않습니다. 프론트가 기기 시간대가 아니라 KST 기준으로 계산합니다.
+- 인증 마감은 항상 회차 날짜 다음 날 05:00(KST)라 응답에 넣지 않습니다. 05:00 전에 등록한 인증은 전날 회차입니다. 프론트가 기기 시간대가 아니라 KST 기준으로 계산합니다.
 
 ### 필드 이름
 
@@ -267,7 +267,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 - `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증 때 만듦
 - `round.status`: 회차 행이 없으면 `CERTIFYING`
 - `round.certifiedCount`: 현재 멤버 중 오늘 인증한 사람 수. 인증하고 나간 멤버는 세지 않음
-- `round.isAllCertified`: 현재 멤버 전원이 인증함. `true`인데 `CERTIFYING`이면 어제 회차 마감을 기다리는 중 (Q-17)
+- `round.isAllCertified`: 현재 멤버 전원이 인증함
 - `certification`: 인증 전이면 `null`
 - `editableUntil`: 수정·삭제 마감 시각 (인증 후 10분). `lockReason`이 `null`일 때 남은 시간 표시에 씀
 - `lockReason`: 수정·삭제할 수 있으면 `null`. 10분이 지나면 `TIME_OVER`, 10분 안이어도 투표가 시작되면 `VOTE_STARTED`
@@ -276,7 +276,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음
 - 리액션 받은 수는 보내지 않음 ([미정] Q-52)
 - `myReaction`: 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
-- `me.isLastCertifier`: 내가 인증하면 전원 인증이 됨. 등록 전 확인 시트에 씀. 어제 회차가 투표 중이면 `false`
+- `me.isLastCertifier`: 내가 인증하면 전원 인증이 됨. 등록 전 확인 시트에 씀. 어제 회차가 투표 중이어도 등록하면 어제 투표가 닫히고 오늘 투표가 시작됨
 - `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아감
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서
   - `unplayedTapRoundId`가 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
@@ -534,7 +534,6 @@ POKE-01. 인증하지 않은 멤버를 콕 찌릅니다. 연타는 화면에서 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
 > - 동점이면 "뽑힌 보살이 없어요" (p97). 명세는 목탁 수로 지목 (RESULT-01)
-> - 미인증자는 투표 불가로 보임 (p40, p61). 명세는 명단이면 투표 가능 (VOTE-03)
 > - 결과 화면에 지목된 사람의 쓴 금액 표시 (p91)
 > - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117)
 > - 방어권을 결과 화면에서 쓰는 흐름 (p96)
@@ -548,7 +547,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 {
   "state": "VOTING",
   "roundId": 100, "roundDate": "2026-11-04",
-  "closesAt": "2026-11-05T12:00:00",
+  "closesAt": "2026-11-06T05:00:00",
   "votedCount": 2, "voterCount": 4,
   "candidates": [
     {
@@ -565,12 +564,15 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 | `UNDER_THREE` | 방 인원 3명 미만 |
 | `BEFORE_FIRST_VOTE` | 지난 결과가 없고 투표 전 |
 | `NOT_IN_LIST` | 투표 시작 후 들어와 명단에 없음 |
+| `NO_VOTING_RIGHT` | 명단에 있지만 인증하지 않아 투표권이 없음 |
 | `VOTING` | 투표 중, 아직 투표 안 함 |
 | `VOTED` | 투표한 뒤 마감 전 |
 | `RESULT_UNSEEN` | 마감 후 결과를 아직 안 봄 |
 | `RESULT_SEEN` | 결과를 본 뒤 다음 투표 전 |
 
 - `BEFORE_FIRST_VOTE`: 나를 뺀 미인증 멤버 수와 첫 번째 미인증 멤버를 함께 보냄 (순서는 [미정] Q-25)
+- `closesAt`: 늦어도 닫히는 시각 (회차 날짜 이틀 뒤 05:00). 다음 회차가 먼저 전원 인증하면 그때 닫힘
+- `voterCount`: 투표권 있는 인원 (명단 중 인증한 멤버)
 - `candidates`: `VOTING`일 때만. `certification`이 `null`이면 인증 안 함
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
