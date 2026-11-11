@@ -59,8 +59,7 @@
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
 | InviteStatus | `JOINABLE` `ALREADY_MEMBER` `ROOM_LIMIT` `ROOM_FULL` `UNAVAILABLE` |
 | ItemSlot | `HAT` (모자) `FACE` (얼굴) `EXPRESSION` (표정) |
-| DefenseTicketStatus | `NONE` `OWNED` `IN_USE` |
-| DefenseRoomStatus | `AVAILABLE` `NOT_CERTIFIED` `VOTING` `USED_THIS_WEEK` `RESTING` `NO_VOTE_ROOM` |
+| DefenseTicketStatus | `NONE` `OWNED` |
 | PushAgreementType | `CERT_REMINDER` |
 | PushAgreementResult | `newAgreement` `alreadyAgreed` `agreementRejected` (앱인토스 값 그대로) |
 
@@ -109,8 +108,7 @@
 | 톡톡 | PUT | `/api/rounds/{roundId}/taps/received/played` | RESULT-03 |
 | 한 솥 | GET | `/api/rooms/{roomId}/pots/{seq}` | POT-01 |
 | 방어권 | POST | `/api/defense-tickets` | SHIELD-01 |
-| 방어권 | GET | `/api/defense-tickets/rooms` | SHIELD-02 |
-| 방어권 | POST | `/api/rooms/{roomId}/defenses` | SHIELD-02 |
+| 방어권 | POST | `/api/rounds/{roundId}/defenses` | SHIELD-02 |
 
 ## 2. 인증
 
@@ -411,15 +409,14 @@ STORE-01. 공양미 잔액, 방어권 상태, 꾸미기 아이템 목록입니�
 ```json
 {
   "riceBalance": 120,
-  "defenseTicket": { "status": "IN_USE", "usingRoomName": "배달 끊기 방", "isUsedThisWeek": true },
+  "defenseTicket": { "status": "OWNED", "isUsedThisWeek": false },
   "items": [
     { "itemId": 1, "code": "SANTA_HAT", "name": "산타 모자", "price": 100, "slot": "HAT", "isOwned": true, "isEquipped": true }
   ]
 }
 ```
 
-- `usingRoomName`: `IN_USE`일 때만. 결과 발표 전에 방이 삭제되면 `IN_USE`가 끝남
-- `IN_USE`일 때 방어권을 더 살 수 있는지는 [미정] Q-20
+- `isUsedThisWeek`: 이번 주(회차 날짜 기준 월~일)에 방어권을 씀
 
 ### POST /api/items/{itemId}/purchases
 
@@ -454,7 +451,7 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 
 ### POST /api/certifications/upload-urls
 
-CERT-04. 사진 업로드 URL을 발급합니다. 임시 경로에 올리고 인증 등록 때 정식 경로로 옮깁니다.
+CERT-04. 사진을 올릴 presigned URL과 `imageKey`를 발급합니다. 프론트는 `uploadUrl`로 사진을 올리고, 인증 등록 요청에 `imageKey`를 넣습니다. 서버는 등록할 때 사진을 임시 경로에서 정식 경로로 옮깁니다.
 
 ```json
 // request
@@ -464,8 +461,10 @@ CERT-04. 사진 업로드 URL을 발급합니다. 임시 경로에 올리고 인
 { "uploadUrl": "https://...", "imageKey": "tmp/...", "expiresIn": 300 }
 ```
 
+- 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보냄. `Content-Type` 헤더는 요청의 `contentType`과 같아야 함 (다르면 저장소가 403)
+- `expiresIn`: `uploadUrl` 유효 시간(초). 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있음
 - 허용 파일 형식·크기는 [미정] Q-30
-- 업로드에 실패하면 `imageKey` 없이 인증을 등록함
+- 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있음
 - 에러: `COMMON_002` (400, 허용하지 않는 형식)
 
 ### POST /api/rooms/{roomId}/certifications
@@ -481,7 +480,6 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
   "certificationId": 501, "roundDate": "2026-11-05",
   "certifiedAt": "2026-11-05T19:24:00", "editableUntil": "2026-11-05T19:34:00",
   "riceEarned": 10, "potEarned": 10,
-  "canUseDefense": true,
   "isVoteStarted": false
 }
 ```
@@ -490,7 +488,6 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
 - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
 - `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
-- `canUseDefense`: 지금 이 방에서 방어권을 쓰면 성공함 (방어권 보유와 SHIELD-02 사용 조건을 모두 채움). 인증 완료 화면의 방어권 버튼에 씀. 마지막 인증자도 유예 시간 안이라 조건을 채우면 `true`
 - `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이었으면 어제 투표는 이때 닫힘
 - 에러: `CERT_001` (409, 이미 인증함), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 입력값 오류·없거나 만료된 `imageKey`)
 
@@ -589,7 +586,6 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
 > - 동점이면 "뽑힌 보살이 없어요" (p97). 명세는 목탁 수로 지목 (RESULT-01)
 > - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡을 직접 수행하는 이마받기 변경(기획 회의)은 아직 반영 전
-> - 방어권을 결과 화면에서 쓰는 흐름 (p96)
 > - 다음 회차 투표가 열려 닫힌 투표의 결과 화면 ([미정] Q-56)
 > - `roundDate`를 화면에서 쓰는지
 > - 투표 탭 status별로 채우는 필드가 화면에 필요한 값과 맞는지
@@ -686,7 +682,8 @@ RESULT-02. 결과 화면입니다.
   "voteCounts": [ { "memberId": 12, "nickname": "지수", "count": 3, "isLeft": false } ],
   "allBosalCount": 1,
   "isMePicked": false,
-  "isMyDefenseUsed": false,
+  "defenseUsableUntil": null,
+  "canUseDefense": false,
   "canTap": true,
   "isTapExpired": false,
   "tappedMemberCount": 2
@@ -698,6 +695,8 @@ RESULT-02. 결과 화면입니다.
 - `isTapExpired`: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
 - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
+- `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록함 (SHIELD-02)
+- `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 보유, 이번 주 미사용). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
 - `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 아직 발표 전)
 - "모두 보살"이 과반이 아닐 때 지목은 [미정] Q-22
@@ -714,7 +713,8 @@ RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보�
 ```
 
 - `count`: 0~10
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아니거나 다음 회차 투표가 열려 닫힌 투표), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열림), `COMMON_002` (400, `count` 범위)
+- 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있음. 방어되면 보낸 톡톡은 무효
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아니거나(방어된 결과 포함) 다음 회차 투표가 열려 닫힌 투표), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열림), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
@@ -730,6 +730,7 @@ RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다
 ```
 
 - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
+- 방어된 회차(`DEFENDED`)는 빈 목록
 - 재생 완료를 저장한 뒤에는 빈 목록. 그 뒤에 도착한 톡톡만 다시 나옴
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
 
@@ -770,9 +771,7 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 ## 12. 방어권
 
 > 담당자 확인
-> - 디자인은 지목된 뒤 결과 화면에서 사용 (p92, p96). 이대로면 방 선택 API가 없어지고 사용 API·조건이 바뀜
-> - 곳간 조회의 `usingRoomName`, `isUsedThisWeek`는 이 흐름이 정해질 때 같이 정리
-> - [미정] Q-20, Q-21, Q-28, Q-75
+> - [미정] Q-76 (`인증 안 함`으로 지목된 사람의 사용), Q-77 (결과를 열지 않을 때 기한), Q-78 (톡톡 재생과 결과 순서)
 
 ### POST /api/defense-tickets
 
@@ -785,31 +784,17 @@ SHIELD-01. 공양미 100석으로 방어권을 삽니다.
 
 - 에러: `STORE_001` (409, 공양미 부족), `DEFENSE_001` (409, 이미 보유)
 
-### GET /api/defense-tickets/rooms
+### POST /api/rounds/{roundId}/defenses
 
-SHIELD-02. 방어권을 쓸 방을 고르는 화면입니다.
-
-```json
-{
-  "rooms": [
-    { "roomId": 1, "name": "배달 끊기 방", "status": "AVAILABLE" },
-    { "roomId": 2, "name": "쇼핑 참기 방", "status": "NOT_CERTIFIED" }
-  ]
-}
-```
-
-- `status`: `DefenseRoomStatus`. 사유마다 사용 API의 에러 code와 짝을 이룸. 사유가 여럿이면 `USED_THIS_WEEK` → `NO_VOTE_ROOM` → `RESTING` → `VOTING` → `NOT_CERTIFIED` 순서로 하나만 보냄
-- 방어권이 없어도 방 목록은 보내고, 쓰는 순간 `DEFENSE_002`로 막음
-
-### POST /api/rooms/{roomId}/defenses
-
-SHIELD-02. 그 방에서 지금 인증을 받는 회차(회차 날짜가 오늘인 회차)에 방어권을 씁니다. 쓰는 순간 소모됩니다. 어제 회차가 투표 중이어도 어제 회차에는 쓸 수 없습니다.
+SHIELD-02. 지목된 사람이 결과를 처음 본 때부터 2분 안에 그 회차에 방어권을 씁니다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀝니다. 차순위로 넘기지 않습니다.
 
 ```json
 // response 201 (data 없음)
 ```
 
-- 마지막 인증자의 유예 시간은 [미정] Q-28
-- 막힌 사유마다 code가 다르고, 방 선택 화면의 `status`와 짝을 이룸
-- 확인 순서: `ROOM_005` → `ROOM_002` → `DEFENSE_002` → `DEFENSE_005` → `DEFENSE_007` → `DEFENSE_006` → `DEFENSE_004` → `DEFENSE_003` (고칠 수 없는 사유부터)
-- 에러: `DEFENSE_002` (409, 방어권 없음), `DEFENSE_003` (409, 인증 전 = `NOT_CERTIFIED`), `DEFENSE_004` (409, 투표 중 = `VOTING`), `DEFENSE_005` (409, 이번 주 사용 완료 = `USED_THIS_WEEK`), `DEFENSE_006` (409, 휴식 중 = `RESTING`), `DEFENSE_007` (409, 3명 미만 방 = `NO_VOTE_ROOM`), `ROOM_002` (403), `ROOM_005` (404)
+- 결과 화면(`GET /api/rounds/{roundId}/result`)의 `defenseUsableUntil`, `canUseDefense`로 버튼과 남은 시간을 표시
+- 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 조회 시각으로 기록함
+- 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않음
+- 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공 (재시도해도 안전)
+- 확인 순서: `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_009` → `DEFENSE_005` → `DEFENSE_002` (고칠 수 없는 사유부터)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 발표 전), `DEFENSE_008` (403, 지목된 사람 아님), `DEFENSE_009` (409, 방어 시간 지남), `DEFENSE_005` (409, 이번 주 사용 완료), `DEFENSE_002` (409, 방어권 없음)

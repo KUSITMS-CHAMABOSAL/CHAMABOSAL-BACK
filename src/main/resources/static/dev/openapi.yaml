@@ -4,6 +4,8 @@ info:
   version: 0.2.0
   description: 시각은 모두 KST. 실패 응답은 `ErrorResponse` 형식이고, 예상하지 못한 오류는 `COMMON_999`(500).
 servers:
+- url: https://api.chamabosal.com
+  description: 개발 서버
 - url: http://localhost:8080
   description: 로컬
 security:
@@ -1009,7 +1011,7 @@ paths:
         공양미 잔액, 방어권 상태, 꾸미기 아이템 목록이다.
 
         - `riceBalance`: 화면 표시 잔액. 실제 잔액이 음수면 0
-        - `usingRoomName`: `IN_USE`일 때만. 결과 발표 전에 방이 삭제되면 `IN_USE`가 끝난다.
+        - `isUsedThisWeek`: 이번 주(회차 날짜 기준 월~일)에 방어권을 씀
       responses:
         '200':
           description: 성공
@@ -1154,9 +1156,12 @@ paths:
       operationId: createCertificationUploadUrl
       summary: 사진 업로드 URL 발급
       description: |-
-        사진 업로드 URL을 발급한다. 임시 경로에 올리고, 인증 등록 때 받은 `imageKey`를 넣으면 서버가 정식 경로로 옮긴다.
+        사진을 올릴 presigned URL과 `imageKey`를 발급한다. 프론트는 `uploadUrl`로 사진을 올리고, 인증 등록 요청에 `imageKey`를 넣는다. 서버는 등록할 때 사진을 임시 경로에서 정식 경로로 옮긴다.
 
-        - 업로드에 실패하면 `imageKey` 없이 인증을 등록한다.
+        - 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보낸다. `Content-Type` 헤더는 요청에 보낸 `contentType`과 같아야 한다. 다르면 저장소가 403으로 거부한다.
+        - `expiresIn`은 `uploadUrl`의 유효 시간이다. 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있다.
+        - 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있다.
+        - 허용 형식·크기는 [미정] Q-30. 허용하지 않는 형식이면 `COMMON_002`
       requestBody:
         required: true
         content:
@@ -1206,7 +1211,6 @@ paths:
 
         - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않는다.
         - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있다. 없거나 만료된 키는 `COMMON_002`
-        - `canUseDefense`: 지금 이 방에서 방어권을 쓰면 성공함 (방어권 보유와 SHIELD-02 사용 조건을 모두 채움). 인증 완료 화면의 방어권 버튼에 쓴다. 마지막 인증자도 유예 시간 안이라 조건을 채우면 `true`
       parameters:
       - *id001
       requestBody:
@@ -1917,6 +1921,8 @@ paths:
         - `isTapExpired`: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
+        - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록한다 (SHIELD-02).
+        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 보유, 이번 주 미사용). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
       parameters:
       - *id004
       responses:
@@ -1979,7 +1985,8 @@ paths:
         톡톡을 끝낼 때 한 번 보낸다. 0번(건너뛰기)도 보낸다. 칠 때마다 보내지 않는다.
 
         - `count`: 0~10
-        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아니거나, 다음 회차 투표가 열려 닫힌 투표
+        - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 무효다.
+        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아니거나(방어된 결과 포함), 다음 회차 투표가 열려 닫힌 투표
         - `TAP_003`: 이미 톡톡함. 저장된 횟수는 그대로다.
         - `TAP_004`: 톡톡 시간 지남. 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열림
       parameters:
@@ -2259,61 +2266,22 @@ paths:
                   $ref: '#/components/examples/STORE_001'
                 DEFENSE_001:
                   $ref: '#/components/examples/DEFENSE_001'
-  /api/defense-tickets/rooms:
-    get:
-      tags:
-      - '[DEFENSE] 방어권'
-      operationId: getDefenseRooms
-      summary: 방어권 쓸 방 선택
-      description: |-
-        방어권을 쓸 방을 고르는 화면이다.
-
-        - `status`: `DefenseRoomStatus`. 사유마다 사용 API의 에러 code와 짝을 이룬다. 사유가 여럿이면 `USED_THIS_WEEK` → `NO_VOTE_ROOM` → `RESTING` → `VOTING` → `NOT_CERTIFIED` 순서로 하나만 보낸다.
-        - 방어권이 없어도 방 목록은 보내고, 쓰는 순간 `DEFENSE_002`로 막는다.
-      responses:
-        '200':
-          description: 성공
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/ApiResponse'
-                - type: object
-                  required:
-                  - data
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/DefenseRoomListResponse'
-        '401':
-          description: COMMON_008
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                COMMON_008:
-                  $ref: '#/components/examples/COMMON_008'
-  /api/rooms/{roomId}/defenses:
+  /api/rounds/{roundId}/defenses:
     post:
       tags:
       - '[DEFENSE] 방어권'
       operationId: useDefense
       summary: 방어권 사용
       description: |-
-        그 방에서 지금 인증을 받는 회차(회차 날짜가 오늘인 회차)에 방어권을 쓴다. 쓰는 순간 소모된다. 어제 회차가 투표 중이어도 어제 회차에는 쓸 수 없다.
+        지목된 사람이 결과를 처음 본 때부터 2분 안에 그 회차에 방어권을 쓴다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀐다. 차순위로 넘기지 않는다.
 
-        | code | 사유 | 방 선택 화면 `status` |
-        |---|---|---|
-        | `DEFENSE_002` | 방어권 없음 | - |
-        | `DEFENSE_003` | 인증 전 | `NOT_CERTIFIED` |
-        | `DEFENSE_004` | 투표 중 | `VOTING` |
-        | `DEFENSE_005` | 이번 주 사용 완료 | `USED_THIS_WEEK` |
-        | `DEFENSE_006` | 휴식 중 | `RESTING` |
-        | `DEFENSE_007` | 3명 미만 방 | `NO_VOTE_ROOM` |
-
-        - 확인 순서 (고칠 수 없는 사유부터): `ROOM_005` → `ROOM_002` → `DEFENSE_002` → `DEFENSE_005` → `DEFENSE_007` → `DEFENSE_006` → `DEFENSE_004` → `DEFENSE_003`
+        - 결과 화면(`GET /api/rounds/{roundId}/result`)의 `defenseUsableUntil`, `canUseDefense`로 버튼과 남은 시간을 표시한다.
+        - 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 조회 시각으로 기록한다.
+        - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않는다.
+        - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공한다 (재시도해도 안전).
+        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_009` → `DEFENSE_005` → `DEFENSE_002`
       parameters:
-      - *id001
+      - *id004
       responses:
         '201':
           description: 성공 (data 없음)
@@ -2331,7 +2299,7 @@ paths:
                 COMMON_008:
                   $ref: '#/components/examples/COMMON_008'
         '403':
-          description: ROOM_002
+          description: ROOM_002 / DEFENSE_008
           content:
             application/json:
               schema:
@@ -2339,34 +2307,32 @@ paths:
               examples:
                 ROOM_002:
                   $ref: '#/components/examples/ROOM_002'
+                DEFENSE_008:
+                  $ref: '#/components/examples/DEFENSE_008'
         '404':
-          description: ROOM_005
+          description: ROUND_001
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                ROOM_005:
-                  $ref: '#/components/examples/ROOM_005'
+                ROUND_001:
+                  $ref: '#/components/examples/ROUND_001'
         '409':
-          description: DEFENSE_002 / DEFENSE_003 / DEFENSE_004 / DEFENSE_005 / DEFENSE_006 / DEFENSE_007
+          description: RESULT_001 / DEFENSE_009 / DEFENSE_005 / DEFENSE_002
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                DEFENSE_002:
-                  $ref: '#/components/examples/DEFENSE_002'
-                DEFENSE_003:
-                  $ref: '#/components/examples/DEFENSE_003'
-                DEFENSE_004:
-                  $ref: '#/components/examples/DEFENSE_004'
+                RESULT_001:
+                  $ref: '#/components/examples/RESULT_001'
+                DEFENSE_009:
+                  $ref: '#/components/examples/DEFENSE_009'
                 DEFENSE_005:
                   $ref: '#/components/examples/DEFENSE_005'
-                DEFENSE_006:
-                  $ref: '#/components/examples/DEFENSE_006'
-                DEFENSE_007:
-                  $ref: '#/components/examples/DEFENSE_007'
+                DEFENSE_002:
+                  $ref: '#/components/examples/DEFENSE_002'
 components:
   securitySchemes:
     bearerAuth:
@@ -2465,16 +2431,6 @@ components:
       - ALL_SAFE
       - DEFENDED
       description: '`PICKED` 지목, `ALL_BOSAL` 오늘은 모두 보살, `ALL_SAFE` 모두 무사, `DEFENDED` 방어'
-    DefenseRoomStatus:
-      type: string
-      enum:
-      - AVAILABLE
-      - NOT_CERTIFIED
-      - VOTING
-      - USED_THIS_WEEK
-      - RESTING
-      - NO_VOTE_ROOM
-      description: 방어권을 쓸 수 있는지. 사용 API의 에러 code와 짝을 이룬다.
     CertificationUploadUrlCreateRequest:
       type: object
       required:
@@ -2501,7 +2457,7 @@ components:
           example: tmp/...
         expiresIn:
           type: integer
-          description: URL 유효 시간(초)
+          description: '`uploadUrl` 유효 시간(초). `imageKey`는 업로드 후 1일 동안 쓸 수 있음'
           example: 300
           format: int32
     CertificationCreateRequest:
@@ -2538,7 +2494,6 @@ components:
       - editableUntil
       - riceEarned
       - potEarned
-      - canUseDefense
       - isVoteStarted
       properties:
         certificationId:
@@ -2569,10 +2524,6 @@ components:
           description: 한 솥에 넣은 석
           example: 10
           format: int32
-        canUseDefense:
-          type: boolean
-          description: 지금 이 방에서 방어권을 쓰면 성공함
-          example: true
         isVoteStarted:
           type: boolean
           description: 이 등록으로 투표가 시작됨
@@ -2933,7 +2884,8 @@ components:
       - voteCounts
       - allBosalCount
       - isMePicked
-      - isMyDefenseUsed
+      - defenseUsableUntil
+      - canUseDefense
       - canTap
       - isTapExpired
       - tappedMemberCount
@@ -2963,9 +2915,15 @@ components:
         isMePicked:
           type: boolean
           example: false
-        isMyDefenseUsed:
+        defenseUsableUntil:
+          type: string
+          description: 내가 지목된 `PICKED` 결과일 때만, 처음 조회 시각 + 2분. 나머지는 `null`
+          example: '2026-11-04T08:02:00'
+          format: date-time
+          nullable: true
+        canUseDefense:
           type: boolean
-          description: 내 방어권이 이 회차에 쓰였음
+          description: 지금 방어권을 쓰면 성공함
           example: false
         canTap:
           type: boolean
@@ -3026,31 +2984,6 @@ components:
           description: 구매 뒤 화면 표시 잔액
           example: 20
           format: int32
-    DefenseRoom:
-      type: object
-      required:
-      - roomId
-      - name
-      - status
-      properties:
-        roomId:
-          type: integer
-          example: 1
-          format: int64
-        name:
-          type: string
-          example: 배달 끊기 방
-        status:
-          $ref: '#/components/schemas/DefenseRoomStatus'
-    DefenseRoomListResponse:
-      type: object
-      required:
-      - rooms
-      properties:
-        rooms:
-          type: array
-          items:
-            $ref: '#/components/schemas/DefenseRoom'
     RoomGoal:
       type: string
       enum:
@@ -3088,7 +3021,6 @@ components:
       enum:
       - NONE
       - OWNED
-      - IN_USE
       description: 방어권 상태
     PushAgreementType:
       type: string
@@ -3655,16 +3587,10 @@ components:
       type: object
       required:
       - status
-      - usingRoomName
       - isUsedThisWeek
       properties:
         status:
           $ref: '#/components/schemas/DefenseTicketStatus'
-        usingRoomName:
-          type: string
-          description: '`IN_USE`일 때만'
-          example: 배달 끊기 방
-          nullable: true
         isUsedThisWeek:
           type: boolean
           description: 이번 주에 이미 씀
@@ -3891,36 +3817,24 @@ components:
         success: false
         code: DEFENSE_002
         message: 가지고 있는 방어권이 없어요.
-    DEFENSE_003:
-      summary: DEFENSE_003 (409)
-      value:
-        success: false
-        code: DEFENSE_003
-        message: 인증한 뒤에 방어권을 쓸 수 있어요.
-    DEFENSE_004:
-      summary: DEFENSE_004 (409)
-      value:
-        success: false
-        code: DEFENSE_004
-        message: 투표 중에는 방어권을 쓸 수 없어요.
     DEFENSE_005:
       summary: DEFENSE_005 (409)
       value:
         success: false
         code: DEFENSE_005
         message: 이번 주에 이미 방어권을 썼어요.
-    DEFENSE_006:
-      summary: DEFENSE_006 (409)
+    DEFENSE_008:
+      summary: DEFENSE_008 (403)
       value:
         success: false
-        code: DEFENSE_006
-        message: 휴식 중에는 방어권을 쓸 수 없어요.
-    DEFENSE_007:
-      summary: DEFENSE_007 (409)
+        code: DEFENSE_008
+        message: 지목된 보살만 방어권을 쓸 수 있어요.
+    DEFENSE_009:
+      summary: DEFENSE_009 (409)
       value:
         success: false
-        code: DEFENSE_007
-        message: 투표가 없는 방이에요.
+        code: DEFENSE_009
+        message: 방어권을 쓸 수 있는 시간이 지났어요.
     POKE_001:
       summary: POKE_001 (400)
       value:

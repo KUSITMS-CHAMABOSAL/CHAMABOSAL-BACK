@@ -158,11 +158,12 @@ erDiagram
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | round_date | DATE | NOT NULL | 회차 날짜 (KST, 05:00부터 다음 날 04:59까지) |
 | status | VARCHAR(20) | NOT NULL | `CERTIFYING` / `VOTING` / `ANNOUNCED` / `NO_VOTE` |
-| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 다음 날 05:00. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용. 마지막 인증자의 방어권 유예(투표 시작 후 1~2분) 판단에도 사용 |
+| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 다음 날 05:00. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용 |
 | vote_closed_at | DATETIME | NULL | 투표권 있는 명단 전원 투표 시각 또는 다음 회차 투표 시작 시각 |
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
+| picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 조회한 시각. 방어 마감(+2분) 기준 (SHIELD-02) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
 - `UNIQUE (room_id, round_date)`
@@ -337,8 +338,8 @@ erDiagram
 
 - 최대 1개 보유: 생성 컬럼 `unused_user_id = IF(used_at IS NULL, user_id, NULL)`에 UNIQUE
 - 주 1번: `UNIQUE (user_id, used_week_start)`
-- 사용 조건(그 방 인증 완료, 투표 시작 전, 휴식 중 아님, 방 3명 이상)은 서버에서 검증. 예외: 마지막 인증자는 투표 시작 후 1~2분 안에 본인만 사용 가능 (기획 확정)
-- 결과 판정 때 지목된 사람의 `used_round_id = 이 회차`인 방어권이 있으면 `DEFENDED`
+- 사용 조건(그 회차 `PICKED`의 지목된 본인, `rounds.picked_seen_at` + 2분 안)은 서버에서 검증 (SHIELD-02)
+- 사용하면 같은 트랜잭션에서 회차 `result_type`을 `DEFENDED`로 바꿈
 
 ### items (꾸미기 카탈로그)
 
