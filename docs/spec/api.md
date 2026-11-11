@@ -8,7 +8,7 @@
 
 ### 인증
 
-- `POST /api/auth/login`, `POST /api/auth/test-token`을 뺀 모든 API는 `Authorization: Bearer {accessToken}` 헤더가 필요합니다. (AUTH-02)
+- `POST /api/auth/login`, `POST /api/auth/test-token`과 문서·상태 확인 경로(Swagger, `/docs/error-codes`, `/actuator/health`)를 뺀 모든 요청은 `Authorization: Bearer {accessToken}` 헤더가 필요합니다. (AUTH-02)
 - 토큰이 없거나 만료되면 `COMMON_008` (401)을 돌려줍니다. 클라이언트는 인증 코드를 다시 받아 로그인합니다.
 
 ### 응답 형식
@@ -21,7 +21,7 @@
 { "success": false, "code": "ROOM_004", "message": "이미 쓰는 닉네임이에요.", "field": "nickname" }
 ```
 
-- 생성은 201, 조회·수정·삭제는 200입니다.
+- 새로 만들면 201, 조회·수정·삭제는 200입니다. 이미 있어서 새로 만들지 않고 기존 값을 돌려주면 200입니다.
 - 돌려줄 값이 없으면 `data`를 빼고 보냅니다. `field`는 입력값 오류일 때만 보냅니다.
 
 ### 값 형식
@@ -41,7 +41,8 @@
 | 개수 | `{대상}Count` | `memberCount`, `certifiedCount` |
 | 시각 | `{동작}At`, 기한은 `{상태}Until` | `certifiedAt`, `closesAt`, `editableUntil` |
 | 날짜 | `{대상}Date` | `roundDate` |
-| enum 값 | 대문자 스네이크 | `DELIVERY`, `NO_VOTE` |
+| enum 값 | 대문자 스네이크. 앱인토스 값은 받은 그대로 | `DELIVERY`, `NO_VOTE` |
+| 상태 필드 | `status` | `round.status`, `defenseTicket.status` |
 
 ### enum
 
@@ -53,9 +54,13 @@
 | LockReason | `TIME_OVER` (10분 지남) `VOTE_STARTED` (투표 시작) |
 | RoundStatus | `CERTIFYING` (인증 중) `VOTING` (투표 중) `ANNOUNCED` (발표) `NO_VOTE` (투표 없음) |
 | ReactionType | `RICE` `MOKTAK` |
+| VoteTabStatus | `UNDER_THREE` `BEFORE_FIRST_VOTE` `NOT_IN_LIST` `NO_VOTING_RIGHT` `VOTING` `VOTED` `RESULT_UNSEEN` `RESULT_SEEN` |
+| VoteTargetType | `MEMBER` (후보) `ALL_BOSAL` (오늘은 모두 보살) |
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
 | InviteStatus | `JOINABLE` `ALREADY_MEMBER` `ROOM_LIMIT` `ROOM_FULL` `UNAVAILABLE` |
+| ItemSlot | `HEAD` |
 | DefenseTicketStatus | `NONE` `OWNED` `IN_USE` |
+| DefenseRoomStatus | `AVAILABLE` `NOT_CERTIFIED` `VOTING` `USED_THIS_WEEK` `RESTING` `NO_VOTE_ROOM` |
 | PushAgreementType | `CERT_REMINDER` |
 | PushAgreementResult | `newAgreement` `alreadyAgreed` `agreementRejected` (앱인토스 값 그대로) |
 
@@ -255,7 +260,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
   "me": { "isLastCertifier": false, "receivedPokeCount": 2 },
   "entry": {
     "unplayedTapRoundId": null,
-    "unseenResultRoundId": 100,
+    "unseenResultRoundId": 99,
     "hasUnseenPotCelebration": false
   }
 }
@@ -294,7 +299,6 @@ ROOM-04. 이 방에서 쓰는 내 닉네임을 바꿉니다.
 - 1~8자, 한글(완성형)·영문·숫자
 - 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 쓸 수 없음. 영문 대소문자는 구분하지 않음
 - 지금 닉네임과 같으면 저장하지 않고 성공
-
 - 에러: `ROOM_002` (403), `ROOM_004` (409, `field: nickname`), `ROOM_005` (404), `COMMON_002` (400)
 
 ### PUT /api/rooms/{roomId}/members/me/seen-result
@@ -302,7 +306,7 @@ ROOM-04. 이 방에서 쓰는 내 닉네임을 바꿉니다.
 ROOM-06. 결과를 어디까지 봤는지 저장합니다. 그 회차와 이전 회차를 모두 본 것으로 처리합니다.
 
 ```json
-{ "roundId": 100 }
+{ "roundId": 99 }
 ```
 
 - 이미 저장한 회차보다 이전 회차를 보내면 바꾸지 않음
@@ -331,7 +335,6 @@ ROOM-07. 방을 나갑니다. 방장이면 위임하고, 마지막 멤버면 방
 ROOM-08. 방장이 멤버를 내보냅니다. 내보낸 사람은 같은 방에 다시 들어올 수 없습니다.
 
 - 투표 중인 회차가 있으면 `ROOM_008`. 어제 회차가 투표 중이어도 같음 (오늘 탭 `room.hasVotingRound`)
-
 - 에러: `ROOM_002` (403), `ROOM_005` (404), `ROOM_007` (403), `ROOM_008` (409), `ROOM_009` (404), `ROOM_010` (400)
 
 ## 5. 초대
@@ -341,7 +344,7 @@ ROOM-08. 방장이 멤버를 내보냅니다. 내보낸 사람은 같은 방에 
 INVITE-01. 내 초대 토큰을 돌려줍니다. 없으면 만듭니다. 클라이언트는 이 토큰으로 공유 링크를 만듭니다.
 
 ```json
-// response 200
+// response 201 (새로 만듦), 200 (이미 있음)
 { "inviteToken": "..." }
 ```
 
@@ -381,7 +384,7 @@ INVITE-03. 방에 들어옵니다. 나간 지 6개월 안이면 예전 멤버 �
 // request
 { "nickname": "지수" }
 
-// response 201
+// response 201 (들어옴), 200 (이미 멤버)
 { "roomId": 1, "memberId": 12, "nickname": "지수", "color": "MINT" }
 ```
 
@@ -422,7 +425,7 @@ STORE-02. 꾸미기 아이템을 사고 바로 착용합니다.
 ```
 
 - `equippedItemIds`: 구매 뒤 착용 중인 아이템 전체. 산 아이템과 같은 슬롯에 있던 아이템은 빠짐
-
+- 곳간 안의 API(구매, 착용)는 `itemId`를 쓰고, 보살 캐릭터를 그리는 응답(내 정보, 오늘 탭, 투표, 결과, 한 솥)은 `equippedItemCodes`를 씀. 곳간 조회의 `items[]`에 둘 다 있음
 - 에러: `STORE_001` (409), `STORE_002` (404), `STORE_003` (409)
 
 ### PUT /api/users/me/equipped-items
@@ -433,18 +436,15 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 { "itemIds": [1] }
 ```
 
-- 지금은 슬롯이 1칸이라 0~1개. 슬롯이 늘면 칸마다 하나씩 보냄
-
+- `itemIds`: 슬롯마다 하나. 지금 슬롯은 `HEAD` 1칸이라 0~1개이고, 칸 수는 [미정] Q-53
 - 곳간에서 끼워 보고 벗어 보는 동안에는 보내지 않고, 마지막 착용 목록을 한 번에 보냄 (구현할 때 Swagger 설명에도 적음)
 - 빈 배열이면 모두 벗음
-- 슬롯마다 하나. 지금 슬롯은 `HEAD` 1칸이고 칸 수는 [미정] Q-53
 - 에러: `STORE_004` (409, 보유하지 않은 아이템), `COMMON_002` (400, 같은 슬롯 중복)
 
 ## 7. 인증 사진
 
 > 담당자 확인
 > - `roundDate`를 화면에서 쓰는지 (오늘 탭에서는 뺌)
-> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
 
 ### POST /api/certifications/upload-urls
 
@@ -484,6 +484,7 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
 - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
 - `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
+- `canUseDefense`: 지금 이 방에서 방어권을 쓰면 성공함 (방어권 보유와 SHIELD-02 사용 조건을 모두 채움). 인증 완료 화면의 방어권 버튼에 씀. 마지막 인증자도 유예 시간 안이라 조건을 채우면 `true`
 - `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이었으면 어제 투표는 이때 닫힘
 - 에러: `CERT_001` (409, 이미 인증함), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 입력값 오류·없거나 만료된 `imageKey`)
 
@@ -512,7 +513,9 @@ CERT-02. 등록 후 10분 안에 수정합니다. 등록처럼 모든 값을 보
   | 없음 | `false` | 사진 삭제 |
   | 있음 | `true` | `COMMON_002` |
 
+- `isImageKept`: 필수. 빠지면 `COMMON_002`이고 인증은 그대로
 - `editableUntil`: 수정해도 바뀌지 않음 (등록 후 10분)
+- 확인 순서: 요청 형식(`COMMON_002`) → 없거나 삭제된 인증(`CERT_002`) → 본인 인증 아님(`CERT_003`) → 수정 시간 지남(`CERT_004`) → 투표 시작(`CERT_005`) → 사진 키 확인(`COMMON_002`)
 - 에러: `CERT_002` (404), `CERT_003` (403, 본인 인증 아님), `CERT_004` (409, 수정 시간 지남), `CERT_005` (409, 투표 시작), `COMMON_002` (400)
 
 ### DELETE /api/certifications/{certificationId}
@@ -530,6 +533,11 @@ CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥
 - 삭제한 뒤 같은 회차에 다시 인증할 수 있음
 - 에러: `CERT_002` (404, 없는 인증), `CERT_003` (403), `CERT_004` (409), `CERT_005` (409)
 
+## 8. 리액션
+
+> 담당자 확인
+> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
+
 ### PUT /api/certifications/{certificationId}/reactions/me
 
 REACT-01. 리액션을 남기거나 바꿉니다.
@@ -540,6 +548,7 @@ REACT-01. 리액션을 남기거나 바꿉니다.
 
 - 보낸 리액션으로 설정만 함. 같은 값으로 다시 보내도 그대로 (재시도해도 안전)
 - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 DELETE를 부름
+- 확인 순서: 요청 형식(`COMMON_002`) → 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`)
 - 에러: `CERT_002` (404), `ROOM_002` (403, 인증이 있는 방의 멤버 아님), `REACT_001` (403, 본인 인증), `REACT_002` (409, 투표 시작 후), `COMMON_002` (400, 없는 `type`)
 
 ### DELETE /api/certifications/{certificationId}/reactions/me
@@ -550,7 +559,7 @@ REACT-01. 리액션을 취소합니다.
 - 확인 순서: 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 남긴 리액션 없음(성공) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`). 그래서 투표 시작 뒤라도 남긴 리액션이 없으면 성공
 - 에러: `CERT_002` (404), `ROOM_002` (403), `REACT_001` (403), `REACT_002` (409)
 
-## 8. 콕
+## 9. 콕
 
 ### POST /api/rooms/{roomId}/pokes
 
@@ -568,7 +577,7 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 - 받는 사람·방·회차 기준 처음 콕만 푸시를 보냄 (POKE-02). 이미 보낸 푸시의 숫자는 바꿀 수 없어서 늘어나는 횟수는 앱 안에서만 보임
 - 에러: `POKE_001` (400, 본인), `ROOM_009` (404, 받는 사람이 이 방 현재 멤버 아님), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, `count` 범위)
 
-## 9. 투표 · 결과 · 톡톡
+## 10. 투표 · 결과 · 톡톡
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
@@ -577,6 +586,7 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 > - 방어권을 결과 화면에서 쓰는 흐름 (p96)
 > - 다음 회차 투표가 열려 닫힌 투표의 결과 화면 ([미정] Q-56)
 > - `roundDate`를 화면에서 쓰는지
+> - 투표 탭 status별로 채우는 필드가 화면에 필요한 값과 맞는지
 
 ### GET /api/rooms/{roomId}/vote
 
@@ -584,7 +594,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 
 ```json
 {
-  "state": "VOTING",
+  "status": "VOTING",
   "roundId": 100, "roundDate": "2026-11-04",
   "closesAt": "2026-11-06T05:00:00",
   "votedCount": 2, "voterCount": 4,
@@ -598,7 +608,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 }
 ```
 
-| state | 조건 |
+| status | 조건 |
 |---|---|
 | `UNDER_THREE` | 방 인원 3명 미만 |
 | `BEFORE_FIRST_VOTE` | 지난 결과가 없고 투표 전 |
@@ -609,26 +619,50 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 | `RESULT_UNSEEN` | 마감 후 결과를 아직 안 봄 |
 | `RESULT_SEEN` | 결과를 본 뒤 다음 투표 전 |
 
-- `BEFORE_FIRST_VOTE`: 나를 뺀 미인증 멤버 수와 첫 번째 미인증 멤버를 함께 보냄 (순서는 [미정] Q-25)
+status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4번)
+
+| status | 채우는 필드 |
+|---|---|
+| `UNDER_THREE` | `memberCount`, `memberLimit` |
+| `BEFORE_FIRST_VOTE` | `uncertifiedCount`, `firstUncertifiedMember` |
+| `NOT_IN_LIST`, `NO_VOTING_RIGHT` | `roundId`, `roundDate`, `closesAt` |
+| `VOTING` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount`, `candidates` |
+| `VOTED` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount` |
+| `RESULT_UNSEEN`, `RESULT_SEEN` | `roundId`, `roundDate` (가장 최근 발표 회차. 내용은 `GET /api/rounds/{roundId}/result`) |
+
+```json
+// BEFORE_FIRST_VOTE 예
+{
+  "status": "BEFORE_FIRST_VOTE",
+  "uncertifiedCount": 2,
+  "firstUncertifiedMember": { "memberId": 13, "nickname": "도윤", "color": "YELLOW" }
+}
+```
+
+- `uncertifiedCount`, `firstUncertifiedMember`: 나를 뺀 미인증 멤버 수와 그중 첫 번째 멤버. 미인증 멤버가 없으면 `0`, `null` (순서는 [미정] Q-25)
 - `closesAt`: 늦어도 닫히는 시각 (회차 날짜 이틀 뒤 05:00). 다음 회차가 먼저 전원 인증하면 그때 닫힘
 - `voterCount`: 투표권 있는 인원 (명단 중 인증한 멤버)
-- `candidates`: `VOTING`일 때만. `certification`이 `null`이면 인증 안 함
+- `candidates`: `certification`이 `null`이면 인증 안 함
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
 - 에러: `ROOM_002` (403), `ROOM_005` (404)
 
 ### POST /api/rounds/{roundId}/votes
 
-VOTE-03. 후보 또는 "오늘은 모두 보살"에 투표합니다. `targetMemberId`가 `null`이면 모두 보살입니다.
+VOTE-03. 후보 또는 "오늘은 모두 보살"에 투표합니다.
 
 ```json
-// request
-{ "targetMemberId": 12 }
+// request (후보)
+{ "targetType": "MEMBER", "targetMemberId": 12 }
+
+// request (오늘은 모두 보살)
+{ "targetType": "ALL_BOSAL" }
 
 // response 201
 { "riceEarned": 5, "potEarned": 5, "isClosed": false }
 ```
 
+- `targetType`: 필수. `MEMBER`면 `targetMemberId` 필수, `ALL_BOSAL`이면 `targetMemberId`를 보내지 않음. 어긋나면 `COMMON_002`
 - `isClosed`: 이 표로 투표권 있는 명단 전원이 투표해 마감됨
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `VOTE_001` (409, 투표 중 아님), `VOTE_002` (403, 명단 밖), `VOTE_003` (403, 투표권 없음), `VOTE_004` (409, 이미 투표함), `VOTE_005` (400, 본인 선택), `VOTE_006` (400, 선택할 수 없는 후보), `COMMON_002` (400)
 
@@ -638,14 +672,14 @@ RESULT-02. 결과 화면입니다.
 
 ```json
 {
-  "roundId": 100, "roundDate": "2026-11-04", "resultType": "PICKED",
+  "roundId": 99, "roundDate": "2026-11-03", "resultType": "PICKED",
   "picked": {
     "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "isLeft": false,
     "certificationResult": "FAILED", "spentAmount": 23000
   },
   "voteCounts": [ { "memberId": 12, "nickname": "지수", "count": 3, "isLeft": false } ],
   "allBosalCount": 1,
-  "isPickedMe": false,
+  "isMePicked": false,
   "isMyDefenseUsed": false,
   "canTap": true,
   "isTapExpired": false,
@@ -654,7 +688,8 @@ RESULT-02. 결과 화면입니다.
 ```
 
 - 누가 누구에게 투표했는지는 보내지 않음
-- `canTap`: `PICKED`이고 내가 지목된 사람이 아니고 아직 톡톡하지 않음
+- `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 다음 회차 투표가 열려 닫힌 투표는 톡톡이 없어 `false`
+- `isTapExpired`: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
 - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
 - `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
@@ -666,11 +701,14 @@ RESULT-02. 결과 화면입니다.
 RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보냅니다.
 
 ```json
+// request
 { "count": 7 }
+
+// response 201 (data 없음)
 ```
 
 - `count`: 0~10
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 톡톡할 수 없는 결과), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남), `COMMON_002` (400, `count` 범위)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아니거나 다음 회차 투표가 열려 닫힌 투표), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열림), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
@@ -686,6 +724,7 @@ RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다
 ```
 
 - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
+- 재생 완료를 저장한 뒤에는 빈 목록. 그 뒤에 도착한 톡톡만 다시 나옴
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
 
 ### PUT /api/rounds/{roundId}/taps/received/played
@@ -695,7 +734,7 @@ RESULT-03. 받은 톡톡 재생 완료를 저장합니다.
 - 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
 
-## 10. 한 솥
+## 11. 한 솥
 
 > 담당자 확인
 > - 방 만들 때 목표 300·450·700석 선택 (p23), 완성 후 방장이 연장·종료 (p41~43). 11/8 회의의 방 유효기간(목표 기간이 끝나도 연장·폭파)과 같이 디자인 보완 중이라 아직 반영 전
@@ -722,12 +761,12 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
 - 에러: `POT_001` (404, 없거나 아직 다 채우지 않은 솥), `ROOM_002` (403), `ROOM_005` (404)
 
-## 11. 방어권
+## 12. 방어권
 
 > 담당자 확인
 > - 디자인은 지목된 뒤 결과 화면에서 사용 (p92, p96). 이대로면 방 선택 API가 없어지고 사용 API·조건이 바뀜
 > - 곳간 조회의 `usingRoomName`, `isUsedThisWeek`는 이 흐름이 정해질 때 같이 정리
-> - [미정] Q-20, Q-21, Q-28
+> - [미정] Q-20, Q-21, Q-28, Q-75
 
 ### POST /api/defense-tickets
 
@@ -753,13 +792,18 @@ SHIELD-02. 방어권을 쓸 방을 고르는 화면입니다.
 }
 ```
 
-- `status`: `AVAILABLE` `NOT_CERTIFIED` `VOTING` `USED_THIS_WEEK` `RESTING` `NO_VOTE_ROOM`
+- `status`: `DefenseRoomStatus`. 사유마다 사용 API의 에러 code와 짝을 이룸. 사유가 여럿이면 `USED_THIS_WEEK` → `NO_VOTE_ROOM` → `RESTING` → `VOTING` → `NOT_CERTIFIED` 순서로 하나만 보냄
 - 방어권이 없어도 방 목록은 보내고, 쓰는 순간 `DEFENSE_002`로 막음
 
 ### POST /api/rooms/{roomId}/defenses
 
-SHIELD-02. 그 방의 현재 회차에 방어권을 씁니다. 쓰는 순간 소모됩니다.
+SHIELD-02. 그 방에서 지금 인증을 받는 회차(회차 날짜가 오늘인 회차)에 방어권을 씁니다. 쓰는 순간 소모됩니다. 어제 회차가 투표 중이어도 어제 회차에는 쓸 수 없습니다.
+
+```json
+// response 201 (data 없음)
+```
 
 - 마지막 인증자의 유예 시간은 [미정] Q-28
 - 막힌 사유마다 code가 다르고, 방 선택 화면의 `status`와 짝을 이룸
+- 확인 순서: `ROOM_005` → `ROOM_002` → `DEFENSE_002` → `DEFENSE_005` → `DEFENSE_007` → `DEFENSE_006` → `DEFENSE_004` → `DEFENSE_003` (고칠 수 없는 사유부터)
 - 에러: `DEFENSE_002` (409, 방어권 없음), `DEFENSE_003` (409, 인증 전 = `NOT_CERTIFIED`), `DEFENSE_004` (409, 투표 중 = `VOTING`), `DEFENSE_005` (409, 이번 주 사용 완료 = `USED_THIS_WEEK`), `DEFENSE_006` (409, 휴식 중 = `RESTING`), `DEFENSE_007` (409, 3명 미만 방 = `NO_VOTE_ROOM`), `ROOM_002` (403), `ROOM_005` (404)
