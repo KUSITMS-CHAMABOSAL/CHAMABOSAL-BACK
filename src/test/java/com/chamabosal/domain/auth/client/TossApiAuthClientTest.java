@@ -9,7 +9,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.chamabosal.domain.auth.exception.AuthErrorCode;
+import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,14 +52,14 @@ class TossApiAuthClientTest {
     void 코드_오류_4011은_AUTH_001로_변환한다() {
         respondFail("4011");
 
-        assertFailsWith(AuthErrorCode.INVALID_AUTH_CODE);
+        assertFailsWith(BaseErrorCode.INVALID_AUTH_CODE);
     }
 
     @Test
     void 요청_한도_초과는_AUTH_002로_변환한다() {
         respondFail("4095");
 
-        assertFailsWith(AuthErrorCode.TOSS_API_FAILED);
+        assertFailsWith(BaseErrorCode.TOSS_API_FAILED);
     }
 
     @Test
@@ -67,7 +67,7 @@ class TossApiAuthClientTest {
         server.expect(requestTo(EXCHANGE_URL))
                 .andRespond(withSuccess("{\"resultType\":\"HTTP_TIMEOUT\"}", MediaType.APPLICATION_JSON));
 
-        assertFailsWith(AuthErrorCode.TOSS_API_FAILED);
+        assertFailsWith(BaseErrorCode.TOSS_API_FAILED);
     }
 
     @Test
@@ -75,21 +75,21 @@ class TossApiAuthClientTest {
         server.expect(requestTo(EXCHANGE_URL))
                 .andRespond(withSuccess("{\"resultType\":\"SUCCESS\"}", MediaType.APPLICATION_JSON));
 
-        assertFailsWith(AuthErrorCode.TOSS_API_FAILED);
+        assertFailsWith(BaseErrorCode.TOSS_API_FAILED);
     }
 
     @Test
     void HTTP_오류는_AUTH_002로_변환한다() {
         server.expect(requestTo(EXCHANGE_URL)).andRespond(withServerError());
 
-        assertFailsWith(AuthErrorCode.TOSS_API_FAILED);
+        assertFailsWith(BaseErrorCode.TOSS_API_FAILED);
     }
 
     @Test
     void 네트워크_오류는_AUTH_002로_변환한다() {
         server.expect(requestTo(EXCHANGE_URL)).andRespond(withException(new IOException("timeout")));
 
-        assertFailsWith(AuthErrorCode.TOSS_API_FAILED);
+        assertFailsWith(BaseErrorCode.TOSS_API_FAILED);
     }
 
     private void respondFail(String errorCode) {
@@ -100,7 +100,7 @@ class TossApiAuthClientTest {
                 ));
     }
 
-    private void assertFailsWith(AuthErrorCode errorCode) {
+    private void assertFailsWith(BaseErrorCode errorCode) {
         assertThatThrownBy(() -> client.exchangeAnonKey("auth-code"))
                 .isInstanceOfSatisfying(BaseException.class, e -> assertThat(e.getErrorCode()).isEqualTo(errorCode));
     }

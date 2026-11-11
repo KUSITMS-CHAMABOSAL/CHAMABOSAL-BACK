@@ -20,7 +20,14 @@ public enum BaseErrorCode implements ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_009", "접근 권한이 없습니다."),
     UNPROCESSABLE_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_010", "처리할 수 없는 요청입니다."),
 
-    UNHANDLED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_999", "서버 내부 오류가 발생했습니다.");
+    UNHANDLED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_999", "서버 내부 오류가 발생했습니다."),
+
+    // Auth
+    INVALID_AUTH_CODE(HttpStatus.BAD_REQUEST, "AUTH_001", "인증 코드가 틀렸거나 만료되었습니다."),
+    TOSS_API_FAILED(HttpStatus.BAD_GATEWAY, "AUTH_002", "앱인토스 호출에 실패했습니다."),
+
+    // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
+    ;
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -48,8 +48,8 @@ reviews:
         테이블·컬럼명은 snake_case다.
     - path: "**/exception/**/*.java"
       instructions: >
-        도메인 에러는 ErrorCode를 구현하는 {도메인}ErrorCode enum에 추가하고,
-        code는 {DOMAIN}_{nnn} 형식(예: MEETUP_001)이다. 예외는 BaseException(ErrorCode)으로 던지고,
+        모든 에러코드는 BaseErrorCode 한 곳에 도메인 구역(// Common, // Auth 등)별로 추가하고,
+        code는 {DOMAIN}_{nnn} 형식(예: ROOM_001)이다. 예외는 BaseException(ErrorCode)으로 던지고,
         GlobalExceptionHandler가 ErrorResponse로 변환한다.
     - path: "**/repository/**/*.java"
       instructions: >
