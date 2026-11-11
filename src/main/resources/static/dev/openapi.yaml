@@ -1712,7 +1712,6 @@ paths:
                           spentAmount: 23000
                           imageUrl: null
                           certifiedAt: '2026-11-04T19:24:00'
-                        moktakCount: 2
                         isSelectable: true
                         isResting: false
                       memberCount: null
@@ -1924,6 +1923,7 @@ paths:
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
         - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록한다 (SHIELD-02).
+        - `hasDefenseTicket`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 미사용 방어권 보유 여부 ("보유 방어권 1개" 표시). 나머지는 `null`
         - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 보유, 이번 주 미사용). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
       parameters:
       - *id004
@@ -2691,7 +2691,6 @@ components:
       - color
       - equippedItemCodes
       - certification
-      - moktakCount
       - isSelectable
       - isResting
       properties:
@@ -2712,11 +2711,6 @@ components:
           example: []
         certification:
           $ref: '#/components/schemas/VoteCandidateCertification'
-        moktakCount:
-          type: integer
-          description: 투표 시작 시점의 목탁 수
-          example: 2
-          format: int32
         isSelectable:
           type: boolean
           description: 고를 수 있는 후보
@@ -2893,6 +2887,7 @@ components:
       - allBosalCount
       - isMePicked
       - defenseUsableUntil
+      - hasDefenseTicket
       - canUseDefense
       - canTap
       - isTapExpired
@@ -2928,6 +2923,11 @@ components:
           description: 내가 지목된 `PICKED` 결과일 때만, 처음 조회 시각 + 2분. 나머지는 `null`
           example: '2026-11-04T08:02:00'
           format: date-time
+          nullable: true
+        hasDefenseTicket:
+          type: boolean
+          description: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 미사용 방어권 보유 여부. 나머지는 `null`
+          example: null
           nullable: true
         canUseDefense:
           type: boolean

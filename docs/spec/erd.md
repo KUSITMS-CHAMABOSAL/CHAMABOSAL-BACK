@@ -187,7 +187,6 @@ erDiagram
 | is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함·휴식 중이면 false) |
 | can_vote | BOOLEAN | NOT NULL | 투표권. 투표 시작 시점까지 인증했으면 true (11/8 회의) |
 | is_resting | BOOLEAN | NOT NULL | 휴식 중 (후보 카드에 흐리게 표시) |
-| moktak_count | INT | NOT NULL | 투표 시작 시점 목탁 수 (후보 카드·동점 판정) |
 
 - `UNIQUE (round_id, member_id)`
 - 명단 3명 미만이면 행을 만들지 않고 `rounds.status = NO_VOTE`

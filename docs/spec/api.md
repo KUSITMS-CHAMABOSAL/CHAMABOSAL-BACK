@@ -584,7 +584,6 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
-> - 동점이면 "뽑힌 보살이 없어요" (p97). 명세는 목탁 수로 지목 (RESULT-01)
 > - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡을 직접 수행하는 이마받기 변경(기획 회의)은 아직 반영 전
 > - 다음 회차 투표가 열려 닫힌 투표의 결과 화면 ([미정] Q-56)
 > - `roundDate`를 화면에서 쓰는지
@@ -604,7 +603,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
     {
       "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [],
       "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" },
-      "moktakCount": 2, "isSelectable": true, "isResting": false
+      "isSelectable": true, "isResting": false
     }
   ]
 }
@@ -685,6 +684,7 @@ RESULT-02. 결과 화면입니다.
   "allBosalCount": 1,
   "isMePicked": false,
   "defenseUsableUntil": null,
+  "hasDefenseTicket": null,
   "canUseDefense": false,
   "canTap": true,
   "isTapExpired": false,
@@ -698,6 +698,7 @@ RESULT-02. 결과 화면입니다.
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
 - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
 - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록함 (SHIELD-02)
+- `hasDefenseTicket`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 미사용 방어권 보유 여부 ("보유 방어권 1개" 표시). 나머지는 `null`
 - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 보유, 이번 주 미사용). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
 - `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 아직 발표 전)
