@@ -2710,7 +2710,10 @@ components:
           description: 착용 아이템 코드. 없으면 빈 배열
           example: []
         certification:
-          $ref: '#/components/schemas/VoteCandidateCertification'
+          allOf:
+          - $ref: '#/components/schemas/VoteCandidateCertification'
+          nullable: true
+          description: 인증하지 않았으면 `null`
         isSelectable:
           type: boolean
           description: 고를 수 있는 후보
@@ -2904,7 +2907,10 @@ components:
         resultType:
           $ref: '#/components/schemas/ResultType'
         picked:
-          $ref: '#/components/schemas/PickedMember'
+          allOf:
+          - $ref: '#/components/schemas/PickedMember'
+          nullable: true
+          description: '`PICKED`, `DEFENDED`일 때만. 나머지는 `null`'
         voteCounts:
           type: array
           items:
@@ -3430,7 +3436,10 @@ components:
           example: 3
           format: int32
         certification:
-          $ref: '#/components/schemas/TodayCertification'
+          allOf:
+          - $ref: '#/components/schemas/TodayCertification'
+          nullable: true
+          description: 오늘 인증. 인증 전이면 `null`
     TodayMe:
       type: object
       required:
@@ -3570,7 +3579,10 @@ components:
         status:
           $ref: '#/components/schemas/InviteStatus'
         room:
-          $ref: '#/components/schemas/InviteRoom'
+          allOf:
+          - $ref: '#/components/schemas/InviteRoom'
+          nullable: true
+          description: '`UNAVAILABLE`이면 `null`'
         inviterNickname:
           type: string
           description: 초대한 사람이 나갔으면 `null`
