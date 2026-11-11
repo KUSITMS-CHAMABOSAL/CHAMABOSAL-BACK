@@ -66,4 +66,7 @@ reviews:
       enabled: false
   pre_merge_checks:
     docstrings:
-      mode: off
+      mode: "off"
+    # 연결 이슈의 할 일을 다 했는지 보는 머지 전 검사도 끈다 (assess_linked_issues와 별개)
+    issue_assessment:
+      mode: "off"

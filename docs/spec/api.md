@@ -72,7 +72,7 @@
 | 인증 | POST | `/api/auth/login` | AUTH-01 |
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 |
 | 사용자 | GET | `/api/users/me` | USER-01 |
-| 사용자 | GET | `/api/users/me/records` | USER-02 |
+| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 |
 | 사용자 | DELETE | `/api/users/me` | USER-05 |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 |
@@ -164,15 +164,17 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 - `hasUnseen`: 안 본 결과나 한 솥 축하가 있음
 - `canCreateRoom`: 참여 중인 방이 2개면 `false`
 
-### GET /api/users/me/records
+### GET /api/rooms/{roomId}/members/me/calendar
 
-USER-02. 내 보살 탭의 이번 달 기록입니다. 나간 방을 포함한 모든 방을 합산합니다.
+USER-02. 내 보살 탭의 방별 인증 캘린더입니다. `month`를 비우면 이번 달입니다.
+
+```
+GET /api/rooms/1/members/me/calendar?month=2026-11
+```
 
 ```json
 {
-  "enduredCount": 9,
-  "streakDays": 4,
-  "pickedCount": 2,
+  "month": "2026-11",
   "calendar": [
     { "date": "2026-11-01", "result": "ENDURED" },
     { "date": "2026-11-02", "result": "FAILED" }
@@ -180,7 +182,10 @@ USER-02. 내 보살 탭의 이번 달 기록입니다. 나간 방을 포함한 �
 }
 ```
 
-- `calendar`: 인증이 없는 날은 빠짐. 그날 하나라도 `FAILED`면 `FAILED`
+- 회차 날짜 기준. 05:00 전 인증은 전날로 들어감
+- 인증이 없는 날과 삭제한 인증은 빠짐
+- 이 방의 이번 달 참은 횟수·지목 횟수는 오늘 탭 `members[]`에 있음
+- 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 월 형식)
 
 ### PATCH /api/users/me/settings
 
@@ -221,7 +226,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 { "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
 ```
 
-- `name`: 1~12자, `memberLimit`: 2~4, `nickname`: 1~8자 (형식은 `common.md`)
+- `name`: 1~8자, `memberLimit`: 2~4, `nickname`: 1~8자 (형식은 `common.md`)
 - 방을 만드는 시점은 [미정] Q-37
 - 에러: `ROOM_001` (409), `COMMON_002` (400)
 
@@ -233,7 +238,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 {
   "room": {
     "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY",
-    "memberCount": 4, "memberLimit": 4, "isOwner": true, "potCompletedCount": 1, "hasVotingRound": true
+    "memberCount": 4, "memberLimit": 4, "isOwner": true, "potCompletedCount": 1, "hasVotingRound": true, "daysTogether": 7
   },
   "pot": { "amount": 186, "goalAmount": 300 },
   "round": {
@@ -262,6 +267,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 ```
 
 - `room.potCompletedCount`: 이 방에서 한 솥을 다 채운 횟수 (쌀가마 배지). 몇 번째 솥인지 표시하고, 안 본 축하를 판단하는 기준(`seen-pot`의 `seenPotCount`)으로도 씀
+- `room.daysTogether`: 방을 만든 회차 날짜부터 지난 일수. 만든 날은 0 ("7일째 같이 참는중")
 - `room.hasVotingRound`: 이 방에 투표 중인 회차가 있음 (어제 회차 포함). 이때 내보내기는 `ROOM_008`로 막힘. `round.status`는 오늘 회차만의 상태라 다를 수 있음
 - `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증이나 첫 콕 때 만듦
 - `round.status`: 회차 행이 없으면 `CERTIFYING`
@@ -404,7 +410,7 @@ STORE-01. 공양미 잔액, 방어권 상태, 꾸미기 아이템 목록입니�
   "riceBalance": 120,
   "defenseTicket": { "status": "IN_USE", "usingRoomName": "배달 끊기 방", "isUsedThisWeek": true },
   "items": [
-    { "itemId": 1, "code": "SANTA_HAT", "name": "산타 모자", "price": 100, "slot": "HEAD", "isOwned": true, "isEquipped": true }
+    { "itemId": 1, "code": "SANTA_HAT", "name": "산타 모자", "price": 100, "slot": "HAT", "isOwned": true, "isEquipped": true }
   ]
 }
 ```
@@ -433,11 +439,11 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 { "itemIds": [1] }
 ```
 
-- 지금은 슬롯이 1칸이라 0~1개. 슬롯이 늘면 칸마다 하나씩 보냄
+- 슬롯마다 하나씩, 0~3개
 
 - 곳간에서 끼워 보고 벗어 보는 동안에는 보내지 않고, 마지막 착용 목록을 한 번에 보냄 (구현할 때 Swagger 설명에도 적음)
 - 빈 배열이면 모두 벗음
-- 슬롯마다 하나. 지금 슬롯은 `HEAD` 1칸이고 칸 수는 [미정] Q-53
+- 슬롯마다 하나. 슬롯은 `HAT`(모자), `FACE`(얼굴), `EXPRESSION`(표정)
 - 에러: `STORE_004` (409, 보유하지 않은 아이템), `COMMON_002` (400, 같은 슬롯 중복)
 
 ## 7. 인증 사진

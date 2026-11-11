@@ -348,7 +348,7 @@ erDiagram
 | code | VARCHAR(50) | UK, NOT NULL | `RUDOLPH_NOSE` 등, 클라이언트 이미지 매핑 |
 | name | VARCHAR(20) | NOT NULL | |
 | price | INT | NOT NULL | 50 / 100 |
-| slot | VARCHAR(20) | NOT NULL | `HEAD` (슬롯 1개로 시작) |
+| slot | VARCHAR(20) | NOT NULL | `HAT` / `FACE` / `EXPRESSION` |
 | display_order | INT | NOT NULL | 상점 노출 순서 |
 
 - 6종으로 시작 (정책서상 "예시"라 바뀔 수 있어서 enum 대신 테이블)
@@ -363,7 +363,7 @@ erDiagram
 | is_equipped | BOOLEAN | NOT NULL, 기본 false | 착용 중 여부 |
 
 - `UNIQUE (user_id, item_id)` → 영구 보유
-- 슬롯마다 하나만 착용: 착용할 때 같은 `items.slot`의 다른 보유 아이템을 `false`로 바꿈 (지금은 슬롯이 `HEAD` 하나라 착용하면 기존 아이템이 벗겨짐)
+- 슬롯마다 하나만 착용: 착용할 때 같은 `items.slot`의 다른 보유 아이템을 `false`로 바꿈
 - 슬롯이 늘어나면 `items.slot` 값만 추가, 테이블 구조는 그대로
 - 착용은 모든 방 공통 (기획 확정)
 
