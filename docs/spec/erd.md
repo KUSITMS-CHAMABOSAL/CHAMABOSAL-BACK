@@ -96,9 +96,9 @@ erDiagram
 | name | VARCHAR(12) | NOT NULL | 방 이름, 수정 불가 |
 | goal | VARCHAR(20) | NOT NULL | `DELIVERY` / `CAFE` / `SHOPPING` / `ETC` |
 | member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가 |
-| owner_member_id | BIGINT | FK room_members, NULL | 방장. 생성 직후 닉네임 정하기 전에는 NULL. [미정] Q-37 |
+| owner_member_id | BIGINT | NULL | 방장의 `room_members.id`. `rooms`와 `room_members`가 서로를 가리키는 순환을 피하려고 FK 없이 둠. 방과 방장 멤버를 만드는 같은 요청에서 채움 (방을 먼저 저장해야 해서 컬럼은 NULL 허용) |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
-| deleted_at | DATETIME | NULL | 마지막 멤버가 나가거나 빈 방 정리로 삭제 |
+| deleted_at | DATETIME | NULL | 마지막 멤버가 나가면 삭제 |
 
 - 방 인원 수는 `room_members`에서 `left_at IS NULL`인 행 수로 계산
 
@@ -123,17 +123,16 @@ erDiagram
 - 나간 지 6개월 안에 다시 들어오면 예전 행을 다시 씀: `left_at`·`leave_type`을 비우고 `joined_at`을 새로 기록
   - 이번 달 지목 횟수는 저장하지 않고 `rounds`에서 집계 (`picked_user_id` + 회차 월 + `result_type = PICKED`)
   - 다시 들어올 때 닉네임 입력(WF 03)에 예전 닉네임을 기본값으로 채워 보여주고 그대로 쓰거나 수정 (기획 확정). 예전 닉네임은 다른 사람이 못 쓰는 값이라 겹치지 않고, 중복 검사에서 본인 행은 제외
-  - 색이 겹치면 남은 색 중 랜덤 (기획 확정). 색을 먼저 정하고 `left_at`을 비움 (먼저 비우면 UNIQUE에 막힘)
+  - 색이 겹치면 남은 색 중 랜덤 (기획 확정). `rooms` 행 락 안에서 현재 멤버의 색을 보고 정함
   - 나간 지 6개월이 지나서 오면 새 멤버로 새 행을 만듦 (기획 확정). 지목 통계는 0부터 시작하고 예전 행은 "떠난 보살"로 남음
 - 현재 멤버와 6개월 안에 나간 멤버의 닉네임은 쓸 수 없음 (대소문자 무시, 기획 확정)
-  - 6개월 조건은 UNIQUE로 걸 수 없어서 `rooms` 행 락을 잡고 서비스에서 확인 (입장·닉네임 변경 모두). 현재 멤버끼리는 아래 UNIQUE로도 막음
-  - 🛠 MySQL은 부분 인덱스가 없음 → 생성 컬럼 `active_nickname = IF(left_at IS NULL, LOWER(nickname), NULL)`에 `UNIQUE (room_id, active_nickname)`
-- 현재 멤버 중 같은 사람은 한 번만: 같은 방식으로 `UNIQUE (room_id, active_user_id)`
-- 현재 멤버 중 색상 중복 불가: 같은 방식으로 `UNIQUE (room_id, active_color)`
+  - 6개월 조건은 UNIQUE로 걸 수 없어서 `rooms` 행 락을 잡고 서비스에서 확인 (입장·닉네임 변경 모두). 방 멤버를 추가하거나 바꾸는 코드는 모두 이 락을 먼저 잡아야 함
+  - 현재 멤버끼리의 닉네임·색상 중복과 같은 사람의 중복 입장도 같은 `rooms` 행 락 안에서 확인한다. MySQL은 부분 인덱스가 없어 생성 컬럼 UNIQUE가 필요한데, 테스트(H2)와 운영 스키마가 달라져서 넣지 않음 (ROOM-01 계획서)
 - 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지
 - 인덱스: `(room_id, left_at)` → 방의 현재 멤버 목록·인원 수 / `(user_id, left_at)` → 내가 참여 중인 방 목록·개수
   - 인원 수는 컬럼으로 저장하지 않고 매번 셈 (방당 최대 4명이라 인덱스로 몇 행만 읽음)
   - 동시 입장으로 `member_limit`을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
+  - 두 락을 함께 잡을 때는 항상 `users` → `rooms` 순서로 잡는다. 순서가 다르면 동시 요청끼리 서로 기다리다 멈출 수 있다 (데드락)
 - 참여 중인 방 개수: user_id 기준 `left_at IS NULL` 행 수 (삭제된 방 제외)
 - 초대 링크: `Share.createLink({ path: "intoss://{앱이름}/invite?token={invite_token}" })`
   - 링크로 들어오면 토큰으로 멤버를 찾고, 그 멤버의 `room_id`·`nickname`으로 미리보기("{닉네임} 님의 초대")
@@ -410,7 +409,6 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
 | 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
 | 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행은 남기고 `toss_anon_key` NULL, `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
-| 빈 방 | 매일, 만든 지 24시간 지난 방 | 현재 멤버 0명인 방 `deleted_at` 기록 ([미정] Q-37) |
 | 인증에 안 쓰인 업로드 사진 | 업로드 + 1일 | S3 `tmp/` 경로 수명 주기 규칙으로 자동 삭제 (서버 작업 없음) |
 
 ---

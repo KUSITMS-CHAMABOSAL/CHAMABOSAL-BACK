@@ -2,7 +2,7 @@
 
 경로, 요청·응답 필드, 에러 code를 적은 문서입니다. 동작 규칙은 각 기능 명세를 따르고, 엔드포인트마다 기능 ID를 붙였습니다. 구현된 API는 Swagger가 기준입니다.
 
-- `[미정] Q-37`처럼 적힌 항목은 [`open-questions.md`](open-questions.md)의 답에 따라 바뀔 수 있습니다.
+- `[미정] Q-16`처럼 적힌 항목은 [`open-questions.md`](open-questions.md)의 답에 따라 바뀔 수 있습니다.
 
 ## 0. 공통
 
@@ -18,7 +18,7 @@
 ```
 
 ```json
-{ "success": false, "code": "ROOM_004", "message": "이미 쓰는 닉네임이에요.", "field": "nickname" }
+{ "success": false, "code": "ROOM_004", "message": "이미 쓰는 닉네임입니다.", "field": "nickname" }
 ```
 
 - 새로 만들면 201, 조회·수정·삭제는 200입니다. 이미 있어서 새로 만들지 않고 기존 값을 돌려주면 200입니다.
@@ -71,44 +71,46 @@
 
 ## 1. API 목록
 
-| 도메인 | 메서드 | 경로 | 기능 ID |
-|---|---|---|---|
-| 인증 | POST | `/api/auth/login` | AUTH-01 |
-| 인증 | POST | `/api/auth/test-token` | AUTH-03 |
-| 사용자 | GET | `/api/users/me` | USER-01 |
-| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |
-| 사용자 | PATCH | `/api/users/me/settings` | USER-03 |
-| 사용자 | DELETE | `/api/users/me` | USER-05 |
-| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 |
-| 방 | POST | `/api/rooms` | ROOM-01 |
-| 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |
-| 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 |
-| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |
-| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 |
-| 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 |
-| 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 |
-| 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 |
-| 초대 | GET | `/api/invites/{token}` | INVITE-02 |
-| 초대 | POST | `/api/invites/{token}/join` | INVITE-03 |
-| 곳간 | GET | `/api/store` | STORE-01 |
-| 곳간 | POST | `/api/items/{itemId}/purchases` | STORE-02 |
-| 곳간 | PUT | `/api/users/me/equipped-items` | STORE-03 |
-| 인증 사진 | POST | `/api/certifications/upload-urls` | CERT-04 |
-| 인증 사진 | POST | `/api/rooms/{roomId}/certifications` | CERT-01 |
-| 인증 사진 | PATCH | `/api/certifications/{certificationId}` | CERT-02 |
-| 인증 사진 | DELETE | `/api/certifications/{certificationId}` | CERT-02 |
-| 리액션 | PUT | `/api/certifications/{certificationId}/reactions/me` | REACT-01 |
-| 리액션 | DELETE | `/api/certifications/{certificationId}/reactions/me` | REACT-01 |
-| 콕 | POST | `/api/rooms/{roomId}/pokes` | POKE-01 |
-| 투표 | GET | `/api/rooms/{roomId}/vote` | VOTE-05 |
-| 투표 | POST | `/api/rounds/{roundId}/votes` | VOTE-03 |
-| 결과 | GET | `/api/rounds/{roundId}/result` | RESULT-02 |
-| 톡톡 | POST | `/api/rounds/{roundId}/taps` | RESULT-03 |
-| 톡톡 | GET | `/api/rounds/{roundId}/taps/received` | RESULT-03 |
-| 톡톡 | PUT | `/api/rounds/{roundId}/taps/received/played` | RESULT-03 |
-| 한 솥 | GET | `/api/rooms/{roomId}/pots/{seq}` | POT-01 |
-| 방어권 | POST | `/api/defense-tickets` | SHIELD-01 |
-| 방어권 | POST | `/api/rounds/{roundId}/defenses` | SHIELD-02 |
+`구현`은 실제로 호출할 수 있는 API입니다. API를 구현한 PR에서 같이 바꿉니다.
+
+| 도메인 | 메서드 | 경로 | 기능 ID | 구현 |
+|---|---|---|---|---|
+| 인증 | POST | `/api/auth/login` | AUTH-01 | ✅ |
+| 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
+| 사용자 | GET | `/api/users/me` | USER-01 |  |
+| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |  |
+| 사용자 | PATCH | `/api/users/me/settings` | USER-03 |  |
+| 사용자 | DELETE | `/api/users/me` | USER-05 |  |
+| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 |  |
+| 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
+| 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
+| 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
+| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
+| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 |  |
+| 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 |  |
+| 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 |  |
+| 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 |  |
+| 초대 | GET | `/api/invites/{token}` | INVITE-02 |  |
+| 초대 | POST | `/api/invites/{token}/join` | INVITE-03 |  |
+| 곳간 | GET | `/api/store` | STORE-01 |  |
+| 곳간 | POST | `/api/items/{itemId}/purchases` | STORE-02 |  |
+| 곳간 | PUT | `/api/users/me/equipped-items` | STORE-03 |  |
+| 인증 사진 | POST | `/api/certifications/upload-urls` | CERT-04 |  |
+| 인증 사진 | POST | `/api/rooms/{roomId}/certifications` | CERT-01 |  |
+| 인증 사진 | PATCH | `/api/certifications/{certificationId}` | CERT-02 |  |
+| 인증 사진 | DELETE | `/api/certifications/{certificationId}` | CERT-02 |  |
+| 리액션 | PUT | `/api/certifications/{certificationId}/reactions/me` | REACT-01 |  |
+| 리액션 | DELETE | `/api/certifications/{certificationId}/reactions/me` | REACT-01 |  |
+| 콕 | POST | `/api/rooms/{roomId}/pokes` | POKE-01 |  |
+| 투표 | GET | `/api/rooms/{roomId}/vote` | VOTE-05 |  |
+| 투표 | POST | `/api/rounds/{roundId}/votes` | VOTE-03 |  |
+| 결과 | GET | `/api/rounds/{roundId}/result` | RESULT-02 |  |
+| 톡톡 | POST | `/api/rounds/{roundId}/taps` | RESULT-03 |  |
+| 톡톡 | GET | `/api/rounds/{roundId}/taps/received` | RESULT-03 |  |
+| 톡톡 | PUT | `/api/rounds/{roundId}/taps/received/played` | RESULT-03 |  |
+| 한 솥 | GET | `/api/rooms/{roomId}/pots/{seq}` | POT-01 |  |
+| 방어권 | POST | `/api/defense-tickets` | SHIELD-01 |  |
+| 방어권 | POST | `/api/rounds/{roundId}/defenses` | SHIELD-02 |  |
 
 ## 2. 인증
 
@@ -230,7 +232,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 ```
 
 - `name`: 1~8자, `memberLimit`: 2~4, `nickname`: 1~8자 (형식은 `common.md`)
-- 방을 만드는 시점은 [미정] Q-37
+- 방과 방장 멤버를 한 번에 만듦 (Q-37)
 - 에러: `ROOM_001` (409), `COMMON_002` (400)
 
 ### GET /api/rooms/{roomId}/today
