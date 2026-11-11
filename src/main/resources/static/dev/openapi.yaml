@@ -2388,7 +2388,7 @@ components:
       - PURPLE
       - MINT
       - YELLOW
-      description: 보살 색
+      description: '보살 색: `PINK` 분홍, `PURPLE` 보라, `MINT` 민트, `YELLOW` 노랑'
     CertificationResult:
       type: string
       enum:
@@ -2406,7 +2406,7 @@ components:
       enum:
       - RICE
       - MOKTAK
-      description: 리액션 종류
+      description: '리액션 종류: `RICE` 잘 참았어요, `MOKTAK` 아쉬워요'
     VoteTabStatus:
       type: string
       enum:
@@ -2418,7 +2418,7 @@ components:
       - VOTED
       - RESULT_UNSEEN
       - RESULT_SEEN
-      description: 투표 탭 상태
+      description: '투표 탭 상태: `UNDER_THREE` 방 인원 3명 미만, `BEFORE_FIRST_VOTE` 지난 결과가 없고 투표 전, `NOT_IN_LIST` 투표 시작 후 들어와 명단에 없음, `NO_VOTING_RIGHT` 명단에 있지만 인증하지 않아 투표권 없음, `VOTING` 투표 중이고 아직 투표 안 함, `VOTED` 투표한 뒤 마감 전, `RESULT_UNSEEN` 마감 후 결과를 아직 안 봄, `RESULT_SEEN` 결과를 본 뒤 다음 투표 전'
     VoteTargetType:
       type: string
       enum:
@@ -2710,7 +2710,10 @@ components:
           description: 착용 아이템 코드. 없으면 빈 배열
           example: []
         certification:
-          $ref: '#/components/schemas/VoteCandidateCertification'
+          allOf:
+          - $ref: '#/components/schemas/VoteCandidateCertification'
+          nullable: true
+          description: 인증하지 않았으면 `null`
         isSelectable:
           type: boolean
           description: 고를 수 있는 후보
@@ -2904,7 +2907,10 @@ components:
         resultType:
           $ref: '#/components/schemas/ResultType'
         picked:
-          $ref: '#/components/schemas/PickedMember'
+          allOf:
+          - $ref: '#/components/schemas/PickedMember'
+          nullable: true
+          description: '`PICKED`, `DEFENDED`일 때만. 나머지는 `null`'
         voteCounts:
           type: array
           items:
@@ -2999,7 +3005,7 @@ components:
       - CAFE
       - SHOPPING
       - ETC
-      description: 절약 목표
+      description: '절약 목표: `DELIVERY` 배달 끊기, `CAFE` 카페 참기, `SHOPPING` 쇼핑 참기, `ETC` 기타'
     RoundStatus:
       type: string
       enum:
@@ -3016,7 +3022,7 @@ components:
       - ROOM_LIMIT
       - ROOM_FULL
       - UNAVAILABLE
-      description: 초대 입장 판단
+      description: '초대 입장 판단: `JOINABLE` 들어올 수 있음, `ALREADY_MEMBER` 이미 이 방 멤버, `ROOM_LIMIT` 참여 중인 방이 2개, `ROOM_FULL` 함께할 인원만큼 참, `UNAVAILABLE` 들어갈 수 없음(없는 토큰, 방 삭제, 내보내짐. 사유는 표시하지 않음)'
     ItemSlot:
       type: string
       enum:
@@ -3029,19 +3035,19 @@ components:
       enum:
       - NONE
       - OWNED
-      description: 방어권 상태
+      description: '방어권 상태: `NONE` 없음, `OWNED` 미사용 1개 보유'
     PushAgreementType:
       type: string
       enum:
       - CERT_REMINDER
-      description: 알림 동의 종류
+      description: '알림 동의 종류: `CERT_REMINDER` 인증 마감 리마인드'
     PushAgreementResult:
       type: string
       enum:
       - newAgreement
       - alreadyAgreed
       - agreementRejected
-      description: 앱인토스 값 그대로
+      description: '앱인토스 값 그대로: `newAgreement` 이번에 동의함, `alreadyAgreed` 이미 동의했음, `agreementRejected` 거부함 (저장하지 않음)'
     LoginRequest:
       type: object
       required:
@@ -3430,7 +3436,10 @@ components:
           example: 3
           format: int32
         certification:
-          $ref: '#/components/schemas/TodayCertification'
+          allOf:
+          - $ref: '#/components/schemas/TodayCertification'
+          nullable: true
+          description: 오늘 인증. 인증 전이면 `null`
     TodayMe:
       type: object
       required:
@@ -3570,7 +3579,10 @@ components:
         status:
           $ref: '#/components/schemas/InviteStatus'
         room:
-          $ref: '#/components/schemas/InviteRoom'
+          allOf:
+          - $ref: '#/components/schemas/InviteRoom'
+          nullable: true
+          description: '`UNAVAILABLE`이면 `null`'
         inviterNickname:
           type: string
           description: 초대한 사람이 나갔으면 `null`
