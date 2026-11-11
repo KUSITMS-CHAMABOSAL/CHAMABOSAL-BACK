@@ -26,7 +26,9 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
-            "/docs/error-codes"
+            "/docs/error-codes",
+            // 프론트 공유용 OpenAPI 초안. Swagger 상단 주소창에 넣어 본다.
+            "/dev/openapi.yaml"
     };
 
     private final JwtProvider jwtProvider;

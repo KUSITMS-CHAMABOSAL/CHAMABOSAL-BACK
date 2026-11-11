@@ -30,4 +30,16 @@ class SwaggerConfigTest {
         mockMvc.perform(get("/swagger-ui/index.html"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void OpenAPI_초안은_토큰_없이_볼_수_있다() throws Exception {
+        mockMvc.perform(get("/dev/openapi.yaml"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void 공개하지_않은_dev_경로는_토큰이_필요하다() throws Exception {
+        mockMvc.perform(get("/dev/other.yaml"))
+                .andExpect(status().isUnauthorized());
+    }
 }
