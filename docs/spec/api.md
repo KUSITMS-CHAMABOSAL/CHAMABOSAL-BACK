@@ -3,7 +3,6 @@
 경로, 요청·응답 필드, 에러 code를 적은 문서입니다. 동작 규칙은 각 기능 명세를 따르고, 엔드포인트마다 기능 ID를 붙였습니다. 구현된 API는 Swagger가 기준입니다.
 
 - `[미정] Q-37`처럼 적힌 항목은 [`open-questions.md`](open-questions.md)의 답에 따라 바뀔 수 있습니다.
-- 인증 사진·콕·투표·결과·톡톡·한 솥·방어권 API는 초안입니다. 담당자가 보완합니다.
 
 ## 0. 공통
 
@@ -264,7 +263,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 
 - `room.potCompletedCount`: 이 방에서 한 솥을 다 채운 횟수 (쌀가마 배지). 몇 번째 솥인지 표시하고, 안 본 축하를 판단하는 기준(`seen-pot`의 `seenPotCount`)으로도 씀
 - `room.hasVotingRound`: 이 방에 투표 중인 회차가 있음 (어제 회차 포함). 이때 내보내기는 `ROOM_008`로 막힘. `round.status`는 오늘 회차만의 상태라 다를 수 있음
-- `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증 때 만듦
+- `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증이나 첫 콕 때 만듦
 - `round.status`: 회차 행이 없으면 `CERTIFYING`
 - `round.certifiedCount`: 현재 멤버 중 오늘 인증한 사람 수. 인증하고 나간 멤버는 세지 않음
 - `round.isAllCertified`: 현재 멤버 전원이 인증함
@@ -277,7 +276,7 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 - 리액션 받은 수는 보내지 않음 ([미정] Q-52)
 - `myReaction`: 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
 - `me.isLastCertifier`: 내가 인증하면 전원 인증이 됨. 등록 전 확인 시트에 씀. 어제 회차가 투표 중이어도 등록하면 어제 투표가 닫히고 오늘 투표가 시작됨
-- `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아감
+- `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아갈지는 [미정] Q-54
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서
   - `unplayedTapRoundId`가 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
   - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
@@ -441,12 +440,10 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 - 슬롯마다 하나. 지금 슬롯은 `HEAD` 1칸이고 칸 수는 [미정] Q-53
 - 에러: `STORE_004` (409, 보유하지 않은 아이템), `COMMON_002` (400, 같은 슬롯 중복)
 
-## 7. 인증 사진 (초안)
+## 7. 인증 사진
 
 > 담당자 확인
-> - 인증 완료 화면(디자인 p109) "모두가 인증해서 투표가 열렸어요"에 투표 시작 여부 필요
 > - `roundDate`를 화면에서 쓰는지 (오늘 탭에서는 뺌)
-> - 에러 code 정하기 (CERT-01·02, REACT-01)
 > - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
 
 ### POST /api/certifications/upload-urls
@@ -462,6 +459,8 @@ CERT-04. 사진 업로드 URL을 발급합니다. 임시 경로에 올리고 인
 ```
 
 - 허용 파일 형식·크기는 [미정] Q-30
+- 업로드에 실패하면 `imageKey` 없이 인증을 등록함
+- 에러: `COMMON_002` (400, 허용하지 않는 형식)
 
 ### POST /api/rooms/{roomId}/certifications
 
@@ -476,26 +475,60 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
   "certificationId": 501, "roundDate": "2026-11-05",
   "certifiedAt": "2026-11-05T19:24:00", "editableUntil": "2026-11-05T19:34:00",
   "riceEarned": 10, "potEarned": 10,
-  "canUseDefense": true
+  "canUseDefense": true,
+  "isVoteStarted": false
 }
 ```
 
 - `memo`: 1~40자 (글자 수 기준은 [미정] Q-29)
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
-- `imageKey`: 선택
-- 에러: 이미 인증함, 활성 멤버 아님, 입력값 오류 (code는 담당자가 정함)
+- `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
+- `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
+- `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이었으면 어제 투표는 이때 닫힘
+- 에러: `CERT_001` (409, 이미 인증함), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 입력값 오류·없거나 만료된 `imageKey`)
 
 ### PATCH /api/certifications/{certificationId}
 
-CERT-02. 등록 후 10분 안에 수정합니다. 바디는 등록과 같고 보낸 값만 바꿉니다. 공양미를 다시 주지 않습니다.
+CERT-02. 등록 후 10분 안에 수정합니다. 등록처럼 모든 값을 보내고, 보낸 값으로 통째로 바꿉니다. 공양미를 다시 주지 않습니다.
 
-- 에러: 없는 인증, 본인 인증 아님, 잠김 (`TIME_OVER`, `VOTE_STARTED`)
+```json
+// request
+{ "result": "FAILED", "memo": "치킨 반 마리만 시켰어요", "spentAmount": 23000, "imageKey": null, "isImageKept": true }
+
+// response 200
+{
+  "certificationId": 501, "result": "FAILED", "memo": "치킨 반 마리만 시켰어요", "spentAmount": 23000,
+  "imageUrl": "https://...", "editableUntil": "2026-11-05T19:34:00"
+}
+```
+
+- `result`, `memo`, `spentAmount`: 등록과 같은 규칙. `ENDURED`로 바꾸면 `spentAmount`를 보내지 않고, 저장된 금액은 지워짐
+- 사진은 `imageKey`와 `isImageKept`로 정함
+
+  | `imageKey` | `isImageKept` | 결과 |
+  |---|---|---|
+  | 있음 | `false` | 새 사진으로 바꾸고 기존 사진은 바로 삭제 |
+  | 없음 | `true` | 기존 사진 유지 (사진이 없었으면 그대로 없음) |
+  | 없음 | `false` | 사진 삭제 |
+  | 있음 | `true` | `COMMON_002` |
+
+- `editableUntil`: 수정해도 바뀌지 않음 (등록 후 10분)
+- 에러: `CERT_002` (404), `CERT_003` (403, 본인 인증 아님), `CERT_004` (409, 수정 시간 지남), `CERT_005` (409, 투표 시작), `COMMON_002` (400)
 
 ### DELETE /api/certifications/{certificationId}
 
-CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥 적립을 회수합니다.
+CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥 적립을 회수하고 사진을 바로 지웁니다.
 
-- 에러: 수정과 같음
+```json
+// response 200
+{ "riceRecalled": 10, "potRecalled": 10 }
+```
+
+- `potRecalled`: 그 인증이 들어간 솥이 이미 가득 찼으면 0 (RICE-02)
+- 이미 삭제한 내 인증을 다시 삭제하면 회수 없이 `0`, `0`으로 성공 (재시도해도 안전). 이 확인은 10분·투표 시작 잠금 검사보다 먼저 해서, 10분이 지났거나 투표가 시작된 뒤의 재시도도 `CERT_004`·`CERT_005` 대신 성공
+- 확인 순서: 없는 인증(`CERT_002`) → 본인 인증 아님(`CERT_003`) → 이미 삭제됨(성공) → 수정 시간 지남(`CERT_004`) → 투표 시작(`CERT_005`)
+- 삭제한 뒤 같은 회차에 다시 인증할 수 있음
+- 에러: `CERT_002` (404, 없는 인증), `CERT_003` (403), `CERT_004` (409), `CERT_005` (409)
 
 ### PUT /api/certifications/{certificationId}/reactions/me
 
@@ -507,37 +540,43 @@ REACT-01. 리액션을 남기거나 바꿉니다.
 
 - 보낸 리액션으로 설정만 함. 같은 값으로 다시 보내도 그대로 (재시도해도 안전)
 - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 DELETE를 부름
-- 에러: 본인 인증, 투표 시작 후
+- 에러: `CERT_002` (404), `ROOM_002` (403, 인증이 있는 방의 멤버 아님), `REACT_001` (403, 본인 인증), `REACT_002` (409, 투표 시작 후), `COMMON_002` (400, 없는 `type`)
 
 ### DELETE /api/certifications/{certificationId}/reactions/me
 
 REACT-01. 리액션을 취소합니다.
 
-## 8. 콕 (초안)
+- 남긴 리액션이 없어도 성공 (재시도해도 안전)
+- 확인 순서: 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 남긴 리액션 없음(성공) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`). 그래서 투표 시작 뒤라도 남긴 리액션이 없으면 성공
+- 에러: `CERT_002` (404), `ROOM_002` (403), `REACT_001` (403), `REACT_002` (409)
 
-> 담당자 확인
-> - 최신 디자인에 "○○님이 찔렀어요" 안내가 없어 오늘 탭은 받은 콕 수만 보냄. POKE-01 출력의 안내 문구 정리 필요
-> - 에러 code 정하기
+## 8. 콕
 
 ### POST /api/rooms/{roomId}/pokes
 
-POKE-01. 인증하지 않은 멤버를 콕 찌릅니다. 연타는 화면에서 모아 횟수로 보냅니다.
+POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태에 상관없이 언제나 보낼 수 있습니다. 연타는 화면에서 1~2초 모아 횟수로 보내고, 서버는 받은 횟수를 더합니다.
 
 ```json
+// request
 { "toMemberId": 12, "count": 5 }
+
+// response 201 (data 없음)
 ```
 
-- 에러: 본인, 이미 인증한 멤버, 다른 방 멤버
+- `count`: 요청 한 번에 1~30. 앱 안 누적 횟수에는 제한이 없음
+- 받은 콕 수는 받는 사람의 오늘 탭 `me.receivedPokeCount`로 보임. 누가 찔렀는지는 보내지 않음. 찌른 사람에게도 보일지는 [미정] Q-55
+- 받는 사람·방·회차 기준 처음 콕만 푸시를 보냄 (POKE-02). 이미 보낸 푸시의 숫자는 바꿀 수 없어서 늘어나는 횟수는 앱 안에서만 보임
+- 에러: `POKE_001` (400, 본인), `ROOM_009` (404, 받는 사람이 이 방 현재 멤버 아님), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, `count` 범위)
 
-## 9. 투표 · 결과 · 톡톡 (초안)
+## 9. 투표 · 결과 · 톡톡
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
 > - 동점이면 "뽑힌 보살이 없어요" (p97). 명세는 목탁 수로 지목 (RESULT-01)
-> - 결과 화면에 지목된 사람의 쓴 금액 표시 (p91)
-> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117)
+> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡을 직접 수행하는 이마받기 변경(기획 회의)은 아직 반영 전
 > - 방어권을 결과 화면에서 쓰는 흐름 (p96)
-> - `roundDate`를 화면에서 쓰는지, 에러 code 정하기
+> - 다음 회차 투표가 열려 닫힌 투표의 결과 화면 ([미정] Q-56)
+> - `roundDate`를 화면에서 쓰는지
 
 ### GET /api/rooms/{roomId}/vote
 
@@ -576,6 +615,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 - `candidates`: `VOTING`일 때만. `certification`이 `null`이면 인증 안 함
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
+- 에러: `ROOM_002` (403), `ROOM_005` (404)
 
 ### POST /api/rounds/{roundId}/votes
 
@@ -589,7 +629,8 @@ VOTE-03. 후보 또는 "오늘은 모두 보살"에 투표합니다. `targetMemb
 { "riceEarned": 5, "potEarned": 5, "isClosed": false }
 ```
 
-- 에러: 투표 중 아님, 명단 밖, 이미 투표, 본인 선택, 후보 아님
+- `isClosed`: 이 표로 투표권 있는 명단 전원이 투표해 마감됨
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `VOTE_001` (409, 투표 중 아님), `VOTE_002` (403, 명단 밖), `VOTE_003` (403, 투표권 없음), `VOTE_004` (409, 이미 투표함), `VOTE_005` (400, 본인 선택), `VOTE_006` (400, 선택할 수 없는 후보), `COMMON_002` (400)
 
 ### GET /api/rounds/{roundId}/result
 
@@ -598,7 +639,10 @@ RESULT-02. 결과 화면입니다.
 ```json
 {
   "roundId": 100, "roundDate": "2026-11-04", "resultType": "PICKED",
-  "picked": { "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "isLeft": false },
+  "picked": {
+    "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "isLeft": false,
+    "certificationResult": "FAILED", "spentAmount": 23000
+  },
   "voteCounts": [ { "memberId": 12, "nickname": "지수", "count": 3, "isLeft": false } ],
   "allBosalCount": 1,
   "isPickedMe": false,
@@ -612,6 +656,9 @@ RESULT-02. 결과 화면입니다.
 - 누가 누구에게 투표했는지는 보내지 않음
 - `canTap`: `PICKED`이고 내가 지목된 사람이 아니고 아직 톡톡하지 않음
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
+- `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
+- `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 아직 발표 전)
 - "모두 보살"이 과반이 아닐 때 지목은 [미정] Q-22
 
 ### POST /api/rounds/{roundId}/taps
@@ -623,7 +670,7 @@ RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보�
 ```
 
 - `count`: 0~10
-- 에러: 톡톡할 수 없는 결과·지목된 본인, 이미 톡톡함, 다음 투표가 열림
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 톡톡할 수 없는 결과), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
@@ -638,15 +685,20 @@ RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다
 }
 ```
 
+- `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
+
 ### PUT /api/rounds/{roundId}/taps/received/played
 
 RESULT-03. 받은 톡톡 재생 완료를 저장합니다.
 
-## 10. 한 솥 (초안)
+- 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
+
+## 10. 한 솥
 
 > 담당자 확인
-> - 방 만들 때 목표 300·450·700석 선택 (p23), 완성 후 방장이 연장·종료 (p41~43)
-> - 동점 순위 기준, POT-01 출력에 기여 석·순위 추가
+> - 방 만들 때 목표 300·450·700석 선택 (p23), 완성 후 방장이 연장·종료 (p41~43). 11/8 회의의 방 유효기간(목표 기간이 끝나도 연장·폭파)과 같이 디자인 보완 중이라 아직 반영 전
 
 ### GET /api/rooms/{roomId}/pots/{seq}
 
@@ -666,16 +718,16 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 
 - `rewardAmount`: 멤버 전원이 받은 개인 공양미
 - `contributions`: 그 솥에 넣은 석이 많은 순. 인증 삭제로 회수한 석은 뺌
-- 동점일 때 순위 기준은 미정 (담당자가 정함)
+- 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
 - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
-- 에러: `ROOM_002` (403), `ROOM_005` (404), 아직 다 채우지 않은 솥
+- 에러: `POT_001` (404, 없거나 아직 다 채우지 않은 솥), `ROOM_002` (403), `ROOM_005` (404)
 
-## 11. 방어권 (초안)
+## 11. 방어권
 
 > 담당자 확인
 > - 디자인은 지목된 뒤 결과 화면에서 사용 (p92, p96). 이대로면 방 선택 API가 없어지고 사용 API·조건이 바뀜
 > - 곳간 조회의 `usingRoomName`, `isUsedThisWeek`는 이 흐름이 정해질 때 같이 정리
-> - [미정] Q-20, Q-21, Q-28, 에러 code 정하기
+> - [미정] Q-20, Q-21, Q-28
 
 ### POST /api/defense-tickets
 
@@ -686,7 +738,7 @@ SHIELD-01. 공양미 100석으로 방어권을 삽니다.
 { "riceBalance": 20 }
 ```
 
-- 에러: 공양미 부족 (`STORE_001`), 이미 보유
+- 에러: `STORE_001` (409, 공양미 부족), `DEFENSE_001` (409, 이미 보유)
 
 ### GET /api/defense-tickets/rooms
 
@@ -702,10 +754,12 @@ SHIELD-02. 방어권을 쓸 방을 고르는 화면입니다.
 ```
 
 - `status`: `AVAILABLE` `NOT_CERTIFIED` `VOTING` `USED_THIS_WEEK` `RESTING` `NO_VOTE_ROOM`
+- 방어권이 없어도 방 목록은 보내고, 쓰는 순간 `DEFENSE_002`로 막음
 
 ### POST /api/rooms/{roomId}/defenses
 
 SHIELD-02. 그 방의 현재 회차에 방어권을 씁니다. 쓰는 순간 소모됩니다.
 
 - 마지막 인증자의 유예 시간은 [미정] Q-28
-- 에러: 방어권 없음, 인증 전, 투표 중, 이번 주 사용 완료, 휴식 중, 3명 미만 방
+- 막힌 사유마다 code가 다르고, 방 선택 화면의 `status`와 짝을 이룸
+- 에러: `DEFENSE_002` (409, 방어권 없음), `DEFENSE_003` (409, 인증 전 = `NOT_CERTIFIED`), `DEFENSE_004` (409, 투표 중 = `VOTING`), `DEFENSE_005` (409, 이번 주 사용 완료 = `USED_THIS_WEEK`), `DEFENSE_006` (409, 휴식 중 = `RESTING`), `DEFENSE_007` (409, 3명 미만 방 = `NO_VOTE_ROOM`), `ROOM_002` (403), `ROOM_005` (404)
