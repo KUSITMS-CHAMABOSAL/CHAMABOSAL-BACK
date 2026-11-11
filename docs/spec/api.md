@@ -3,7 +3,7 @@
 경로, 요청·응답 필드, 에러 code를 적은 문서입니다. 동작 규칙은 각 기능 명세를 따르고, 엔드포인트마다 기능 ID를 붙였습니다. 구현된 API는 Swagger가 기준입니다.
 
 - `[미정] Q-37`처럼 적힌 항목은 [`open-questions.md`](open-questions.md)의 답에 따라 바뀔 수 있습니다.
-- 인증 사진·콕·투표·결과·톡톡·한 솥·방어권 API는 초안입니다. 담당자가 보완합니다.
+- 콕·투표·결과·톡톡·한 솥·방어권 API는 초안입니다. 담당자가 보완합니다.
 
 ## 0. 공통
 
@@ -441,12 +441,10 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 - 슬롯마다 하나. 지금 슬롯은 `HEAD` 1칸이고 칸 수는 [미정] Q-53
 - 에러: `STORE_004` (409, 보유하지 않은 아이템), `COMMON_002` (400, 같은 슬롯 중복)
 
-## 7. 인증 사진 (초안)
+## 7. 인증 사진
 
 > 담당자 확인
-> - 인증 완료 화면(디자인 p109) "모두가 인증해서 투표가 열렸어요"에 투표 시작 여부 필요
 > - `roundDate`를 화면에서 쓰는지 (오늘 탭에서는 뺌)
-> - 에러 code 정하기 (CERT-01·02, REACT-01)
 > - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
 
 ### POST /api/certifications/upload-urls
@@ -462,6 +460,8 @@ CERT-04. 사진 업로드 URL을 발급합니다. 임시 경로에 올리고 인
 ```
 
 - 허용 파일 형식·크기는 [미정] Q-30
+- 업로드에 실패하면 `imageKey` 없이 인증을 등록함
+- 에러: `COMMON_002` (400, 허용하지 않는 형식)
 
 ### POST /api/rooms/{roomId}/certifications
 
@@ -476,26 +476,59 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
   "certificationId": 501, "roundDate": "2026-11-05",
   "certifiedAt": "2026-11-05T19:24:00", "editableUntil": "2026-11-05T19:34:00",
   "riceEarned": 10, "potEarned": 10,
-  "canUseDefense": true
+  "canUseDefense": true,
+  "isVoteStarted": false
 }
 ```
 
 - `memo`: 1~40자 (글자 수 기준은 [미정] Q-29)
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
-- `imageKey`: 선택
-- 에러: 이미 인증함, 활성 멤버 아님, 입력값 오류 (code는 담당자가 정함)
+- `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
+- `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
+- `isVoteStarted`: 이 등록으로 전원 인증이 되어 투표가 시작됨. 인증 완료 화면(디자인 p109)의 "모두가 인증해서 투표가 열렸어요"에 씀. 어제 회차가 투표 중이면 전원 인증이어도 `false` (Q-17)
+- 에러: `CERT_001` (409, 이미 인증함), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 입력값 오류·없거나 만료된 `imageKey`)
 
 ### PATCH /api/certifications/{certificationId}
 
-CERT-02. 등록 후 10분 안에 수정합니다. 바디는 등록과 같고 보낸 값만 바꿉니다. 공양미를 다시 주지 않습니다.
+CERT-02. 등록 후 10분 안에 수정합니다. 등록처럼 모든 값을 보내고, 보낸 값으로 통째로 바꿉니다. 공양미를 다시 주지 않습니다.
 
-- 에러: 없는 인증, 본인 인증 아님, 잠김 (`TIME_OVER`, `VOTE_STARTED`)
+```json
+// request
+{ "result": "FAILED", "memo": "치킨 반 마리만 시켰어요", "spentAmount": 23000, "imageKey": null, "isImageKept": true }
+
+// response 200
+{
+  "certificationId": 501, "result": "FAILED", "memo": "치킨 반 마리만 시켰어요", "spentAmount": 23000,
+  "imageUrl": "https://...", "editableUntil": "2026-11-05T19:34:00"
+}
+```
+
+- `result`, `memo`, `spentAmount`: 등록과 같은 규칙. `ENDURED`로 바꾸면 `spentAmount`를 보내지 않고, 저장된 금액은 지워짐
+- 사진은 `imageKey`와 `isImageKept`로 정함
+
+  | `imageKey` | `isImageKept` | 결과 |
+  |---|---|---|
+  | 있음 | `false` | 새 사진으로 바꾸고 기존 사진은 바로 삭제 |
+  | 없음 | `true` | 기존 사진 유지 (사진이 없었으면 그대로 없음) |
+  | 없음 | `false` | 사진 삭제 |
+  | 있음 | `true` | `COMMON_002` |
+
+- `editableUntil`: 수정해도 바뀌지 않음 (등록 후 10분)
+- 에러: `CERT_002` (404), `CERT_003` (403, 본인 인증 아님), `CERT_004` (409, 수정 시간 지남), `CERT_005` (409, 투표 시작), `COMMON_002` (400)
 
 ### DELETE /api/certifications/{certificationId}
 
-CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥 적립을 회수합니다.
+CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥 적립을 회수하고 사진을 바로 지웁니다.
 
-- 에러: 수정과 같음
+```json
+// response 200
+{ "riceRecalled": 10, "potRecalled": 10 }
+```
+
+- `potRecalled`: 그 인증이 들어간 솥이 이미 가득 찼으면 0 (RICE-02)
+- 이미 삭제한 내 인증을 다시 삭제하면 회수 없이 `0`, `0`으로 성공 (재시도해도 안전)
+- 삭제한 뒤 같은 회차에 다시 인증할 수 있음
+- 에러: `CERT_003` (403), `CERT_004` (409), `CERT_005` (409)
 
 ### PUT /api/certifications/{certificationId}/reactions/me
 
@@ -507,11 +540,14 @@ REACT-01. 리액션을 남기거나 바꿉니다.
 
 - 보낸 리액션으로 설정만 함. 같은 값으로 다시 보내도 그대로 (재시도해도 안전)
 - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 DELETE를 부름
-- 에러: 본인 인증, 투표 시작 후
+- 에러: `CERT_002` (404), `ROOM_002` (403, 인증이 있는 방의 멤버 아님), `REACT_001` (403, 본인 인증), `REACT_002` (409, 투표 시작 후), `COMMON_002` (400, 없는 `type`)
 
 ### DELETE /api/certifications/{certificationId}/reactions/me
 
 REACT-01. 리액션을 취소합니다.
+
+- 남긴 리액션이 없어도 성공 (재시도해도 안전)
+- 에러: PUT과 같음 (`COMMON_002` 제외)
 
 ## 8. 콕 (초안)
 
