@@ -628,7 +628,7 @@ paths:
         한 솥 축하를 몇 번째 솥까지 봤는지 저장한다.
 
         - 저장값보다 작거나 같으면 바꾸지 않는다.
-        - 현재 완성 횟수보다 크면 `COMMON_002`
+        - 현재 완성 횟수보다 크거나 음수면 `COMMON_002`
       parameters:
       - *id001
       requestBody:
@@ -3533,7 +3533,7 @@ components:
           type: integer
           example: 2
           format: int32
-          minimum: 1
+          minimum: 0
     InviteTokenResponse:
       type: object
       required:

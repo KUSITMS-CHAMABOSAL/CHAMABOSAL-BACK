@@ -2,6 +2,7 @@ package com.chamabosal.domain.room.controller;
 
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
+import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
 import com.chamabosal.domain.room.service.RoomService;
 import com.chamabosal.global.common.response.ErrorResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 나가기")
+@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 한 솥 확인, 나가기")
 public class RoomController {
 
     private final RoomService roomService;
@@ -128,6 +130,56 @@ public class RoomController {
             @RequestBody @Valid RoomNicknameUpdateRequest request
     ) {
         roomService.updateNickname(userId, roomId, request);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
+    @PutMapping("/{roomId}/members/me/seen-pot")
+    @Operation(summary = "한 솥 축하 확인 (ROOM-06)",
+            description = """
+                    한 솥 축하를 몇 번째 솥까지 봤는지 저장합니다. 축하를 본 뒤 오늘 탭의 room.potCompletedCount를 그대로 보내 주세요.
+                    저장값보다 작거나 같으면 바꾸지 않고 성공합니다. 방의 완성 횟수보다 크거나 음수면 COMMON_002입니다.
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "저장 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "COMMON_002 입력값 오류 (field: seenPotCount)",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "COMMON_008 로그인 필요",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "ROOM_002 이 방 멤버가 아님",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            )
+    })
+    public ResponseEntity<Response<Void>> markPotSeen(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId,
+            @RequestBody @Valid RoomSeenPotUpdateRequest request
+    ) {
+        roomService.markPotSeen(userId, roomId, request);
         return ResponseEntity.ok(Response.ok(null));
     }
 
