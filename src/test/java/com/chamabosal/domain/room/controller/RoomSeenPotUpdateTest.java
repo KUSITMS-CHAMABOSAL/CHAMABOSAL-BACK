@@ -18,12 +18,17 @@ import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** 오늘 탭(ROOM-02)이 아직 없어 "안 본 축하 여부"는 저장값으로 확인한다. 완성 횟수는 POT-01이 없어 직접 넣는다. */
 class RoomSeenPotUpdateTest extends RoomTestSupport {
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private User userA;
     private Room room;
@@ -110,6 +115,34 @@ class RoomSeenPotUpdateTest extends RoomTestSupport {
         markSeen(1)
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ROOM_005"));
+    }
+
+    @Test
+    void 저장값보다_작거나_같으면_바꾸지_않는다() throws Exception {
+        completePots(2);
+        markSeen(2).andExpect(status().isOk());
+
+        markSeen(2).andExpect(status().isOk());
+        markSeen(1).andExpect(status().isOk());
+
+        assertThat(seenPotCount()).isEqualTo(2);
+    }
+
+    @Test
+    void 확인_뒤에_다른_트랜잭션이_멤버를_저장해도_확인_횟수를_되돌리지_않는다() {
+        completePots(2);
+
+        // 닉네임을 바꾸는 트랜잭션이 멤버를 읽은 뒤, 그사이 확인 요청이 먼저 커밋되는 순서를 만든다.
+        transactionTemplate.executeWithoutResult(status -> {
+            RoomMember stale = roomMemberRepository.findById(memberA.getId()).orElseThrow();
+            CompletableFuture.runAsync(() ->
+                    roomService.markPotSeen(userA.getId(), room.getId(), new RoomSeenPotUpdateRequest(2))).join();
+            stale.changeNickname("민지2");
+        });
+
+        RoomMember saved = roomMemberRepository.findById(memberA.getId()).orElseThrow();
+        assertThat(saved.getNickname()).isEqualTo("민지2");
+        assertThat(saved.getSeenPotCount()).isEqualTo(2);
     }
 
     @Test

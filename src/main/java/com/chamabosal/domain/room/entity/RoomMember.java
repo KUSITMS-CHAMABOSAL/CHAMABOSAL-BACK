@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_room_members_user_left", columnList = "user_id, left_at")
 })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@DynamicUpdate // 확인 횟수는 조건부 update로 따로 올려서, 다른 변경을 저장할 때 바뀐 컬럼만 써야 옛 값으로 덮어쓰지 않는다.
 public class RoomMember extends BaseEntity {
 
     /** 나간 지 이 기간이 지나지 않으면 닉네임을 잡고 있고, 다시 들어올 때 이 행을 다시 쓴다. */
