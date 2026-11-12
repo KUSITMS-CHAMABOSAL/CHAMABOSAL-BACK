@@ -29,6 +29,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RoomMember extends BaseEntity {
 
+    /** 나간 지 이 기간이 지나지 않으면 닉네임을 잡고 있고, 다시 들어올 때 이 행을 다시 쓴다. */
+    private static final int RETENTION_MONTHS = 6;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -73,6 +76,7 @@ public class RoomMember extends BaseEntity {
 
     private LocalDate restingRoundDate;
 
+    /** 들어오기 전의 한 솥 축하는 보여주지 않도록 확인 상태를 방의 현재 완성 횟수로 채운다. */
     public static RoomMember create(Room room, User user, String nickname, BosalColor color, LocalDateTime joinedAt) {
         RoomMember member = new RoomMember();
         member.room = room;
@@ -80,6 +84,7 @@ public class RoomMember extends BaseEntity {
         member.nickname = nickname;
         member.color = color;
         member.joinedAt = joinedAt;
+        member.seenPotCount = room.getPotCompletedCount();
         return member;
     }
 
@@ -87,9 +92,43 @@ public class RoomMember extends BaseEntity {
         this.nickname = nickname;
     }
 
-    /** 현재 멤버이거나 나간 지 holdMonths가 지나지 않았으면 이 닉네임을 다른 사람이 쓸 수 없다. left_at + 기간 시각까지 포함한다. */
-    public boolean holdsNickname(LocalDateTime now, int holdMonths) {
-        return leftAt == null || !now.isAfter(leftAt.plusMonths(holdMonths));
+    public boolean isCurrent() {
+        return leftAt == null;
+    }
+
+    public boolean isKicked() {
+        return leaveType == LeaveType.KICKED;
+    }
+
+    /** 현재 멤버이거나 나간 지 6개월이 지나지 않았으면 이 닉네임을 다른 사람이 쓸 수 없다. left_at + 6개월 시각까지 포함한다. */
+    public boolean holdsNickname(LocalDateTime now) {
+        return isCurrent() || isWithinRetention(now);
+    }
+
+    /** 스스로 나가거나 내 데이터 삭제로 나간 지 6개월이 지나지 않았으면 이 행으로 다시 들어온다. */
+    public boolean canRejoin(LocalDateTime now) {
+        return !isCurrent() && !isKicked() && isWithinRetention(now);
+    }
+
+    /** 지목·휴식·초대 토큰은 그대로 이어진다. */
+    public void rejoin(String nickname, BosalColor color, LocalDateTime joinedAt) {
+        this.leftAt = null;
+        this.leaveType = null;
+        this.nickname = nickname;
+        this.color = color;
+        this.joinedAt = joinedAt;
+        this.seenPotCount = room.getPotCompletedCount();
+    }
+
+    /** 토큰은 한 번 정해지면 바뀌지 않는다. */
+    public void issueInviteToken(String inviteToken) {
+        if (this.inviteToken == null) {
+            this.inviteToken = inviteToken;
+        }
+    }
+
+    private boolean isWithinRetention(LocalDateTime now) {
+        return !now.isAfter(leftAt.plusMonths(RETENTION_MONTHS));
     }
 
     public void leave(LocalDateTime leftAt, LeaveType leaveType) {
