@@ -86,7 +86,7 @@
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
-| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 |  |
+| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 |  |
 | 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
@@ -327,7 +327,7 @@ ROOM-06. 한 솥 축하를 몇 번째 솥까지 봤는지 저장합니다.
 ```
 
 - 저장값보다 작거나 같으면 바꾸지 않음
-- 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 현재 완성 횟수보다 큼)
+- 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 현재 완성 횟수보다 큼·음수)
 
 ### DELETE /api/rooms/{roomId}/members/me
 
