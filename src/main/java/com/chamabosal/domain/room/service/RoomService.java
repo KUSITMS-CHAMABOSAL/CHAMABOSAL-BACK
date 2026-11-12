@@ -2,6 +2,7 @@ package com.chamabosal.domain.room.service;
 
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
+import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
@@ -30,6 +31,7 @@ public class RoomService {
     private static final int ROOM_NAME_MAX_LENGTH = 8;
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
     private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~8자입니다.";
+    private static final String SEEN_POT_MESSAGE = "본 완성 횟수가 방의 완성 횟수보다 큽니다.";
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
@@ -69,6 +71,20 @@ public class RoomService {
         }
         checkNicknameAvailable(room.getId(), nickname, me.getId());
         me.changeNickname(nickname);
+    }
+
+    /** 완성 횟수는 늘기만 해서 락 없이 읽은 값과 비교해도 된다. 동시 요청은 조건부 update로 막아 방 행 락을 잡지 않는다. */
+    @Transactional
+    public void markPotSeen(Long userId, Long roomId, RoomSeenPotUpdateRequest request) {
+        Room room = roomRepository.findById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        if (request.seenPotCount() > room.getPotCompletedCount()) {
+            throw BaseException.withField(BaseErrorCode.INVALID_REQUEST, SEEN_POT_MESSAGE, "seenPotCount");
+        }
+        roomMemberRepository.raiseSeenPotCount(me.getId(), request.seenPotCount(), LocalDateTime.now(clock));
     }
 
     @Transactional
