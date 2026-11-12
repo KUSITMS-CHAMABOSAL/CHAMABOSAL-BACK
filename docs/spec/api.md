@@ -79,9 +79,9 @@
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
 | 사용자 | GET | `/api/users/me` | USER-01 |  |
 | 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |  |
-| 사용자 | PATCH | `/api/users/me/settings` | USER-03 |  |
+| 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 사용자 | DELETE | `/api/users/me` | USER-05 |  |
-| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 |  |
+| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
@@ -127,7 +127,7 @@ AUTH-01. 앱인토스 인증 코드로 로그인합니다. 처음 온 사용자�
 ```
 
 - `isNewUser`: 6개월 안에 돌아와 복구한 사용자는 `false`
-- 리프레시 토큰 없이 액세스 토큰만 쓸지는 [미정] Q-16
+- 리프레시 토큰 없이 액세스 토큰만 씀. 만료되면 인증 코드를 다시 받아 로그인 [Q-16]
 - 에러: `AUTH_001` (400), `AUTH_002` (502), `COMMON_002` (400)
 
 ### POST /api/auth/test-token
