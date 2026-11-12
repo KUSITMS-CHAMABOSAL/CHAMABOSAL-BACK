@@ -53,6 +53,19 @@ class UserSettingsUpdateTest {
     }
 
     @Test
+    void 인증_투표_알림만_바꿀_수_있다() throws Exception {
+        user.updatePushSettings(false, null);
+        userRepository.save(user);
+
+        update("{\"isActivityPushEnabled\":false}")
+                .andExpect(status().isOk());
+
+        User updated = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(updated.isActivityPushEnabled()).isFalse();
+        assertThat(updated.isPokePushEnabled()).isFalse();
+    }
+
+    @Test
     void USER_03_2_값_없이_요청하면_설정이_바뀌지_않는다() throws Exception {
         user.updatePushSettings(false, null);
         userRepository.save(user);

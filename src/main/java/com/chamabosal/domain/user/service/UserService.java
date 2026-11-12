@@ -26,9 +26,10 @@ public class UserService {
     private final PushAgreementRepository pushAgreementRepository;
     private final Clock clock;
 
+    /** 두 토글을 동시에 따로 바꾸면 나중 요청이 먼저 바뀐 값을 덮어쓰지 않도록 사용자 행 락으로 하나씩 처리한다. */
     @Transactional
     public void updateSettings(Long userId, UserSettingsUpdateRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findWithLockById(userId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.UNAUTHENTICATED));
         user.updatePushSettings(request.isPokePushEnabled(), request.isActivityPushEnabled());

@@ -106,6 +106,16 @@ class PushAgreementCreateTest {
     }
 
     @Test
+    void 기록이_없을_때_alreadyAgreed가_오면_저장한다() throws Exception {
+        agree("CERT_REMINDER", "alreadyAgreed")
+                .andExpect(status().isOk());
+
+        List<PushAgreement> agreements = pushAgreementRepository.findAll();
+        assertThat(agreements).hasSize(1);
+        assertThat(agreements.getFirst().getAgreedAt()).isEqualTo(NOW);
+    }
+
+    @Test
     void NOTI_01_3_거부하면_저장하지_않는다() throws Exception {
         agree("CERT_REMINDER", "agreementRejected")
                 .andExpect(status().isOk());

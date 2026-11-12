@@ -66,7 +66,7 @@
 | 처리 규칙 | 시나리오 | 테스트 |
 | --- | --- | --- |
 | 1, 2 (`CERT_REMINDER`만, 나머지는 `COMMON_002`) | NOTI-01-4 | `PushAgreementCreateTest` |
-| 3 (`newAgreement`, `alreadyAgreed`면 저장) | NOTI-01-1 | `PushAgreementCreateTest` |
+| 3 (`newAgreement`, `alreadyAgreed`면 저장) | NOTI-01-1, 시나리오 없음(기록 없을 때 `alreadyAgreed`, 코드리뷰 봇 반영) | `PushAgreementCreateTest` |
 | 4 (거부는 저장 안 함) | NOTI-01-3 | `PushAgreementCreateTest` |
 | 5 (처음 동의 시각 유지) | NOTI-01-2 | `PushAgreementCreateTest` |
 | 6 (동시 요청에도 1건) | NOTI-01-5 | `PushAgreementCreateTest` |
