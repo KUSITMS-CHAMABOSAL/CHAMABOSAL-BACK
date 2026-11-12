@@ -55,6 +55,15 @@ public class User extends BaseEntity {
         deletedAt = null;
     }
 
+    public void updatePushSettings(Boolean isPokePushEnabled, Boolean isActivityPushEnabled) {
+        if (isPokePushEnabled != null) {
+            this.isPokePushEnabled = isPokePushEnabled;
+        }
+        if (isActivityPushEnabled != null) {
+            this.isActivityPushEnabled = isActivityPushEnabled;
+        }
+    }
+
     public void releaseTossAnonKey() {
         tossAnonKey = null;
     }
