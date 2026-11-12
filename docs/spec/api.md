@@ -79,9 +79,9 @@
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
 | 사용자 | GET | `/api/users/me` | USER-01 |  |
 | 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |  |
-| 사용자 | PATCH | `/api/users/me/settings` | USER-03 |  |
+| 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 사용자 | DELETE | `/api/users/me` | USER-05 |  |
-| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 |  |
+| 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
