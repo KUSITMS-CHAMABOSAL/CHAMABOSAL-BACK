@@ -24,12 +24,10 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class RoomService {
 
-    private static final int MAX_JOINED_ROOMS = 2;
+    static final int MAX_JOINED_ROOMS = 2;
     private static final int ROOM_NAME_MAX_LENGTH = 8;
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
     private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~8자입니다.";
-    /** 나간 지 이 기간이 지나지 않은 멤버의 닉네임은 쓸 수 없다. */
-    private static final int NICKNAME_HOLD_MONTHS = 6;
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
@@ -67,13 +65,18 @@ public class RoomService {
         if (me.getNickname().equals(nickname)) {
             return;
         }
+        checkNicknameAvailable(room.getId(), nickname, me.getId());
+        me.changeNickname(nickname);
+    }
+
+    /** 방 행 락을 잡은 뒤 부른다. 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 대소문자 없이 비교해 막는다. */
+    void checkNicknameAvailable(Long roomId, String nickname, Long excludeMemberId) {
         LocalDateTime now = LocalDateTime.now(clock);
-        boolean taken = roomMemberRepository.findSameNicknameMembers(room.getId(), nickname, me.getId()).stream()
-                .anyMatch(member -> member.holdsNickname(now, NICKNAME_HOLD_MONTHS));
+        boolean taken = roomMemberRepository.findSameNicknameMembers(roomId, nickname, excludeMemberId).stream()
+                .anyMatch(member -> member.holdsNickname(now));
         if (taken) {
             throw BaseException.withField(BaseErrorCode.NICKNAME_DUPLICATED, "nickname");
         }
-        me.changeNickname(nickname);
     }
 
     /** 앞뒤 띄어쓰기를 지운 뒤 검사해야 해서 요청 DTO가 아니라 여기서 확인한다. */

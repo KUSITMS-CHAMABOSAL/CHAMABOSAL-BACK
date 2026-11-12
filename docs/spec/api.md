@@ -89,9 +89,9 @@
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 |  |
 | 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 |  |
 | 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 |  |
-| 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 |  |
-| 초대 | GET | `/api/invites/{token}` | INVITE-02 |  |
-| 초대 | POST | `/api/invites/{token}/join` | INVITE-03 |  |
+| 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
+| 초대 | GET | `/api/invites/{token}` | INVITE-02 | ✅ |
+| 초대 | POST | `/api/invites/{token}/join` | INVITE-03 | ✅ |
 | 곳간 | GET | `/api/store` | STORE-01 |  |
 | 곳간 | POST | `/api/items/{itemId}/purchases` | STORE-02 |  |
 | 곳간 | PUT | `/api/users/me/equipped-items` | STORE-03 |  |
@@ -399,7 +399,7 @@ INVITE-03. 방에 들어옵니다. 나간 지 6개월 안이면 예전 멤버 �
 - 나간 지 6개월 안이면 예전 기록이 이어지고, 예전 색을 다른 멤버가 쓰면 남은 색 중 랜덤
 - 이미 멤버면 새로 만들지 않고 기존 정보를 돌려줌
 - 투표가 시작된 뒤 들어오면 다음 회차부터 참여
-- 입장 시점은 [미정] Q-38
+- 닉네임 제출(WF 03) 때 입장까지 한 번에 처리 [Q-38]
 - 에러: `ROOM_001` (409), `ROOM_003` (409), `ROOM_004` (409, `field: nickname`), `ROOM_006` (403), `COMMON_002` (400)
 
 ## 6. 곳간
