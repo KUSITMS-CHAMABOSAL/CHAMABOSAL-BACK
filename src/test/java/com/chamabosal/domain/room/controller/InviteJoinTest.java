@@ -27,7 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.ResultActions;
 
-class InviteJoinTest extends InviteTestSupport {
+class InviteJoinTest extends RoomTestSupport {
 
     private User userA;
     private User userB;

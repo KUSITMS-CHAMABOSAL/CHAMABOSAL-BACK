@@ -55,6 +55,10 @@ public class Room extends BaseEntity {
         ownerMemberId = memberId;
     }
 
+    public void delete(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

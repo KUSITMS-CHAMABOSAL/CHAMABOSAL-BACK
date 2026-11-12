@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultActions;
 
-class InviteTokenTest extends InviteTestSupport {
+class InviteTokenTest extends RoomTestSupport {
 
     private User userA;
     private Room room;

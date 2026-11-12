@@ -87,7 +87,7 @@
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 |  |
-| 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 |  |
+| 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 |  |
 | 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
 | 초대 | GET | `/api/invites/{token}` | INVITE-02 | ✅ |
