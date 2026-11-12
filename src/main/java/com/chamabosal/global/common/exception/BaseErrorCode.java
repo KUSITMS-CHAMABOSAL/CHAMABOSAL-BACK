@@ -29,8 +29,10 @@ public enum BaseErrorCode implements ErrorCode {
     // Room
     ROOM_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "ROOM_001", "참여 중인 방이 2개입니다."),
     NOT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "ROOM_002", "이 방의 멤버가 아닙니다."),
+    ROOM_FULL(HttpStatus.CONFLICT, "ROOM_003", "방이 가득 찼습니다."),
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "ROOM_004", "이미 쓰는 닉네임입니다."),
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방입니다."),
+    ROOM_UNAVAILABLE(HttpStatus.FORBIDDEN, "ROOM_006", "들어갈 수 없는 방입니다."),
 
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
