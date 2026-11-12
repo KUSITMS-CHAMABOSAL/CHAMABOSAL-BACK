@@ -29,14 +29,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** 초대 시나리오 테스트가 함께 쓰는 방·멤버 준비 코드. 방장이 만든 방에 A(`민지`)가 초대 토큰을 가진 멤버로 있다. */
+/** 방·초대 시나리오 테스트가 함께 쓰는 방·멤버 준비 코드. 고정 Clock(NOW)을 쓴다. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(InviteTestSupport.FixedClockConfig.class)
-abstract class InviteTestSupport {
+@Import(RoomTestSupport.FixedClockConfig.class)
+abstract class RoomTestSupport {
 
     static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 11, 12, 0);
     static final String TOKEN_A = "token-a";
@@ -123,7 +122,7 @@ abstract class InviteTestSupport {
     }
 
     void deleteRoom(Room room) {
-        ReflectionTestUtils.setField(room, "deletedAt", NOW.minusDays(1));
+        room.delete(NOW.minusDays(1));
         roomRepository.save(room);
     }
 

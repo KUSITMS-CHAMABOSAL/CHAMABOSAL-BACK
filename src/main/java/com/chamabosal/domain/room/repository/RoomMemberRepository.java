@@ -18,6 +18,9 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     long countByRoom_IdAndLeftAtIsNull(Long roomId);
 
+    /** 방장을 넘겨받을 멤버. 들어온 시각이 같으면 먼저 저장된 행. 다시 들어온 멤버는 예전 행이라 id만으로는 들어온 순서가 아니다. */
+    Optional<RoomMember> findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(Long roomId, Long excludeMemberId);
+
     Optional<RoomMember> findByInviteToken(String inviteToken);
 
     /** 엔티티를 읽지 않고 방 ID만 구한다. 방 행 락을 잡기 전에 읽은 멤버가 영속성 컨텍스트에 남지 않게 한다. */

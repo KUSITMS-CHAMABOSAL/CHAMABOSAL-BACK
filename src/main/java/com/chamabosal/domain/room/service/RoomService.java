@@ -3,6 +3,7 @@ package com.chamabosal.domain.room.service;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
+import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Service
@@ -67,6 +69,35 @@ public class RoomService {
         }
         checkNicknameAvailable(room.getId(), nickname, me.getId());
         me.changeNickname(nickname);
+    }
+
+    @Transactional
+    public void leave(Long userId, Long roomId) {
+        Room room = roomRepository.findWithLockById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        removeMember(room, me, LeaveType.LEFT);
+    }
+
+    /**
+     * 살아 있는 방의 행 락을 잡은 뒤 부른다. 내 데이터 삭제(USER-05)는 방마다 락을 잡는 공개 메서드를 이 클래스에 추가해 이 처리를 쓴다.
+     * 투표 연결(VOTE-01·VOTE-04): 방이 남아 있으면 이 안에서 남은 멤버 기준으로 투표 시작·마감을 확인해야 한다.
+     */
+    void removeMember(Room room, RoomMember member, LeaveType leaveType) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        // 나가기를 저장하기 전에 찾아야 flush 시점과 상관없이 나가는 사람이 빠진다.
+        Optional<RoomMember> successor = roomMemberRepository
+                .findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(room.getId(), member.getId());
+        member.leave(now, leaveType);
+        if (successor.isEmpty()) {
+            room.delete(now);
+            return;
+        }
+        if (member.getId().equals(room.getOwnerMemberId())) {
+            room.assignOwner(successor.get().getId());
+        }
     }
 
     /** 방 행 락을 잡은 뒤 부른다. 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 대소문자 없이 비교해 막는다. */

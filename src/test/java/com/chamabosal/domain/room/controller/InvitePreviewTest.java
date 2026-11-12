@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultActions;
 
-class InvitePreviewTest extends InviteTestSupport {
+class InvitePreviewTest extends RoomTestSupport {
 
     private User userA;
     private User userB;

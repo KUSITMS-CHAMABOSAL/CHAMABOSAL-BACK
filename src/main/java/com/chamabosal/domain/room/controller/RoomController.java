@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정")
+@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 나가기")
 public class RoomController {
 
     private final RoomService roomService;
@@ -127,6 +128,47 @@ public class RoomController {
             @RequestBody @Valid RoomNicknameUpdateRequest request
     ) {
         roomService.updateNickname(userId, roomId, request);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
+    @DeleteMapping("/{roomId}/members/me")
+    @Operation(summary = "나가기 (ROOM-07)",
+            description = """
+                    방을 나갑니다. 방장이면 남은 멤버 중 가장 먼저 들어온 멤버에게 위임하고, 마지막 멤버면 방을 삭제합니다.
+                    방이 남아 있으면 나간 뒤 6개월 안에 초대 링크로 다시 들어올 때 기록이 이어집니다.
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "나가기 성공"),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "COMMON_008 로그인 필요",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "ROOM_002 이 방 멤버가 아님",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            )
+    })
+    public ResponseEntity<Response<Void>> leave(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId
+    ) {
+        roomService.leave(userId, roomId);
         return ResponseEntity.ok(Response.ok(null));
     }
 }
