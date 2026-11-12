@@ -70,7 +70,7 @@ public class InviteService {
         String inviterNickname = inviter.isCurrent() ? inviter.getNickname() : null;
         String previousNickname = status == InviteStatus.ALREADY_MEMBER ? null
                 : findRejoinableMember(room.getId(), userId).map(RoomMember::getNickname).orElse(null);
-        return new InvitePreviewResponse(status, RoomSummary.of(room, memberCount), inviterNickname, previousNickname);
+        return new InvitePreviewResponse(status, RoomSummary.from(room, memberCount), inviterNickname, previousNickname);
     }
 
     /**

@@ -49,12 +49,13 @@ class InviteJoinTest extends InviteTestSupport {
     void INVITE_03_1_입장하면_멤버가_되고_남은_색_중_하나가_배정된다() throws Exception {
         List<BosalColor> usedColors = currentColors(room);
 
-        join(userD, "도윤")
+        ResultActions result = join(userD, "도윤")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.roomId").value(room.getId()))
                 .andExpect(jsonPath("$.data.nickname").value("도윤"));
 
         RoomMember memberD = currentMemberOf(userD).orElseThrow();
+        result.andExpect(jsonPath("$.data.memberId").value(memberD.getId()));
         assertThat(memberD.getNickname()).isEqualTo("도윤");
         assertThat(memberD.getJoinedAt()).isEqualTo(NOW);
         assertThat(usedColors).doesNotContain(memberD.getColor());

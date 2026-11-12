@@ -26,7 +26,7 @@ public record InvitePreviewResponse(
 
     public record RoomSummary(Long roomId, String name, RoomGoal goal, int memberCount, int memberLimit) {
 
-        public static RoomSummary of(Room room, int memberCount) {
+        public static RoomSummary from(Room room, int memberCount) {
             return new RoomSummary(room.getId(), room.getName(), room.getGoal(), memberCount, room.getMemberLimit());
         }
     }
