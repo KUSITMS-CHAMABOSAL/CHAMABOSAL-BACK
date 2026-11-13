@@ -11,6 +11,7 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
+import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class RoomService {
     private final RoomMemberRepository roomMemberRepository;
     private final UserRepository userRepository;
     private final BosalColorPicker bosalColorPicker;
+    private final VoteStartService voteStartService;
     private final Clock clock;
 
     @Transactional
@@ -99,7 +101,7 @@ public class RoomService {
 
     /**
      * 살아 있는 방의 행 락을 잡은 뒤 부른다. 내 데이터 삭제(USER-05)는 방마다 락을 잡는 공개 메서드를 이 클래스에 추가해 이 처리를 쓴다.
-     * 투표 연결(VOTE-01·VOTE-04): 방이 남아 있으면 이 안에서 남은 멤버 기준으로 투표 시작·마감을 확인해야 한다.
+     * 방이 남아 있으면 남은 멤버 기준으로 투표 시작을 확인한다 (ROOM-07 10번). 투표 마감(VOTE-04, ROOM-07 9번)도 여기에 붙인다.
      */
     void removeMember(Room room, RoomMember member, LeaveType leaveType) {
         LocalDateTime now = LocalDateTime.now(clock);
@@ -114,6 +116,7 @@ public class RoomService {
         if (member.getId().equals(room.getOwnerMemberId())) {
             room.assignOwner(successor.get().getId());
         }
+        voteStartService.startIfAllCertified(room.getId(), now);
     }
 
     /** 방 행 락을 잡은 뒤 부른다. 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 대소문자 없이 비교해 막는다. */
