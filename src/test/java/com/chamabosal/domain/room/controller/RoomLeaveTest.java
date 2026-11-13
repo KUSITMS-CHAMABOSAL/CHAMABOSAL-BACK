@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chamabosal.domain.certification.entity.Certification;
+import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.user.entity.User;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -83,6 +87,26 @@ class RoomLeaveTest extends RoomTestSupport {
         assertThat(found.isDeleted()).isTrue();
         assertThat(found.getDeletedAt()).isEqualTo(NOW);
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())).isEmpty();
+    }
+
+    @Test
+    void ROOM_07_11_나가서_전원_인증이_되면_바로_투표가_시작되고_명단은_남은_멤버다() throws Exception {
+        RoomMember memberB = addMember(room, newUser(), "지수");
+        RoomMember memberC = addMember(room, newUser(), "하린");
+        User userD = newUser();
+        addMember(room, userD, "도윤");
+        Round round = saveRound(room, NOW.toLocalDate(), RoundStatus.CERTIFYING);
+        for (RoomMember member : List.of(memberA, memberB, memberC)) {
+            certificationRepository.save(Certification.create(
+                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, NOW.minusHours(1)));
+        }
+
+        leave(userD).andExpect(status().isOk());
+
+        assertThat(roundRepository.findById(round.getId()).orElseThrow().getStatus()).isEqualTo(RoundStatus.VOTING);
+        assertThat(roundParticipantRepository.findByRound_Id(round.getId()))
+                .extracting(participant -> participant.getMember().getId())
+                .containsExactlyInAnyOrder(memberA.getId(), memberB.getId(), memberC.getId());
     }
 
     private ResultActions leave(User user) throws Exception {

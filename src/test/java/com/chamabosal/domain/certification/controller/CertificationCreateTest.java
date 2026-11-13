@@ -15,16 +15,14 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
-import com.chamabosal.global.config.ClockConfig;
 import com.chamabosal.global.security.jwt.JwtProvider;
-import java.time.Clock;
-import java.time.Instant;
+import com.chamabosal.support.MutableClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -36,11 +34,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,46 +44,11 @@ import org.springframework.test.web.servlet.ResultActions;
 /** 공통 Given: 방 인원은 A, B, C, D 4명이다. 시나리오마다 서버가 요청을 받는 시각을 바꾼다. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(CertificationCreateTest.MutableClockConfig.class)
+@Import(MutableClock.Config.class)
 class CertificationCreateTest {
 
     private static final LocalDate NOV_30 = LocalDate.of(2026, 11, 30);
     private static final LocalDate DEC_1 = LocalDate.of(2026, 12, 1);
-
-    @TestConfiguration
-    static class MutableClockConfig {
-
-        @Bean
-        @Primary
-        MutableClock mutableClock() {
-            return new MutableClock();
-        }
-    }
-
-    /** 테스트마다 서버 시각을 바꿀 수 있는 Clock. */
-    static class MutableClock extends Clock {
-
-        private volatile Instant instant = Instant.now();
-
-        void set(LocalDateTime time) {
-            instant = time.atZone(ClockConfig.KST).toInstant();
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return ClockConfig.KST;
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Instant instant() {
-            return instant;
-        }
-    }
 
     @Autowired
     MockMvc mockMvc;
@@ -114,10 +74,15 @@ class CertificationCreateTest {
     @Autowired
     CertificationRepository certificationRepository;
 
+    @Autowired
+    RoundParticipantRepository roundParticipantRepository;
+
     private int userSequence;
     private Room room;
     private User userA;
     private User userB;
+    private User userC;
+    private User userD;
     private RoomMember memberA;
     private RoomMember memberB;
 
@@ -127,14 +92,17 @@ class CertificationCreateTest {
         room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
         userA = newUser();
         userB = newUser();
+        userC = newUser();
+        userD = newUser();
         memberA = addMember(userA, "민지", BosalColor.PINK);
         memberB = addMember(userB, "지수", BosalColor.PURPLE);
-        addMember(newUser(), "하린", BosalColor.MINT);
-        addMember(newUser(), "도윤", BosalColor.YELLOW);
+        addMember(userC, "하린", BosalColor.MINT);
+        addMember(userD, "도윤", BosalColor.YELLOW);
     }
 
     @AfterEach
     void tearDown() {
+        roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
         roomMemberRepository.deleteAll();
@@ -292,6 +260,59 @@ class CertificationCreateTest {
 
         assertThat(roundRepository.findByRoom_IdAndRoundDate(room.getId(), DEC_1).orElseThrow().getStatus())
                 .isEqualTo(RoundStatus.CERTIFYING);
+    }
+
+    @Test
+    void CERT_01_9_마지막_인증이면_인증이_저장되고_투표가_시작된다() throws Exception {
+        for (User user : List.of(userA, userB, userC)) {
+            certify(user, endured())
+                    .andExpect(jsonPath("$.data.isVoteStarted").value(false));
+        }
+
+        certify(userD, endured())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.isVoteStarted").value(true));
+
+        Round dec1 = roundRepository.findByRoom_IdAndRoundDate(room.getId(), DEC_1).orElseThrow();
+        assertThat(dec1.getStatus()).isEqualTo(RoundStatus.VOTING);
+        assertThat(dec1.getVoteStartedAt()).isEqualTo(DEC_1.atTime(20, 0));
+        assertThat(certificationRepository.count()).isEqualTo(4);
+    }
+
+    @Test
+    void CERT_01_10_마지막_두_명이_동시에_인증해도_투표는_한_번만_시작된다() {
+        try {
+            certify(userA, endured()).andExpect(status().isCreated());
+            certify(userB, endured()).andExpect(status().isCreated());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+
+        CountDownLatch ready = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            List<CompletableFuture<String>> results = List.of(userC, userD).stream()
+                    .map(user -> CompletableFuture.supplyAsync(() -> {
+                        await(ready);
+                        try {
+                            return certify(user, endured()).andReturn().getResponse().getContentAsString();
+                        } catch (Exception e) {
+                            throw new IllegalStateException(e);
+                        }
+                    }, executor))
+                    .toList();
+            ready.countDown();
+
+            List<String> bodies = results.stream().map(CompletableFuture::join).toList();
+            assertThat(bodies).allMatch(body -> body.contains("\"certificationId\""));
+            assertThat(bodies).filteredOn(body -> body.contains("\"isVoteStarted\":true")).hasSize(1);
+        } finally {
+            executor.shutdown();
+        }
+        Round dec1 = roundRepository.findByRoom_IdAndRoundDate(room.getId(), DEC_1).orElseThrow();
+        assertThat(dec1.getStatus()).isEqualTo(RoundStatus.VOTING);
+        assertThat(certificationRepository.count()).isEqualTo(4);
+        assertThat(roundParticipantRepository.findByRound_Id(dec1.getId())).hasSize(4);
     }
 
     /** 시나리오 없음: 전원 인증으로 투표가 시작된 뒤 들어온 멤버 (사람 확인, 2026-11-13) */

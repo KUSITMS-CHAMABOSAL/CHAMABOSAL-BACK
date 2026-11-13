@@ -12,7 +12,9 @@ import com.chamabosal.domain.room.service.InviteService;
 import com.chamabosal.domain.room.service.RoomService;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.config.ClockConfig;
@@ -81,8 +83,16 @@ abstract class RoomTestSupport {
     @Autowired
     RoundRepository roundRepository;
 
+    @Autowired
+    RoundParticipantRepository roundParticipantRepository;
+
+    @Autowired
+    CertificationRepository certificationRepository;
+
     @AfterEach
     void tearDown() {
+        roundParticipantRepository.deleteAll();
+        certificationRepository.deleteAll();
         roundRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
