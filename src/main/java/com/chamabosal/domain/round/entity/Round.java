@@ -33,6 +33,7 @@ import java.time.LocalTime;
 public class Round extends BaseEntity {
 
     private static final LocalTime ROUND_START = LocalTime.of(3, 0);
+    private static final LocalTime VOTE_DEADLINE = LocalTime.of(15, 0);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -99,5 +100,21 @@ public class Round extends BaseEntity {
     /** 투표 없이 끝났거나 투표가 마감됐으면 다음 회차 인증이 열린다. */
     public boolean isVoteFinished() {
         return status == RoundStatus.NO_VOTE || voteClosedAt != null;
+    }
+
+    public void startVote(LocalDateTime startedAt) {
+        this.status = RoundStatus.VOTING;
+        this.voteStartedAt = startedAt;
+    }
+
+    /** 확정 시각을 vote_started_at에 남겨 사진 삭제 기준으로 쓴다. */
+    public void markNoVote(LocalDateTime decidedAt) {
+        this.status = RoundStatus.NO_VOTE;
+        this.voteStartedAt = decidedAt;
+    }
+
+    /** 투표는 늦어도 회차 날짜 다음 날 15:00에 닫힌다. */
+    public LocalDateTime getVoteClosesAt() {
+        return roundDate.plusDays(1).atTime(VOTE_DEADLINE);
     }
 }
