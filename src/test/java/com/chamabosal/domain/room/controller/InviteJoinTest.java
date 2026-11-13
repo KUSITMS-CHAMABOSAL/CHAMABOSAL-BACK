@@ -11,6 +11,7 @@ import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
@@ -181,16 +182,23 @@ class InviteJoinTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_03_12_들어오기_전_한_솥_축하는_본_것으로_채운다() throws Exception {
+    void INVITE_03_12_들어오기_전_결과와_한_솥_축하는_본_것으로_채운다() throws Exception {
         ReflectionTestUtils.setField(room, "potCompletedCount", 2);
         roomRepository.save(room);
+        saveRound(room, NOW.toLocalDate().minusDays(3), RoundStatus.ANNOUNCED);
+        saveRound(room, NOW.toLocalDate().minusDays(2), RoundStatus.ANNOUNCED);
+        saveRound(room, NOW.toLocalDate().minusDays(1), RoundStatus.NO_VOTE);
         leave(memberB.getId(), NOW.minusMonths(1), LeaveType.LEFT);
 
         join(userD, "도윤").andExpect(status().isCreated());
         join(userB, "Jisu").andExpect(status().isCreated());
 
-        assertThat(currentMemberOf(userD).orElseThrow().getSeenPotCount()).isEqualTo(2);
-        assertThat(roomMemberRepository.findById(memberB.getId()).orElseThrow().getSeenPotCount()).isEqualTo(2);
+        RoomMember memberD = currentMemberOf(userD).orElseThrow();
+        RoomMember rejoinedB = roomMemberRepository.findById(memberB.getId()).orElseThrow();
+        assertThat(memberD.getSeenPotCount()).isEqualTo(2);
+        assertThat(rejoinedB.getSeenPotCount()).isEqualTo(2);
+        assertThat(memberD.getSeenResultRoundDate()).isEqualTo(NOW.toLocalDate().minusDays(2));
+        assertThat(rejoinedB.getSeenResultRoundDate()).isEqualTo(NOW.toLocalDate().minusDays(2));
     }
 
     @Test
