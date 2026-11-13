@@ -11,6 +11,7 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class CertificationService {
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
+    private final VoteStartService voteStartService;
     private final Clock clock;
 
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
@@ -64,8 +66,9 @@ public class CertificationService {
         Round round = found.orElseGet(() -> roundRepository.save(Round.create(room, roundDate)));
         Certification certification = certificationRepository.save(Certification.create(
                 round, me, request.result(), request.memo(), request.spentAmount(), now));
-        // 투표 시작(VOTE-01, #69): 이 등록으로 현재 멤버 전원이 인증했으면 같은 락 안에서 투표를 시작하고 true를 돌려준다.
-        return CertificationCreateResponse.from(certification, false);
+        // 마지막 인증이면 같은 락 안에서 투표를 시작한다 (CERT-01 9번).
+        boolean isVoteStarted = voteStartService.startIfAllCertified(round, now);
+        return CertificationCreateResponse.from(certification, isVoteStarted);
     }
 
     /**
