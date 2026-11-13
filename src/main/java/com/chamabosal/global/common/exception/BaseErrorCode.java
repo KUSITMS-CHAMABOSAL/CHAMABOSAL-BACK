@@ -34,6 +34,10 @@ public enum BaseErrorCode implements ErrorCode {
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방입니다."),
     ROOM_UNAVAILABLE(HttpStatus.FORBIDDEN, "ROOM_006", "들어갈 수 없는 방입니다."),
 
+    // Certification
+    ALREADY_CERTIFIED(HttpStatus.CONFLICT, "CERT_001", "이미 인증했습니다."),
+    CERTIFICATION_NOT_OPEN(HttpStatus.CONFLICT, "CERT_006", "아직 인증 시간이 아닙니다."),
+
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
 
