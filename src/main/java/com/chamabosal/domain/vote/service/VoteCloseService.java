@@ -100,8 +100,7 @@ public class VoteCloseService {
     private boolean allRequiredVoted(Round round, List<Vote> votes) {
         Set<Long> votedMemberIds = votes.stream().map(vote -> vote.getVoterMember().getId())
                 .collect(Collectors.toSet());
-        return roundParticipantRepository.findByRound_Id(round.getId()).stream()
-                .filter(RoundParticipant::isCanVote)
+        return roundParticipantRepository.findCanVoteWithMemberByRound_Id(round.getId()).stream()
                 .map(RoundParticipant::getMember)
                 .filter(member -> isRequired(member, round))
                 .allMatch(member -> votedMemberIds.contains(member.getId()));
