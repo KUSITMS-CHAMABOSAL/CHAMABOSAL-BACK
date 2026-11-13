@@ -14,7 +14,7 @@ public record CertificationCreateResponse(
         @Schema(description = "이 등록으로 전원 인증이 되어 투표가 시작됐는지") boolean isVoteStarted
 ) {
 
-    public static CertificationCreateResponse of(Certification certification, boolean isVoteStarted) {
+    public static CertificationCreateResponse from(Certification certification, boolean isVoteStarted) {
         return new CertificationCreateResponse(certification.getId(), certification.getRound().getRoundDate(),
                 certification.getCertifiedAt(), certification.getEditableUntil(), isVoteStarted);
     }

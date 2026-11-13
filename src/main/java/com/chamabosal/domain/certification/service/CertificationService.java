@@ -40,6 +40,8 @@ public class CertificationService {
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
     @Transactional
     public CertificationCreateResponse create(Long userId, Long roomId, CertificationCreateRequest request) {
+        // 회차는 요청을 받은 시각으로 정한다. 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게 락보다 먼저 읽는다.
+        LocalDateTime now = LocalDateTime.now(clock);
         validateMemo(request.memo());
         validateSpentAmount(request.result(), request.spentAmount());
 
@@ -49,7 +51,6 @@ public class CertificationService {
         RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
 
-        LocalDateTime now = LocalDateTime.now(clock);
         LocalDate roundDate = Round.dateOf(now);
         Optional<Round> found = roundRepository.findByRoom_IdAndRoundDate(roomId, roundDate);
         if (found.isPresent()
@@ -64,7 +65,7 @@ public class CertificationService {
         Certification certification = certificationRepository.save(Certification.create(
                 round, me, request.result(), request.memo(), request.spentAmount(), now));
         // 투표 시작(VOTE-01, #69): 이 등록으로 현재 멤버 전원이 인증했으면 같은 락 안에서 투표를 시작하고 true를 돌려준다.
-        return CertificationCreateResponse.of(certification, false);
+        return CertificationCreateResponse.from(certification, false);
     }
 
     /**
