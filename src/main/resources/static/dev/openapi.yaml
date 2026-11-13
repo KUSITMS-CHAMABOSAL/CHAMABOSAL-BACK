@@ -1209,10 +1209,12 @@ paths:
       operationId: createCertification
       summary: 인증 등록
       description: |-
-        인증을 등록한다. 회차는 서버가 요청을 받은 시각으로 정한다. 05:00(KST) 전에 등록하면 전날 회차다.
+        인증을 등록한다. 회차는 서버가 요청을 받은 시각으로 정한다. 03:00(KST) 전에 등록하면 전날 회차, 03:00 이후면 그날 회차다.
+        그날 회차 인증은 이전 회차 투표가 마감돼야 열린다 (늦어도 15:00). 이전 회차 투표가 없으면(처음 만든 방, 투표 명단 3명 미만) 바로 열린다.
 
         - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않는다.
         - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있다. 없거나 만료된 키는 `COMMON_002`
+        - `CERT_006`: 아직 인증 시간이 아님. 이전 회차 투표가 끝나지 않았다.
       parameters:
       - *id001
       requestBody:
@@ -1285,7 +1287,7 @@ paths:
                 ROOM_005:
                   $ref: '#/components/examples/ROOM_005'
         '409':
-          description: CERT_001
+          description: CERT_001 / CERT_006
           content:
             application/json:
               schema:
@@ -1293,6 +1295,8 @@ paths:
               examples:
                 CERT_001:
                   $ref: '#/components/examples/CERT_001'
+                CERT_006:
+                  $ref: '#/components/examples/CERT_006'
   /api/certifications/{certificationId}:
     patch:
       tags:
@@ -1466,6 +1470,7 @@ paths:
         보낸 리액션으로 설정만 한다. 같은 값으로 다시 보내도 그대로다 (재시도해도 안전).
 
         - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 `DELETE`를 부른다.
+        - `riceEarned`, `potEarned`: 이 인증에 처음 리액션을 남길 때만 1, 바꾸거나 다시 남기면 0. 방 인원이 1명이면 0 (RICE-01)
         - 확인 순서: 요청 형식(`COMMON_002`) → 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`)
       parameters:
       - *id003
@@ -1477,11 +1482,18 @@ paths:
               $ref: '#/components/schemas/ReactionPutRequest'
       responses:
         '200':
-          description: 성공 (data 없음)
+          description: 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReactionPutResponse'
         '400':
           description: COMMON_002
           content:
@@ -1700,7 +1712,7 @@ paths:
                       status: VOTING
                       roundId: 100
                       roundDate: '2026-11-04'
-                      closesAt: '2026-11-06T05:00:00'
+                      closesAt: '2026-11-05T15:00:00'
                       votedCount: 2
                       voterCount: 4
                       candidates:
@@ -1920,13 +1932,13 @@ paths:
       description: |-
         결과 화면이다. 누가 누구에게 투표했는지는 보내지 않는다.
 
-        - `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 다음 회차 투표가 열려 닫힌 투표는 톡톡이 없어 `false`
-        - `isTapExpired`: 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
+        - `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같다.
+        - `isTapExpired`: `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
         - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록한다 (SHIELD-02).
-        - `hasDefenseTicket`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 미사용 방어권 보유 여부 ("보유 방어권 1개" 표시). 나머지는 `null`
-        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 보유, 이번 주 미사용). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
+        - `defenseTicketCount`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 보유한 미사용 방어권 개수 ("보유 방어권 n개" 표시, 보유 개수 제한 없음). 나머지는 `null`
+        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 1개 이상 보유). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
       parameters:
       - *id004
       responses:
@@ -1990,9 +2002,10 @@ paths:
 
         - `count`: 0~10
         - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 무효다.
-        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아니거나(방어된 결과 포함), 다음 회차 투표가 열려 닫힌 투표
+        - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0(건너뛰기)이면 0. 방 인원이 1명이면 0 (RICE-01)
+        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함)
         - `TAP_003`: 이미 톡톡함. 저장된 횟수는 그대로다.
-        - `TAP_004`: 톡톡 시간 지남. 전원 투표로 마감된 `PICKED` 결과인데 그 뒤 다음 투표가 열림
+        - `TAP_004`: 톡톡 시간 지남. `PICKED` 결과인데 그 뒤 다음 투표가 열림
       parameters:
       - *id004
       requestBody:
@@ -2003,11 +2016,18 @@ paths:
               $ref: '#/components/schemas/TapCreateRequest'
       responses:
         '201':
-          description: 성공 (data 없음)
+          description: 성공
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TapCreateResponse'
         '400':
           description: COMMON_002
           content:
@@ -2169,8 +2189,9 @@ paths:
       description: |-
         다 채운 솥의 축하 화면이다.
 
-        - `rewardAmount`: 멤버 전원이 받은 개인 공양미
-        - `contributions`: 그 솥에 넣은 석이 많은 순. 인증 삭제로 회수한 석은 뺀다.
+        - `goalAmount`: 이 솥의 목표 석 (방 목표 석, 300~700석 50석 단위)
+        - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%, 반올림은 [미정] Q-81)
+        - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺀다.
         - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
         - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
       parameters:
@@ -2233,7 +2254,7 @@ paths:
       operationId: purchaseDefenseTicket
       summary: 방어권 구매
       description: |-
-        공양미 100석으로 방어권을 산다. 최대 1개 보유한다.
+        공양미 100석으로 방어권을 산다. 보유 개수 제한이 없다.
 
         - `STORE_001`: 잔액 부족 또는 음수 (꾸미기 구매와 같은 code)
       responses:
@@ -2260,7 +2281,7 @@ paths:
                 COMMON_008:
                   $ref: '#/components/examples/COMMON_008'
         '409':
-          description: STORE_001 / DEFENSE_001
+          description: STORE_001
           content:
             application/json:
               schema:
@@ -2268,8 +2289,6 @@ paths:
               examples:
                 STORE_001:
                   $ref: '#/components/examples/STORE_001'
-                DEFENSE_001:
-                  $ref: '#/components/examples/DEFENSE_001'
   /api/rounds/{roundId}/defenses:
     post:
       tags:
@@ -2283,7 +2302,8 @@ paths:
         - 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 조회 시각으로 기록한다.
         - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않는다.
         - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공한다 (재시도해도 안전).
-        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_009` → `DEFENSE_005` → `DEFENSE_002`
+        - 사용 횟수 제한이 없다. 방어하면 그 회차 번뇌 완료 보상(10석)은 받지 않는다.
+        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_009` → `DEFENSE_002`
       parameters:
       - *id004
       responses:
@@ -2323,7 +2343,7 @@ paths:
                 ROUND_001:
                   $ref: '#/components/examples/ROUND_001'
         '409':
-          description: RESULT_001 / DEFENSE_009 / DEFENSE_005 / DEFENSE_002
+          description: RESULT_001 / DEFENSE_009 / DEFENSE_002
           content:
             application/json:
               schema:
@@ -2333,8 +2353,6 @@ paths:
                   $ref: '#/components/examples/RESULT_001'
                 DEFENSE_009:
                   $ref: '#/components/examples/DEFENSE_009'
-                DEFENSE_005:
-                  $ref: '#/components/examples/DEFENSE_005'
                 DEFENSE_002:
                   $ref: '#/components/examples/DEFENSE_002'
 components:
@@ -2613,6 +2631,22 @@ components:
           description: 한 솥에서 회수한 석. 솥이 이미 가득 찼거나 이미 삭제했으면 0
           example: 10
           format: int32
+    ReactionPutResponse:
+      type: object
+      required:
+      - riceEarned
+      - potEarned
+      properties:
+        riceEarned:
+          type: integer
+          description: 받은 개인 공양미. 이 인증에 처음 남길 때만 1
+          example: 1
+          format: int32
+        potEarned:
+          type: integer
+          description: 한 솥에 넣은 석. 이 인증에 처음 남길 때만 1
+          example: 1
+          format: int32
     ReactionPutRequest:
       type: object
       required:
@@ -2744,8 +2778,8 @@ components:
           format: date
         closesAt:
           type: string
-          description: 늦어도 닫히는 시각 (회차 날짜 이틀 뒤 05:00). 다음 회차가 먼저 전원 인증하면 그때 닫힘
-          example: '2026-11-06T05:00:00'
+          description: 늦어도 닫히는 시각 (회차 날짜 다음 날 15:00). 그 전에 투표권 있는 명단 전원이 투표하면 그때 닫힘
+          example: '2026-11-05T15:00:00'
           nullable: true
           format: date-time
         votedCount:
@@ -2892,7 +2926,7 @@ components:
       - allBosalCount
       - isMePicked
       - defenseUsableUntil
-      - hasDefenseTicket
+      - defenseTicketCount
       - canUseDefense
       - canTap
       - isTapExpired
@@ -2932,10 +2966,11 @@ components:
           example: '2026-11-04T08:02:00'
           format: date-time
           nullable: true
-        hasDefenseTicket:
-          type: boolean
-          description: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 미사용 방어권 보유 여부. 나머지는 `null`
+        defenseTicketCount:
+          type: integer
+          description: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 보유한 미사용 방어권 개수. 나머지는 `null`
           example: null
+          format: int32
           nullable: true
         canUseDefense:
           type: boolean
@@ -2951,6 +2986,22 @@ components:
           type: integer
           description: 나를 뺀, 톡톡을 끝낸 멤버 수
           example: 2
+          format: int32
+    TapCreateResponse:
+      type: object
+      required:
+      - riceEarned
+      - potEarned
+      properties:
+        riceEarned:
+          type: integer
+          description: 받은 개인 공양미. 1번 이상 쳤으면 5, 건너뛰면 0
+          example: 5
+          format: int32
+        potEarned:
+          type: integer
+          description: 한 솥에 넣은 석. 1번 이상 쳤으면 5, 건너뛰면 0
+          example: 5
           format: int32
     TapCreateRequest:
       type: object
@@ -3747,11 +3798,12 @@ components:
           format: int32
         goalAmount:
           type: integer
+          description: 이 솥의 목표 석 (방 목표 석)
           example: 300
           format: int32
         rewardAmount:
           type: integer
-          description: 멤버 전원이 받은 개인 공양미
+          description: 멤버 전원이 받은 개인 공양미 (목표의 10%)
           example: 30
           format: int32
         contributions:
@@ -3802,6 +3854,12 @@ components:
         success: false
         code: CERT_005
         message: 투표가 시작되어 인증을 바꿀 수 없습니다.
+    CERT_006:
+      summary: CERT_006 (409)
+      value:
+        success: false
+        code: CERT_006
+        message: 아직 인증 시간이 아닙니다.
     COMMON_001:
       summary: COMMON_001 (404)
       value:
@@ -3827,24 +3885,12 @@ components:
         success: false
         code: COMMON_008
         message: 인증이 필요합니다.
-    DEFENSE_001:
-      summary: DEFENSE_001 (409)
-      value:
-        success: false
-        code: DEFENSE_001
-        message: 이미 방어권을 가지고 있습니다.
     DEFENSE_002:
       summary: DEFENSE_002 (409)
       value:
         success: false
         code: DEFENSE_002
         message: 가지고 있는 방어권이 없습니다.
-    DEFENSE_005:
-      summary: DEFENSE_005 (409)
-      value:
-        success: false
-        code: DEFENSE_005
-        message: 이번 주에 이미 방어권을 썼습니다.
     DEFENSE_008:
       summary: DEFENSE_008 (403)
       value:

@@ -155,10 +155,10 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
-| round_date | DATE | NOT NULL | 회차 날짜 (KST, 05:00부터 다음 날 04:59까지) |
+| round_date | DATE | NOT NULL | 회차 날짜 (KST, 03:00부터 다음 날 02:59까지) |
 | status | VARCHAR(20) | NOT NULL | `CERTIFYING` / `VOTING` / `ANNOUNCED` / `NO_VOTE` |
-| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 다음 날 05:00. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용 |
-| vote_closed_at | DATETIME | NULL | 투표권 있는 명단 전원 투표 시각 또는 다음 회차 투표 시작 시각 |
+| vote_started_at | DATETIME | NULL | 전원 인증 시각 또는 다음 날 03:00. `NO_VOTE`로 확정되면 그 확정 시각을 기록해 사진 삭제 기준으로 사용 |
+| vote_closed_at | DATETIME | NULL | 투표권 있는 명단 전원 투표 시각 또는 다음 날 15:00 (자동 마감) |
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
@@ -167,12 +167,12 @@ erDiagram
 
 - `UNIQUE (room_id, round_date)`
 - 회차 행은 그날 방에서 첫 인증이나 첫 콕이 있을 때 만든다 (ROOM-02, POKE-01)
-  - 인증도 콕도 없던 날은 회차 행이 없다. 그 회차는 인증한 사람이 0명이므로 다음 날 05:00 처리는 VOTE-01 4번(인증 0명, [미정] Q-57)을 따르고, 투표를 열기로 정하면 그때 행을 만든다
-  - 이전 회차 투표 닫기(VOTE-04 2번)는 다음 회차 행이 있는지와 상관없이 05:00에 한다
+  - 인증도 콕도 없던 날은 회차 행이 없다. 그 회차는 인증한 사람이 0명이므로 다음 날 03:00 처리는 VOTE-01 4번(인증 0명, [미정] Q-57)을 따르고, 투표를 열기로 정하면 그때 행을 만든다
+- 그날 회차 인증이 열렸는지는 저장하지 않고 계산: 이전 회차 행이 없거나, `NO_VOTE`이거나, `vote_closed_at`이 있으면 열림 (CERT-01 8번)
 - 득표수는 `votes`에서 집계
 - `version` (낙관적 락): JPA 엔티티 필드에 `@Version`만 붙이면 저장할 때마다 version을 올리고, 읽었을 때와 값이 다르면 저장을 실패시켜 줌 (`OptimisticLockException`)
-  - 예) 04:59:59 마지막 인증(이벤트)과 05:00 배치가 같은 회차를 동시에 투표 시작 → 먼저 저장한 쪽만 성공, 나중 쪽은 실패 → "이미 처리됨"으로 보고 넘어감
-  - 투표 마감(전원 투표 이벤트 vs 다음 회차 투표 시작)도 같은 방식. 없으면 명단 스냅샷·알림·결과 판정·공양미 지급이 두 번 일어날 수 있음
+  - 예) 02:59:59 마지막 인증(이벤트)과 03:00 배치가 같은 회차를 동시에 투표 시작 → 먼저 저장한 쪽만 성공, 나중 쪽은 실패 → "이미 처리됨"으로 보고 넘어감
+  - 투표 마감(전원 투표 이벤트 vs 15:00 자동 마감)도 같은 방식. 없으면 명단 스냅샷·알림·결과 판정·공양미 지급이 두 번 일어날 수 있음
 
 ### round_participants
 
@@ -265,6 +265,7 @@ erDiagram
 | played_at | DATETIME | NULL | 받은 사람 화면에서 재생된 시각. NULL이면 아직 안 본 톡톡 → 다음에 열 때 재생 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트
+- `count`가 1 이상이면 보낸 사람에게 톡톡 완료 보상(`rice_histories.reason = TAP`, 한 솥 +5) 적립 (RICE-01 4번)
 - 받는 사람(지목된 사람)은 `rounds.picked_member_id`라 따로 저장하지 않음
 - 톡톡이 끝날 때(10번 다 침·건너뛰기·나가기) 프론트가 최종 횟수를 **한 번만** 보냄 → 행이 생겼다는 것 자체가 끝났다는 뜻 (UNIQUE라 두 번째 요청은 거절)
   - "친구 n명이 톡톡했어요" = 그 회차에서 count가 1 이상인 행 개수 (나 제외). 0번 건너뛰기도 행은 만듦 (다시 못 치게)
@@ -281,15 +282,19 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | |
-| delta | INT | NOT NULL | +10, +5, +30, -50, -100, -10 … |
-| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `POT` / `PURCHASE` / `RECALL` |
-| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `ROOM_POT` / `ITEM` / `DEFENSE` |
-| ref_id | BIGINT | NULL | 원인 행 ID |
+| room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)는 NULL |
+| delta | INT | NOT NULL | +10, +5, +1, +30, -50, -100, -10 … |
+| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) |
+| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE` / `ROOM_MEMBER` |
+| ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감은 나간 멤버 ID |
 
-- 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용
+- 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용 (나가기 차감만 0석 아래로 내려가지 않게 차감액을 줄임, RICE-03)
+- 방에서 모은 공양미(나가기 차감) = `SUM(delta) WHERE user_id = ? AND room_id = ? AND reason <> 'LEAVE'`
+- 인덱스: `(user_id, room_id)` → 나가기 차감 계산
 - 중복 지급 방지: `UNIQUE (user_id, reason, ref_type, ref_id)`
   - 인증 보상은 인증 ID 기준이라 삭제 후 다시 인증하면 새 ID로 다시 지급 (기획 확정)
   - 회수(`RECALL`)도 같은 인증 ID로 1번만
+  - 리액션 보상은 (사용자, 인증 ID)로 1번만이라 바꾸거나 취소하고 다시 남겨도 다시 주지 않음 (Q-90)
 
 ### room_pots (한 솥)
 
@@ -298,12 +303,13 @@ erDiagram
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | seq | INT | NOT NULL | 몇 번째 솥인지 (1부터) |
-| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0~300) |
+| goal_amount | INT | NOT NULL | 이 솥의 목표 석. 만들 때 방 목표 석을 복사 (연장해도 같은 값) |
+| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0~`goal_amount`) |
 | carried_over | INT | NOT NULL, 기본 0 | 이전 솥에서 넘어온 석 |
 | completed_at | DATETIME | NULL | 가득 찬 시각. NULL이면 진행 중인 솥 |
 
 - `UNIQUE (room_id, seq)`. 진행 중인 솥은 방마다 1개
-- 가득 차면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +30 → `rooms.pot_completed_count` +1 → 다음 솥을 넘친 석으로 생성
+- 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%) → `rooms.pot_completed_count` +1 → 방 기간 종료. 방장이 연장하면 다음 솥을 같은 목표, 넘친 석으로 생성 (POT-01)
 
 ### pot_contributions
 
@@ -312,9 +318,9 @@ erDiagram
 | id | BIGINT | PK | |
 | pot_id | BIGINT | FK room_pots, NOT NULL | 들어간 솥 |
 | member_id | BIGINT | FK room_members, NOT NULL | |
-| delta | INT | NOT NULL | +10 / +5 / -10 |
-| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `RECALL` |
-| ref_id | BIGINT | NOT NULL | 인증 또는 투표 ID |
+| delta | INT | NOT NULL | +10 / +5 / +1 / -10 |
+| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP` / `REACTION` / `RECALL` |
+| ref_id | BIGINT | NOT NULL | 인증, 투표, 톡톡 ID (리액션은 리액션을 남긴 인증 ID) |
 
 - 인증이 지워질 때: 그 인증이 들어간 솥이 `completed_at IS NULL`이면 차감 (0 아래로는 안 내려감), 이미 찬 솥이면 차감 안 함
 - 넘쳐서 두 솥에 나뉘어 들어간 경우는 🛠 가득 찬 솥 기준으로 기록 (이미 보상이 나갔으니 차감 대상 아님)
@@ -332,10 +338,11 @@ erDiagram
 | purchased_at | DATETIME | NOT NULL | |
 | used_at | DATETIME | NULL | NULL이면 보유 중 |
 | used_round_id | BIGINT | FK rounds, NULL | 쓴 회차 (방은 회차에서 알 수 있음) |
-| used_week_start | DATE | NULL | 쓴 회차 날짜가 속한 주의 월요일 |
 
-- 최대 1개 보유: 생성 컬럼 `unused_user_id = IF(used_at IS NULL, user_id, NULL)`에 UNIQUE
-- 주 1번: `UNIQUE (user_id, used_week_start)`
+- 보유 개수·사용 횟수 제한 없음 (SHIELD-01, SHIELD-02)
+- 같은 회차에 두 번 쓰지 않게: `UNIQUE (used_round_id)` (NULL은 여러 개 허용)
+- 사용할 때 보유 중인 방어권 하나를 잠그고(`SELECT ... FOR UPDATE`) 소모 → 방어권 하나로 두 방에서 동시에 쓰지 못함
+- 인덱스: `(user_id, used_at)` → 보유 개수 조회
 - 사용 조건(그 회차 `PICKED`의 지목된 본인, `rounds.picked_seen_at` + 2분 안)은 서버에서 검증 (SHIELD-02)
 - 사용하면 같은 트랜잭션에서 회차 `result_type`을 `DEFENDED`로 바꿈
 
@@ -376,12 +383,14 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | 받는 사람 |
-| type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_OPENED` / `VOTE_REMINDER` / `RESULT` |
+| type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_REMINDER` / `RESULT` |
 | room_id | BIGINT | FK rooms, NULL | 인증 마감 리마인드(`CERT_REMINDER`)는 방 개수와 상관없이 항상 NULL |
 | round_date | DATE | NOT NULL | |
+| from_member_id | BIGINT | FK room_members, NULL | 콕 푸시(`POKE`)의 보낸 사람. 나머지는 NULL |
 | is_success | BOOLEAN | NOT NULL | 앱인토스 응답 결과 |
 
-- 중복 발송 방지 (콕 푸시 회차당 1번 등): 생성 컬럼 `room_key = IFNULL(room_id, 0)`에 `UNIQUE (user_id, type, room_key, round_date)`
+- 중복 발송 방지: 생성 컬럼 `room_key = IFNULL(room_id, 0)`, `from_key = IFNULL(from_member_id, 0)`에 `UNIQUE (user_id, type, room_key, round_date, from_key)`
+  - 콕 푸시는 보낸 사람별 처음 1번, 받는 사람 하루 3건 (POKE-02). 재발송 금지 기준이 회차가 아니면 키를 바꿈 ([미정] Q-97)
   - `room_id`에 바로 UNIQUE를 걸면 MySQL은 NULL끼리 같은 값으로 보지 않아서, 방 2개를 합친 인증 리마인드(`room_id` NULL)가 두 번 들어가도 못 막음
   - 발송 실패(`is_success = false`) 후 다시 보낼 때는 새 행을 넣지 말고 기존 행을 업데이트 (새로 넣으면 UNIQUE에 막힘)
 
@@ -396,7 +405,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
 | `certifications` | `(member_id)` | 이번 달 참은 횟수·연속 인증·인증 캘린더 (멤버 → 사용자 기준 집계) |
-| `rounds` | `(status, round_date)` | 05:00 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
+| `rounds` | `(status, round_date)` | 03:00·15:00 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
 
 ---
 
