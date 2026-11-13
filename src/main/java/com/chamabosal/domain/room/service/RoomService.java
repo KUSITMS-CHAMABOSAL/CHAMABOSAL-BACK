@@ -11,6 +11,7 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
+import com.chamabosal.domain.vote.service.VoteCloseService;
 import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
@@ -39,6 +40,7 @@ public class RoomService {
     private final UserRepository userRepository;
     private final BosalColorPicker bosalColorPicker;
     private final VoteStartService voteStartService;
+    private final VoteCloseService voteCloseService;
     private final Clock clock;
 
     @Transactional
@@ -117,6 +119,7 @@ public class RoomService {
             room.assignOwner(successor.get().getId());
         }
         voteStartService.startIfAllCertified(room.getId(), now);
+        voteCloseService.closeIfAllVoted(room.getId(), now);
     }
 
     /** 방 행 락을 잡은 뒤 부른다. 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 대소문자 없이 비교해 막는다. */
