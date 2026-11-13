@@ -21,6 +21,8 @@ import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.security.jwt.JwtProvider;
 import com.chamabosal.support.MutableClock;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -169,12 +172,12 @@ class VoteStartTest {
 
         CountDownLatch ready = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
+        MockHttpServletResponse response;
         try {
-            // 배치가 먼저 락을 잡으면 마지막 인증은 투표가 시작된 회차라 CERT_006으로 거부된다. 어느 쪽이 먼저든 투표는 하나다.
-            CompletableFuture<Void> lastCertification = CompletableFuture.runAsync(() -> {
+            CompletableFuture<MockHttpServletResponse> lastCertification = CompletableFuture.supplyAsync(() -> {
                 await(ready);
                 try {
-                    requestCertification(members.get(3));
+                    return requestCertification(members.get(3)).andReturn().getResponse();
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
@@ -185,12 +188,47 @@ class VoteStartTest {
             }, executor);
             ready.countDown();
             CompletableFuture.allOf(lastCertification, batch).join();
+            response = lastCertification.join();
         } finally {
             executor.shutdown();
         }
 
+        // 인증이 먼저면 201로 투표를 열고, 배치가 먼저면 투표가 시작된 회차라 CERT_006이다. 그 밖의 응답은 실패다.
+        String body = contentOf(response);
+        if (response.getStatus() == 201) {
+            assertThat(body).contains("\"isVoteStarted\":true");
+        } else {
+            assertThat(response.getStatus()).isEqualTo(409);
+            assertThat(body).contains("\"code\":\"CERT_006\"");
+        }
         assertThat(nov5().getStatus()).isEqualTo(RoundStatus.VOTING);
         assertThat(participants(nov5())).hasSize(4);
+    }
+
+    /** 시나리오 없음: 서버가 03:00에 꺼져 있어 배치가 늦게 돌 때, 그 사이 들어온 멤버는 인증할 수 없었으므로 후보가 아니다 (코드리뷰 반영). */
+    @Test
+    void 배치가_늦게_돌면_회차_날짜_뒤에_들어온_미인증_멤버는_후보가_아니다() throws Exception {
+        RoomMember a = addMember("민지");
+        RoomMember b = addMember("지수");
+        addMember("하린");
+        certify(a);
+        certify(b);
+        RoomMember late = addMemberJoinedAt("도윤", DEADLINE.plusHours(1));
+
+        clock.set(DEADLINE.plusHours(2));
+        voteStartScheduler.startDueVotes();
+
+        RoundParticipant participant = participants(nov5()).get(late.getId());
+        assertThat(participant.isCandidate()).isFalse();
+        assertThat(participant.isCanVote()).isFalse();
+    }
+
+    private static String contentOf(MockHttpServletResponse response) {
+        try {
+            return response.getContentAsString(StandardCharsets.UTF_8);
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

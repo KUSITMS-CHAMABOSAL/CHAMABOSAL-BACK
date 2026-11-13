@@ -105,11 +105,14 @@ public class VoteStartService {
         return true;
     }
 
-    /** 휴식 중이거나 그날 들어와서 인증하지 않은 멤버는 후보가 아니다. 인증하지 않은 기존 멤버는 `인증 안 함` 후보다 (CERT-05). */
+    /**
+     * 휴식 중이거나 그날 들어와서 인증하지 않은 멤버는 후보가 아니다. 인증하지 않은 기존 멤버는 `인증 안 함` 후보다 (CERT-05).
+     * 배치가 늦게 돌면 회차 날짜 다음 날 들어온 멤버도 명단에 들어올 수 있어서, 회차 날짜 이후에 들어왔으면 "그날 들어옴"으로 본다.
+     */
     private RoundParticipant snapshot(Round round, RoomMember member, boolean hasCertified, LocalDate roundDate) {
         boolean isResting = roundDate.equals(member.getRestingRoundDate());
-        boolean joinedThisRound = Round.dateOf(member.getJoinedAt()).equals(roundDate);
-        boolean isCandidate = !isResting && (hasCertified || !joinedThisRound);
+        boolean joinedThisRoundOrLater = !Round.dateOf(member.getJoinedAt()).isBefore(roundDate);
+        boolean isCandidate = !isResting && (hasCertified || !joinedThisRoundOrLater);
         return RoundParticipant.create(round, member, isCandidate, hasCertified, isResting);
     }
 }
