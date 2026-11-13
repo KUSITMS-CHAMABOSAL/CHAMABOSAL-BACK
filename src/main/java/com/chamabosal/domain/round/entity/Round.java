@@ -22,6 +22,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Entity
@@ -30,6 +31,8 @@ import java.time.LocalDateTime;
 })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Round extends BaseEntity {
+
+    private static final LocalTime ROUND_START = LocalTime.of(3, 0);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -81,5 +84,20 @@ public class Round extends BaseEntity {
         round.roundDate = roundDate;
         round.status = RoundStatus.CERTIFYING;
         return round;
+    }
+
+    /** 03:00 전이면 전날 회차, 03:00부터 그날 회차다. */
+    public static LocalDate dateOf(LocalDateTime time) {
+        LocalDate date = time.toLocalDate();
+        return time.toLocalTime().isBefore(ROUND_START) ? date.minusDays(1) : date;
+    }
+
+    public boolean isCertifying() {
+        return status == RoundStatus.CERTIFYING;
+    }
+
+    /** 투표 없이 끝났거나 투표가 마감됐으면 다음 회차 인증이 열린다. */
+    public boolean isVoteFinished() {
+        return status == RoundStatus.NO_VOTE || voteClosedAt != null;
     }
 }
