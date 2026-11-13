@@ -117,4 +117,17 @@ public class Round extends BaseEntity {
     public LocalDateTime getVoteClosesAt() {
         return roundDate.plusDays(1).atTime(VOTE_DEADLINE);
     }
+
+    /** 결과 판정(RESULT-01)과 마감을 같이 기록한다. pickedMember가 없으면(ALL_BOSAL·ALL_SAFE) 지목 사용자도 비운다. */
+    public void announce(LocalDateTime closedAt, RoundResultType resultType, RoomMember pickedMember) {
+        this.status = RoundStatus.ANNOUNCED;
+        this.voteClosedAt = closedAt;
+        this.resultType = resultType;
+        this.pickedMember = pickedMember;
+        this.pickedUser = pickedMember != null ? pickedMember.getUser() : null;
+    }
+
+    public boolean isVoting() {
+        return status == RoundStatus.VOTING;
+    }
 }
