@@ -11,6 +11,9 @@ import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
@@ -32,6 +35,7 @@ public class InviteService {
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final UserRepository userRepository;
+    private final RoundRepository roundRepository;
     private final RoomService roomService;
     private final BosalColorPicker bosalColorPicker;
     private final InviteTokenGenerator inviteTokenGenerator;
@@ -131,13 +135,18 @@ public class InviteService {
                 .map(RoomMember::getColor)
                 .toList();
         LocalDateTime now = LocalDateTime.now(clock);
+        RoomMember member;
         if (previous.isPresent()) {
-            RoomMember member = previous.get();
+            member = previous.get();
             BosalColor color = usedColors.contains(member.getColor()) ? bosalColorPicker.pick(usedColors) : member.getColor();
             member.rejoin(nickname, color, now);
-            return member;
+        } else {
+            member = roomMemberRepository.save(
+                    RoomMember.create(room, user, nickname, bosalColorPicker.pick(usedColors), now));
         }
-        return roomMemberRepository.save(RoomMember.create(room, user, nickname, bosalColorPicker.pick(usedColors), now));
+        member.fillSeenResult(roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
+                room.getId(), RoundStatus.ANNOUNCED).map(Round::getRoundDate).orElse(null));
+        return member;
     }
 
     private Optional<RoomMember> findRejoinableMember(Long roomId, Long userId) {

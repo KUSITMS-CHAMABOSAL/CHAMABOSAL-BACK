@@ -78,7 +78,7 @@ public class RoomMember extends BaseEntity {
 
     private LocalDate restingRoundDate;
 
-    /** 들어오기 전의 한 솥 축하는 보여주지 않도록 확인 상태를 방의 현재 완성 횟수로 채운다. */
+    /** 들어오기 전의 한 솥 축하는 보여주지 않도록 확인 상태를 방의 현재 완성 횟수로 채운다. 결과 확인 상태는 fillSeenResult로 채운다. */
     public static RoomMember create(Room room, User user, String nickname, BosalColor color, LocalDateTime joinedAt) {
         RoomMember member = new RoomMember();
         member.room = room;
@@ -120,6 +120,11 @@ public class RoomMember extends BaseEntity {
         this.color = color;
         this.joinedAt = joinedAt;
         this.seenPotCount = room.getPotCompletedCount();
+    }
+
+    /** 들어오기 전의 결과는 보여주지 않도록 입장할 때 가장 최근 발표 회차 날짜로 채운다. 발표된 회차가 없으면 NULL이다. */
+    public void fillSeenResult(LocalDate latestAnnouncedRoundDate) {
+        this.seenResultRoundDate = latestAnnouncedRoundDate;
     }
 
     /** 토큰은 한 번 정해지면 바뀌지 않는다. */

@@ -10,11 +10,15 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.room.service.InviteService;
 import com.chamabosal.domain.room.service.RoomService;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.config.ClockConfig;
 import com.chamabosal.global.security.jwt.JwtProvider;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -29,6 +33,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** 방·초대 시나리오 테스트가 함께 쓰는 방·멤버 준비 코드. 고정 Clock(NOW)을 쓴다. */
@@ -73,8 +78,12 @@ abstract class RoomTestSupport {
 
     private int userSequence;
 
+    @Autowired
+    RoundRepository roundRepository;
+
     @AfterEach
     void tearDown() {
+        roundRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
@@ -119,6 +128,13 @@ abstract class RoomTestSupport {
     /** user를 다른 방 count개에 참여시킨다. */
     void joinOtherRooms(User user, int count) {
         IntStream.range(0, count).forEach(i -> addMember(createRoom(4), user, "다른방" + i));
+    }
+
+    /** 회차 상태 전이는 투표 기능에서 만들어서, 지금은 상태를 바로 넣는다. */
+    Round saveRound(Room room, LocalDate roundDate, RoundStatus status) {
+        Round round = Round.create(room, roundDate);
+        ReflectionTestUtils.setField(round, "status", status);
+        return roundRepository.save(round);
     }
 
     void deleteRoom(Room room) {
