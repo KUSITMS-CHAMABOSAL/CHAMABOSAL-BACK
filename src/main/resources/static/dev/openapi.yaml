@@ -2425,8 +2425,8 @@ components:
       type: string
       enum:
       - RICE
-      - MOKTAK
-      description: '리액션 종류: `RICE` 잘 참았어요, `MOKTAK` 아쉬워요'
+      - BAD
+      description: '리액션 종류: `RICE` 잘 참았어요, `BAD` 아쉬워요'
     VoteTabStatus:
       type: string
       enum:

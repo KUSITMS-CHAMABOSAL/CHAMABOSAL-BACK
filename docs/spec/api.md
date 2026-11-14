@@ -54,7 +54,7 @@
 | CertificationResult | `ENDURED` (참았어요) `FAILED` (못 참았어요) |
 | LockReason | `TIME_OVER` (10분 지남) `VOTE_STARTED` (투표 시작) |
 | RoundStatus | `CERTIFYING` (인증 중) `VOTING` (투표 중) `ANNOUNCED` (발표) `NO_VOTE` (투표 없음) |
-| ReactionType | `RICE` `MOKTAK` |
+| ReactionType | `RICE` `BAD` |
 | VoteTabStatus | `UNDER_THREE` `BEFORE_FIRST_VOTE` `NOT_IN_LIST` `NO_VOTING_RIGHT` `VOTING` `VOTED` `RESULT_UNSEEN` `RESULT_SEEN` |
 | VoteTargetType | `MEMBER` (후보) `ALL_BOSAL` (오늘은 모두 보살) |
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
@@ -593,7 +593,7 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
-> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡을 직접 수행하는 번뇌(정책서: 번뇌 완료 +10석)의 API는 수행 완료 기준이 정해지면 추가 ([미정] Q-92)
+> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡만큼 직접 두드리는 목탁 수행(끝까지 하면 번뇌 완료 +10석)의 API는 수행 완료 기준이 정해지면 추가 ([미정] Q-92)
 > - `roundDate`를 화면에서 쓰는지
 > - 투표 탭 status별로 채우는 필드가 화면에 필요한 값과 맞는지
 

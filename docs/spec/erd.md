@@ -217,7 +217,7 @@ erDiagram
 | id | BIGINT | PK | |
 | certification_id | BIGINT | FK certifications, NOT NULL | |
 | member_id | BIGINT | FK room_members, NOT NULL | 누른 사람 |
-| type | VARCHAR(20) | NOT NULL | `RICE`(잘 참았다) / `MOKTAK`(아쉬워요) |
+| type | VARCHAR(20) | NOT NULL | `RICE`(잘 참았다) / `BAD`(아쉬워요) |
 
 - `UNIQUE (certification_id, member_id)` → 변경은 type 수정, 취소는 행 삭제
 
