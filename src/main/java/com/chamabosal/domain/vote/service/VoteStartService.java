@@ -91,6 +91,8 @@ public class VoteStartService {
 
     /** 명단 3명 미만이거나 인증한 멤버가 0명이면 투표 없음 (VOTE-01 4번). */
     private boolean start(Round round, List<RoomMember> members, Set<Long> certified, LocalDateTime now) {
+        // 휴식 날짜가 지난 멤버는 이번 투표가 시작되기 전에 연속 지목을 0으로 정리한다 (RESULT-04 5번, 코드리뷰 반영).
+        members.forEach(member -> member.finishRestBefore(round.getRoundDate()));
         boolean anyCertified = members.stream().anyMatch(member -> certified.contains(member.getId()));
         if (members.size() < MIN_VOTERS || !anyCertified) {
             round.markNoVote(now);

@@ -33,6 +33,7 @@ public class RoomMember extends BaseEntity {
 
     /** 나간 지 이 기간이 지나지 않으면 닉네임을 잡고 있고, 다시 들어올 때 이 행을 다시 쓴다. */
     private static final int RETENTION_MONTHS = 6;
+    private static final int REST_STREAK = 3;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -136,6 +137,33 @@ public class RoomMember extends BaseEntity {
 
     private boolean isWithinRetention(LocalDateTime now) {
         return !now.isAfter(leftAt.plusMonths(RETENTION_MONTHS));
+    }
+
+    /**
+     * 휴식 날짜가 이 회차 날짜보다 이전이면 휴식이 끝난 것이라 연속 지목과 휴식 날짜를 비운다. 휴식 날짜에 투표가 없었어도 휴식을
+     * 쓴 것으로 본다 (RESULT-04 4·5번). 투표 시작 때 불러 다음 투표가 시작되면 0이 되게 한다.
+     */
+    public void finishRestBefore(LocalDate roundDate) {
+        if (restingRoundDate != null && restingRoundDate.isBefore(roundDate)) {
+            restingRoundDate = null;
+            pickedStreak = 0;
+        }
+    }
+
+    /**
+     * 결과 발표 때 부른다 (RESULT-04). 이번 회차가 휴식 회차였으면 먼저 휴식을 정리한다 (5번).
+     * 그다음 지목되면 +1하고 3회 연속이면 다음 회차 날짜를 휴식으로 둔다. 아니면 0이다 (1·3·4번).
+     */
+    public void applyRoundResult(LocalDate roundDate, boolean isPicked) {
+        finishRestBefore(roundDate.plusDays(1));
+        if (!isPicked) {
+            pickedStreak = 0;
+            return;
+        }
+        pickedStreak++;
+        if (pickedStreak == REST_STREAK) {
+            restingRoundDate = roundDate.plusDays(1);
+        }
     }
 
     public void leave(LocalDateTime leftAt, LeaveType leaveType) {
