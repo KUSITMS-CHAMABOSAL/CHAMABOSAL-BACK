@@ -1,0 +1,93 @@
+# RICE-01 개인 공양미 적립
+
+## 범위
+- 구현 기능: RICE-01, CERT-02, RICE-02
+- 함께 끝내는 기능: CERT-03 (잠금 계산은 CERT-02 3·7번 규칙의 일부라 따로 세지 않음. 아래 "규칙 점검")
+- 참고 기능: CERT-01, VOTE-01, VOTE-03, POT-01, RICE-03, STORE-01, CERT-04
+- Sprint 3-A와 3-B를 합친 PR. 개인 공양미 장부, 인증·투표 적립, 인증 수정·삭제·잠금, 삭제 회수
+- 한 솥(POT-01)은 방 목표 석을 받는 곳이 없어 미룬다. 방 만들기(ROOM-01, 팀원 담당)에 목표 석이 들어온 뒤 진행한다 (아래 "정한 것" 1번)
+
+## 명세 점검
+- 상태 전이
+  - 인증: `있음` → `삭제됨`(`deleted_at`). 삭제한 인증은 되살리지 않고, 다시 인증하면 새 행이다
+  - 잠금은 저장하지 않고 계산한다 (CERT-03 2번): 등록 후 10분이 지나면 `수정 시간 지남`, 회차가 `VOTING`·`ANNOUNCED`면 `투표 시작`. `NO_VOTE` 회차는 10분까지 허용 (Q-32)
+- 동시성
+  - 인증 등록(CERT-01)·투표 제출(VOTE-03)·투표 시작(VOTE-01)·나가기가 모두 방 행 락을 쓴다. 수정·삭제도 방 행 락을 잡고 회차 상태를 다시 읽어서 CERT-02-8(수정과 투표 시작이 동시에)을 막는다
+  - 수정·삭제는 인증 ID만 받으므로 락 전에 방 ID를 읽어야 한다. VOTE-03에서 코드리뷰로 걸린 것처럼, MySQL REPEATABLE READ에서는 락 전 일반 조회가 스냅샷을 고정하므로 `READ_COMMITTED`로 읽는다
+  - 장부는 사용자 단위라 다른 방의 요청과 겹칠 수 있다. 장부는 INSERT만 하고 잔액을 저장하지 않아서(RICE-01 11번) 읽고-고치는 경합이 없다. 같은 원인의 중복 지급·회수는 `UNIQUE (user_id, reason, ref_type, ref_id)`로 막는다 (ERD)
+- 권한: 작성자 본인만 수정·삭제 (`CERT_003`). 방에서 나간 뒤에는 그 방의 인증을 고칠 수 없다 (본인 확인을 현재 멤버로 함)
+- 외부 연동 실패: 없음
+- 금액
+  - 인증 +10석, 투표 +5석. 방 인원 2명 이상일 때만 (그 요청 시점 현재 멤버 수). `참았어요`·`못 참았어요` 같은 양
+  - 회수는 그 인증으로 장부에 기록된 양만큼. 지급 기록이 없으면 회수하지 않는다. 잔액은 음수가 될 수 있다 (RICE-02 5번, Q-87)
+  - 수정은 다시 지급하지 않는다
+- 제외 범위
+  - 한 솥(POT-01) 전부: 팀 공양미 적립, 목표 달성 보너스(RICE-01 8번), 솥 회수(RICE-02 2·3번), 응답의 `potEarned`·`potRecalled`. 한 솥과 함께 추가
+  - 사진(CERT-02 9·10번, `imageKey`·`isImageKept`·`imageUrl`): CERT-01처럼 사진(CERT-04)과 함께 추가
+  - 톡톡(RICE-01 4번)·리액션(5번)·번뇌(6·7번) 적립, 리액션 보상 회수(Q-91): 해당 기능 PR에서 이 장부를 써서 붙인다
+  - 잔액을 보여주는 API(STORE-01)와 음수 잔액일 때 구매 차단(RICE-02 5번 뒷부분): 곳간 기능에서. 이번에는 표시 잔액 계산(음수면 0)만 서비스로 만든다
+  - 인증별 잠금 여부를 화면에 내려주는 응답(CERT-03 출력): 오늘 탭(ROOM-02)이 이 계산을 쓴다
+
+## 명세 변경
+- Q-32 결정을 `round-certification.md` CERT-03 2번에 반영 (이 계획을 쓰며 커밋 전, `open-questions.md`도 결정으로 바꿈)
+- "정한 것" 3번을 `erd.md` `room_pots.amount` 설명에 반영 (한 솥 구현 때 쓸 결정이라 먼저 적어 둠)
+- CERT-01 10번 규칙과 시나리오 CERT-01-16 추가: `NO_VOTE` 회차에서 인증을 삭제한 멤버는 03:00까지 다시 인증할 수 있다 ("정한 것" 6번)
+
+## 설계
+
+### API 계약
+- `POST /api/rooms/{roomId}/certifications` (CERT-01): 응답에 `riceEarned` 추가 (방 인원 1명이면 0)
+- `POST /api/rounds/{roundId}/votes` (VOTE-03): 응답에 `riceEarned` 추가 (방 인원 1명이면 0)
+- `PATCH /api/certifications/{certificationId}` (CERT-02)
+  - 요청: `result`, `memo`, `spentAmount` (등록과 같은 규칙. 사진 필드는 CERT-04에서)
+  - 응답 200: `certificationId`, `result`, `memo`, `spentAmount`, `editableUntil`
+  - 확인 순서: 요청 형식(`COMMON_002`) → 없거나 삭제된 인증(`CERT_002`) → 본인 인증 아님(`CERT_003`) → 수정 시간 지남(`CERT_004`) → 투표 시작(`CERT_005`)
+- `DELETE /api/certifications/{certificationId}` (CERT-02, RICE-02)
+  - 응답 200: `riceRecalled` (`potRecalled`는 한 솥에서)
+  - 확인 순서: 없는 인증(`CERT_002`) → 본인 인증 아님(`CERT_003`) → 이미 삭제됨(성공, `riceRecalled: 0`) → 수정 시간 지남(`CERT_004`) → 투표 시작(`CERT_005`)
+- 새 에러 코드: `CERT_002`(404), `CERT_003`(403), `CERT_004`(409), `CERT_005`(409). `error-codes.snapshot`에 추가
+
+### 엔티티
+- `RiceHistory` (`rice_histories`): user, room(NULL 허용), delta, reason, refType, refId
+  - `UNIQUE (user_id, reason, ref_type, ref_id)`, 인덱스 `(user_id, room_id)`
+  - `RiceReason`·`RiceRefType`: ERD 값 전부 정의. 이번에 쓰는 값은 사유 `CERTIFICATION`·`VOTE`·`RECALL`, 원인 `CERTIFICATION`·`VOTE`
+- `Certification`: `update(result, memo, spentAmount)`, `delete(now)`, `lockReason(now)`(없음·`수정 시간 지남`·`투표 시작`) 추가. 금액 규칙(`ENDURED`면 금액 없음)은 `create`와 같은 곳에서
+
+### 주요 결정
+1. **적립·회수는 호출한 쪽 트랜잭션 안에서**: `RiceService`의 적립·회수는 `Propagation.MANDATORY`. 방 행 락을 잡은 서비스가 부른다 (`VoteStartService`와 같은 패턴)
+2. **중복 확인**: 같은 (사용자, 사유, 원인) 기록이 있으면 지급·회수하지 않고 0을 돌려준다. 동시 요청은 UNIQUE 제약이 막는다
+3. **회수 양**: 그 인증의 `CERTIFICATION` 지급 기록을 찾아 같은 양을 `RECALL`(원인 `CERTIFICATION`, 같은 인증 ID)로 뺀다. 기록이 없으면(방 인원 1명) 0. 회수 기록의 방은 지급 기록의 방 (RICE-02 6번)
+4. **수정·삭제의 락**: 인증 ID로 방 ID만 먼저 읽고(`findRoomIdByCertificationId`), 방 행 락을 잡은 뒤 인증과 회차를 읽는다. 트랜잭션은 `READ_COMMITTED`
+5. **잠금 판단 순서**: 10분 경과를 먼저 본다. 둘 다 해당하면 `CERT_004` (CERT-02-13)
+6. **방 인원 기준**: 적립 시점의 현재 멤버 수. 방 행 락 안이라 나가기와 겹치지 않는다
+7. **표시 잔액**: `max(0, SUM(delta))` (RICE-01-6). 곳간 API가 이 메서드를 쓴다
+8. **`NO_VOTE` 회차 재인증**: CERT-01의 등록 가능 판단에서, 회차가 `NO_VOTE`이고 내가 그 회차에 삭제한 인증이 있으면 연다. 03:00이 지나면 회차 날짜가 바뀌어 자연히 다음 회차로 넘어가므로 따로 시각을 보지 않는다. `NO_VOTE` 회차라 재인증해도 투표 시작 판단은 하지 않는다
+
+## 규칙 점검
+- 기능 ID 상한(1~3개): CERT-03은 따로 세지 않았다. CERT-03의 처리 규칙은 "잠금을 계산하는 방법"뿐이고, 그 계산을 쓰는 곳이 CERT-02의 수정·삭제 거부(3·7번)라서 CERT-02와 떼어 구현할 수 없다. CERT-03 시나리오 3개도 이 PR에서 테스트하고 상태를 `구현됨`으로 바꾼다
+- 그 외 `CLAUDE.md`, `docs/CONVENTION.md` 위반: 없음
+
+## 할 일
+- [ ] `RiceHistory`·`RiceReason`·`RiceRefType`·`RiceHistoryRepository`, `RiceService`(적립·회수·표시 잔액)
+- [ ] CERT-01·VOTE-03에 적립 연결, 응답에 `riceEarned`
+- [ ] 에러 코드 `CERT_002`~`CERT_005`
+- [ ] `Certification` 수정·삭제·잠금 계산
+- [ ] 인증 수정 서비스·API (CERT-02)
+- [ ] 인증 삭제 서비스·API, 회수 연결 (CERT-02, RICE-02)
+- [ ] CERT-01 등록 가능 판단에 `NO_VOTE` 회차 재인증 추가
+- [ ] 테스트: RICE-01-1~6·12, CERT-02-1~9·13·14, CERT-03-1~3, RICE-02-1·2·5·6, CERT-01-16
+- [ ] CERT-01 남은 항목 확인 후 상태 정리
+
+## 열린 질문
+- 없음
+
+### 정한 것 (2026-11-14, 사람 결정)
+1. 방 목표 석을 받는 곳이 ROOM-01 명세·`rooms` 테이블·방 만들기 API 어디에도 없다. 팀원(ROOM-01 담당)이 방 만들기에 목표 석을 넣을 때까지 한 솥(POT-01)은 기다린다. 팀원 요청 4번(`pot_completed_count` +1)도 그때 해결
+2. 목표 석 없이 만들어진 dev 서버의 기존 방은 출시 전이라 데이터를 정리한다. 한 솥 코드는 모든 방에 솥이 있다고 보고 만든다
+3. 목표를 채운 뒤 방장이 고르기 전까지 쌓이는 석(Q-86)은 다 채운 솥에 계속 쌓는다. 진행도가 목표를 넘을 수 있고, 연장하면 `진행도 - 목표`를 새 솥에 이월한다 (Q-83)
+4. Q-32: `NO_VOTE` 회차의 인증은 등록 후 10분까지 수정·삭제할 수 있다 (`open-questions.md` 결정으로 바꿈)
+5. 1~3번과 6번은 `open-questions.md`에 올리지 않는다
+6. `NO_VOTE` 회차에서 인증을 삭제한 멤버는 03:00까지 다시 인증할 수 있다. 기획 규칙 "10분 안에 삭제했으면 다시 인증 가능"에 `NO_VOTE` 예외가 없어서 그대로 따른다. 다시 인증할 수 있는 사람은 그 회차에서 삭제한 멤버뿐이고, 그 외 멤버가 `NO_VOTE` 회차에 등록하지 못하는 건 지금과 같다
+
+## 자기 점검
+`/spec-build`가 구현 후 작성합니다.
