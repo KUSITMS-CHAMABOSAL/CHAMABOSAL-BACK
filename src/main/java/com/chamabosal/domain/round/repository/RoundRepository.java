@@ -19,4 +19,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
     /** 03:00 배치 대상. 서버가 꺼져 있어 놓친 지난 회차도 함께 잡힌다. */
     List<Round> findByStatusAndRoundDateBefore(RoundStatus status, LocalDate roundDate);
+
+    /** 15:00 배치 대상을 거르는 기준(회차 날짜 다음 날 15:00)은 자바에서 계산해서, 상태로만 먼저 가져온다. */
+    List<Round> findByStatus(RoundStatus status);
 }
