@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -42,7 +43,11 @@ public class RoundResultService {
     private final TapRepository tapRepository;
     private final Clock clock;
 
-    @Transactional
+    /**
+     * 지목된 사람이 동시에 처음 열면 뒤 요청의 조건부 UPDATE는 0건이 된다. REPEATABLE READ면 다시 읽어도 트랜잭션 첫 조회의
+     * 스냅샷(비어 있는 처음 조회 시각)을 보므로, 먼저 커밋된 시각을 읽도록 READ COMMITTED로 읽는다 (코드리뷰 반영).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RoundResultResponse getResult(Long userId, Long roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -61,7 +66,7 @@ public class RoundResultService {
         if (isMePicked && isPicked && pickedSeenAt == null) {
             LocalDateTime now = LocalDateTime.now(clock);
             roundRepository.markPickedSeen(roundId, now);
-            // 동시에 연 다른 요청이 먼저 남겼으면 그 값을 쓴다. 조건부 UPDATE가 영속성 컨텍스트를 비워 다시 읽는다.
+            // 동시에 연 다른 요청이 먼저 남겼으면 그 값을 쓴다. 조건부 UPDATE가 영속성 컨텍스트를 비워 DB에서 다시 읽는다.
             round = roundRepository.findById(roundId).orElseThrow();
             picked = round.getPickedMember();
             pickedSeenAt = round.getPickedSeenAt();
