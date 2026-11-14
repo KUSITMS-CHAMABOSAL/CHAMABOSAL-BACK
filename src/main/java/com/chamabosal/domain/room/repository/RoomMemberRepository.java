@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +46,17 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
             where m.id = :memberId and m.leftAt is null and m.seenPotCount < :seenPotCount
             """)
     int raiseSeenPotCount(Long memberId, int seenPotCount, LocalDateTime now);
+
+    /**
+     * 본 결과 회차 날짜를 저장값보다 뒤일 때만 바꾼다 (ROOM-06 2·3번). raiseSeenPotCount와 같은 이유로 비교와 저장을 한 문장으로 한다.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update RoomMember m set m.seenResultRoundDate = :roundDate, m.updatedAt = :now
+            where m.id = :memberId and m.leftAt is null
+              and (m.seenResultRoundDate is null or m.seenResultRoundDate < :roundDate)
+            """)
+    int raiseSeenResultRoundDate(Long memberId, LocalDate roundDate, LocalDateTime now);
 
     /** 같은 방에서 같은 닉네임(대소문자 무시)을 쓰는 멤버. 나간 멤버도 포함하고, excludeMemberId가 있으면 그 행은 뺀다. */
     @Query("""

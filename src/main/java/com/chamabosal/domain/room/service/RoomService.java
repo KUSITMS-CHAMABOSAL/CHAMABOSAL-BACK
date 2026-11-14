@@ -1,5 +1,9 @@
 package com.chamabosal.domain.room.service;
 
+import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.room.dto.request.RoomSeenResultUpdateRequest;
 import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
@@ -35,6 +39,7 @@ public class RoomService {
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
     private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~8자입니다.";
     private static final String SEEN_POT_MESSAGE = "본 완성 횟수가 방의 완성 횟수보다 큽니다.";
+    private static final String SEEN_RESULT_MESSAGE = "이 방의 발표된 회차가 아닙니다.";
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
@@ -43,6 +48,7 @@ public class RoomService {
     private final VoteStartService voteStartService;
     private final VoteCloseService voteCloseService;
     private final RiceService riceService;
+    private final RoundRepository roundRepository;
     private final Clock clock;
 
     @Transactional
@@ -80,6 +86,24 @@ public class RoomService {
     }
 
     /** 완성 횟수는 늘기만 해서 락 없이 읽은 값과 비교해도 된다. 동시 요청은 조건부 update로 막아 방 행 락을 잡지 않는다. */
+    /**
+     * 본 결과 회차를 저장해 그 회차와 이전 회차를 모두 본 것으로 처리한다 (ROOM-06, RESULT-02 8번).
+     * 이미 저장한 회차보다 이전 회차면 바꾸지 않는다. 비교와 저장을 한 문장으로 해서 동시 요청에도 뒤 회차가 남는다.
+     */
+    @Transactional
+    public void markResultSeen(Long userId, Long roomId, RoomSeenResultUpdateRequest request) {
+        Room room = roomRepository.findById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        Round round = roundRepository.findById(request.roundId())
+                .filter(found -> found.getRoom().getId().equals(room.getId()))
+                .filter(found -> found.getStatus() == RoundStatus.ANNOUNCED)
+                .orElseThrow(() -> BaseException.withField(BaseErrorCode.INVALID_REQUEST, SEEN_RESULT_MESSAGE, "roundId"));
+        roomMemberRepository.raiseSeenResultRoundDate(me.getId(), round.getRoundDate(), LocalDateTime.now(clock));
+    }
+
     @Transactional
     public void markPotSeen(Long userId, Long roomId, RoomSeenPotUpdateRequest request) {
         Room room = roomRepository.findById(roomId)
