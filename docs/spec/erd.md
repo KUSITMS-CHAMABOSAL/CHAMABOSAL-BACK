@@ -261,13 +261,13 @@ erDiagram
 | id | BIGINT | PK | |
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NOT NULL | 두드린 사람 |
-| count | INT | NOT NULL | 0~10 |
+| count | INT | NOT NULL | 0~999 |
 | played_at | DATETIME | NULL | 받은 사람 화면에서 재생된 시각. NULL이면 아직 안 본 톡톡 → 다음에 열 때 재생 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트
 - `count`가 1 이상이면 보낸 사람에게 톡톡 완료 보상(`rice_histories.reason = TAP`, 한 솥 +5) 적립 (RICE-01 4번)
 - 받는 사람(지목된 사람)은 `rounds.picked_member_id`라 따로 저장하지 않음
-- 톡톡이 끝날 때(10번 다 침·건너뛰기·나가기) 프론트가 최종 횟수를 **한 번만** 보냄 → 행이 생겼다는 것 자체가 끝났다는 뜻 (UNIQUE라 두 번째 요청은 거절)
+- 톡톡이 끝날 때(다 침·건너뛰기·나가기) 프론트가 최종 횟수를 **한 번만** 보냄 → 행이 생겼다는 것 자체가 끝났다는 뜻 (UNIQUE라 두 번째 요청은 거절)
   - "친구 n명이 톡톡했어요" = 그 회차에서 count가 1 이상인 행 개수 (나 제외). 0번 건너뛰기도 행은 만듦 (다시 못 치게)
   - 톡톡 도중 앱이 강제로 꺼지면 전송을 못 해서 그 사람의 톡톡은 전달 안 됨 (벌칙 연출이라 감수)
 - ⚠️ 프론트 협의 필요: 칠 때마다 보내지 말고 끝날 때 `{ count: n }` 한 번만 전송. 화면을 나갈 때(`pagehide` 등)도 친 만큼 전송

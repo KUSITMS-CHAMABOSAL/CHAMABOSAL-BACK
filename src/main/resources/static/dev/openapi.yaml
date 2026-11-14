@@ -2000,7 +2000,7 @@ paths:
       description: |-
         톡톡을 끝낼 때 한 번 보낸다. 0번(건너뛰기)도 보낸다. 칠 때마다 보내지 않는다.
 
-        - `count`: 0~10
+        - `count`: 0~999 (안전용 상한)
         - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 무효다.
         - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0(건너뛰기)이면 0. 방 인원이 1명이면 0 (RICE-01)
         - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함)
@@ -3010,11 +3010,11 @@ components:
       properties:
         count:
           type: integer
-          description: 0~10. 0은 건너뛰기
-          example: 7
+          description: 0~999. 0은 건너뛰기
+          example: 42
           format: int32
           minimum: 0
-          maximum: 10
+          maximum: 999
     ReceivedTap:
       type: object
       required:
