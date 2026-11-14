@@ -103,7 +103,7 @@ public class CertificationService {
         return CertificationUpdateResponse.from(certification);
     }
 
-    /** 이미 삭제한 내 인증이면 잠금과 상관없이 성공이다 (CERT-02 12번). */
+    /** 삭제하면 그 인증으로 받은 공양미를 회수한다 (CERT-02 5번, RICE-02). 이미 삭제한 내 인증이면 잠금과 상관없이 성공이다 (CERT-02 12번). */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public CertificationDeleteResponse delete(Long userId, Long certificationId) {
         Certification certification = findWithLock(certificationId);
@@ -114,7 +114,7 @@ public class CertificationService {
         LocalDateTime now = LocalDateTime.now(clock);
         checkNotLocked(certification, now);
         certification.delete(now);
-        return new CertificationDeleteResponse(0);
+        return new CertificationDeleteResponse(riceService.recallCertification(certification.getMember(), certificationId));
     }
 
     /** 방 행 락을 잡은 뒤에 인증을 읽는다. 없는 인증이면 CERT_002. */

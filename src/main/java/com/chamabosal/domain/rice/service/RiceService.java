@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 개인 공양미 적립 (RICE-01). 적립은 방 행 락을 잡은 트랜잭션 안에서 부른다.
+ * 개인 공양미 적립·회수 (RICE-01, RICE-02). 적립·회수는 방 행 락을 잡은 트랜잭션 안에서 부른다.
  * 같은 사유·원인으로는 한 번만 기록하고, 동시에 들어오면 UNIQUE 제약이 막는다.
  */
 @Service
@@ -39,6 +39,22 @@ public class RiceService {
         }
         riceHistoryRepository.save(RiceHistory.create(member.getUser(), room, amount, reason, refType, refId));
         return amount;
+    }
+
+    /** 그 인증으로 지급한 만큼 회수한다. 지급 기록이 없거나 이미 회수했으면 0 (RICE-02 1·6번). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int recallCertification(RoomMember member, Long certificationId) {
+        Long userId = member.getUser().getId();
+        return riceHistoryRepository.findByUser_IdAndReasonAndRefTypeAndRefId(
+                        userId, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION, certificationId)
+                .filter(paid -> !riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
+                        userId, RiceReason.RECALL, RiceRefType.CERTIFICATION, certificationId))
+                .map(paid -> {
+                    riceHistoryRepository.save(RiceHistory.create(paid.getUser(), paid.getRoom(), -paid.getDelta(),
+                            RiceReason.RECALL, RiceRefType.CERTIFICATION, certificationId));
+                    return paid.getDelta();
+                })
+                .orElse(0);
     }
 
     /** 화면 표시 잔액. 실제 잔액이 음수면 0석이다 (RICE-01-6). */
