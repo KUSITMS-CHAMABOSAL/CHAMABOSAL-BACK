@@ -54,7 +54,7 @@
 | CertificationResult | `ENDURED` (참았어요) `FAILED` (못 참았어요) |
 | LockReason | `TIME_OVER` (10분 지남) `VOTE_STARTED` (투표 시작) |
 | RoundStatus | `CERTIFYING` (인증 중) `VOTING` (투표 중) `ANNOUNCED` (발표) `NO_VOTE` (투표 없음) |
-| ReactionType | `RICE` `BAD` |
+| ReactionType | `GOOD` `BAD` |
 | VoteTabStatus | `UNDER_THREE` `BEFORE_FIRST_VOTE` `NOT_IN_LIST` `NO_VOTING_RIGHT` `VOTING` `VOTED` `RESULT_UNSEEN` `RESULT_SEEN` |
 | VoteTargetType | `MEMBER` (후보) `ALL_BOSAL` (오늘은 모두 보살) |
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
@@ -550,7 +550,7 @@ REACT-01. 리액션을 남기거나 바꿉니다.
 
 ```json
 // request
-{ "type": "RICE" }
+{ "type": "GOOD" }
 
 // response 200
 { "riceEarned": 1, "potEarned": 1 }
