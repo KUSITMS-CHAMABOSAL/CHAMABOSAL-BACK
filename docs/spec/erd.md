@@ -285,11 +285,11 @@ erDiagram
 | room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)는 NULL |
 | delta | INT | NOT NULL | +10, +5, +1, +30, -50, -100, -10 … |
 | reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) |
-| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE` / `ROOM_MEMBER` |
-| ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감은 나간 멤버 ID |
+| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE`. 나가기 차감은 NULL |
+| ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감(`LEAVE`)은 NULL (다시 들어오면 같은 멤버 행이라 멤버 ID로는 구분 못 함, RICE-03 7번) |
 
 - 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용 (나가기 차감만 0석 아래로 내려가지 않게 차감액을 줄임, RICE-03)
-- 방에서 모은 공양미(나가기 차감) = `SUM(delta) WHERE user_id = ? AND room_id = ? AND reason <> 'LEAVE'`
+- 방에서 모은 공양미(나가기 차감) = `SUM(delta) WHERE user_id = ? AND room_id = ? AND created_at >= 그 멤버의 joined_at`. 다시 들어오면 `joined_at`이 바뀌어 그 뒤에 모은 것만 센다 (RICE-03 2번)
 - 인덱스: `(user_id, room_id)` → 나가기 차감 계산
 - 중복 지급 방지: `UNIQUE (user_id, reason, ref_type, ref_id)`
   - 인증 보상은 인증 ID 기준이라 삭제 후 다시 인증하면 새 ID로 다시 지급 (기획 확정)
