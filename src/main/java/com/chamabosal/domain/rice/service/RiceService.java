@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 개인 공양미 적립·회수 (RICE-01, RICE-02). 적립·회수는 방 행 락을 잡은 트랜잭션 안에서 부른다.
+ * 개인 공양미 적립·회수·나가기 차감 (RICE-01, RICE-02, RICE-03). 방 행 락을 잡은 트랜잭션 안에서 부른다.
  * 같은 사유·원인으로는 한 번만 기록하고, 동시에 들어오면 UNIQUE 제약이 막는다.
  */
 @Service
@@ -55,6 +55,24 @@ public class RiceService {
                     return paid.getDelta();
                 })
                 .orElse(0);
+    }
+
+    /**
+     * 목표를 채우기 전에 나가면 그 방에서 모은 공양미를 뺀다 (RICE-03). 잔액이 0석 아래로 내려가지 않게 줄이고,
+     * 이미 0석 이하면 빼지 않는다 (Q-88). 다시 들어오면 같은 멤버 행이라 원인 없이 기록한다 (RICE-03 7번).
+     * 한 솥(POT-01)이 아직 없어 모든 방이 목표를 채우기 전이다. 뺀 석, 빼지 않았으면 0.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int deductOnLeave(Room room, RoomMember member) {
+        Long userId = member.getUser().getId();
+        long collected = riceHistoryRepository.sumRoomDeltaSinceLastLeave(userId, room.getId(), RiceReason.LEAVE);
+        long balance = riceHistoryRepository.sumDeltaByUserId(userId);
+        int amount = (int) Math.min(collected, Math.max(0, balance));
+        if (amount <= 0) {
+            return 0;
+        }
+        riceHistoryRepository.save(RiceHistory.create(member.getUser(), room, -amount, RiceReason.LEAVE, null, null));
+        return amount;
     }
 
     /** 화면 표시 잔액. 실제 잔액이 음수면 0석이다 (RICE-01-6). */

@@ -1,5 +1,6 @@
 package com.chamabosal.domain.room.service;
 
+import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
@@ -41,6 +42,7 @@ public class RoomService {
     private final BosalColorPicker bosalColorPicker;
     private final VoteStartService voteStartService;
     private final VoteCloseService voteCloseService;
+    private final RiceService riceService;
     private final Clock clock;
 
     @Transactional
@@ -107,6 +109,10 @@ public class RoomService {
      */
     void removeMember(Room room, RoomMember member, LeaveType leaveType) {
         LocalDateTime now = LocalDateTime.now(clock);
+        // 스스로 나갈 때만 뺀다. 내보내기는 Q-94가 정해지면, 내 데이터 삭제는 복구하면 공양미를 유지해서 빼지 않는다 (RICE-03).
+        if (leaveType == LeaveType.LEFT) {
+            riceService.deductOnLeave(room, member);
+        }
         // 나가기를 저장하기 전에 찾아야 flush 시점과 상관없이 나가는 사람이 빠진다.
         Optional<RoomMember> successor = roomMemberRepository
                 .findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(room.getId(), member.getId());
