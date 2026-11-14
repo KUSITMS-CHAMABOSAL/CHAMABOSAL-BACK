@@ -1,5 +1,9 @@
 package com.chamabosal.domain.vote.service;
 
+import com.chamabosal.domain.rice.entity.RiceReason;
+import com.chamabosal.domain.rice.entity.RiceRefType;
+import com.chamabosal.domain.rice.service.RiceService;
+import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
@@ -36,6 +40,7 @@ public class VoteSubmitService {
     private final RoundParticipantRepository roundParticipantRepository;
     private final VoteRepository voteRepository;
     private final VoteCloseService voteCloseService;
+    private final RiceService riceService;
     private final Clock clock;
 
     /**
@@ -50,7 +55,7 @@ public class VoteSubmitService {
         // roomId만 먼저 구하고, 방 행 락을 잡은 뒤에야 회차와 현재 시각을 읽는다.
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
-        roomRepository.findWithLockById(roomId)
+        Room room = roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now(clock);
@@ -74,10 +79,12 @@ public class VoteSubmitService {
         }
 
         RoomMember target = resolveTarget(request, roundId, me.getId());
-        voteRepository.save(Vote.create(round, me, target));
+        Vote vote = voteRepository.save(Vote.create(round, me, target));
+        int riceEarned = riceService.accrue(room, me, RiceReason.VOTE, RiceRefType.VOTE, vote.getId(),
+                RiceService.VOTE_REWARD);
 
         boolean isClosed = voteCloseService.closeIfAllVoted(round, now);
-        return new VoteSubmitResponse(isClosed);
+        return new VoteSubmitResponse(riceEarned, isClosed);
     }
 
     private void validateRequest(VoteSubmitRequest request) {

@@ -2,6 +2,7 @@ package com.chamabosal.domain.certification.entity;
 
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -74,14 +75,41 @@ public class Certification extends BaseEntity {
         Certification certification = new Certification();
         certification.round = round;
         certification.member = member;
-        certification.result = result;
-        certification.memo = memo;
-        certification.spentAmount = result == CertificationResult.FAILED ? spentAmount : null;
         certification.certifiedAt = certifiedAt;
+        certification.update(result, memo, spentAmount);
         return certification;
+    }
+
+    /** 등록처럼 통째로 바꾼다. `ENDURED`로 바꾸면 저장된 금액을 지운다 (CERT-02 8번). */
+    public void update(CertificationResult result, String memo, Integer spentAmount) {
+        this.result = result;
+        this.memo = memo;
+        this.spentAmount = result == CertificationResult.FAILED ? spentAmount : null;
+    }
+
+    public void delete(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
     public LocalDateTime getEditableUntil() {
         return certifiedAt.plusMinutes(EDITABLE_MINUTES);
+    }
+
+    /**
+     * 잠금은 저장하지 않고 계산한다 (CERT-03 2번). 둘 다 해당하면 수정 시간 지남이 먼저다 (CERT-02-13).
+     * 투표가 열리지 않은 회차(`NO_VOTE`)는 투표 시작이 없어 10분까지 바꿀 수 있다 (Q-32). 잠기지 않았으면 null.
+     */
+    public CertificationLock lockAt(LocalDateTime now) {
+        if (now.isAfter(getEditableUntil())) {
+            return CertificationLock.EDIT_TIME_OVER;
+        }
+        if (round.isVoting() || round.getStatus() == RoundStatus.ANNOUNCED) {
+            return CertificationLock.VOTE_STARTED;
+        }
+        return null;
     }
 }

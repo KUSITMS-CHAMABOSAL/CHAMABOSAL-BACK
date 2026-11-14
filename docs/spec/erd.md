@@ -304,7 +304,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | seq | INT | NOT NULL | 몇 번째 솥인지 (1부터) |
 | goal_amount | INT | NOT NULL | 이 솥의 목표 석. 만들 때 방 목표 석을 복사 (연장해도 같은 값) |
-| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0~`goal_amount`) |
+| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0 이상). 목표를 채운 뒤 방장이 고르기 전까지 쌓이는 석(Q-86)도 이 솥에 계속 쌓여 `goal_amount`를 넘을 수 있고, 연장하면 `amount - goal_amount`를 다음 솥 `carried_over`로 넘김 (Q-83) |
 | carried_over | INT | NOT NULL, 기본 0 | 이전 솥에서 넘어온 석 |
 | completed_at | DATETIME | NULL | 가득 찬 시각. NULL이면 진행 중인 솥 |
 
