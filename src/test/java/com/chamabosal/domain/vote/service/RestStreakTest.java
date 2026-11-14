@@ -185,6 +185,21 @@ class RestStreakTest {
         assertThat(next.isCandidate()).isTrue();
     }
 
+    /** 휴식 날짜(4일)에 아무도 인증하지 않아 회차가 없어도 휴식을 쓴 것으로 보고, 다음 투표가 시작되면 0이다 (RESULT-04 4·5번, 코드리뷰 반영). */
+    @Test
+    void 휴식_날짜에_투표가_없어도_다음_투표가_시작되면_연속_지목은_0이다() {
+        pick(room, day(1), memberA);
+        pick(room, day(2), memberA);
+        pick(room, day(3), memberA);
+
+        RoundParticipant next = participant(startVoting(room, day(5)), memberA);
+
+        assertThat(reload(memberA).getPickedStreak()).isZero();
+        assertThat(reload(memberA).getRestingRoundDate()).isNull();
+        assertThat(next.isResting()).isFalse();
+        assertThat(next.isCandidate()).isTrue();
+    }
+
     @Test
     void RESULT_04_6_다른_방에서는_휴식이_아니다() {
         Room room2 = newRoom();
