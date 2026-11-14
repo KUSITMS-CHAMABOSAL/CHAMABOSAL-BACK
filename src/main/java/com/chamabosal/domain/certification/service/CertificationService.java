@@ -1,8 +1,12 @@
 package com.chamabosal.domain.certification.service;
 
 import com.chamabosal.domain.certification.dto.request.CertificationCreateRequest;
+import com.chamabosal.domain.certification.dto.request.CertificationUpdateRequest;
 import com.chamabosal.domain.certification.dto.response.CertificationCreateResponse;
+import com.chamabosal.domain.certification.dto.response.CertificationDeleteResponse;
+import com.chamabosal.domain.certification.dto.response.CertificationUpdateResponse;
 import com.chamabosal.domain.certification.entity.Certification;
+import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.rice.entity.RiceReason;
@@ -13,12 +17,14 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -63,7 +69,7 @@ public class CertificationService {
                 && certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNull(found.get().getId(), me.getId())) {
             throw new BaseException(BaseErrorCode.ALREADY_CERTIFIED);
         }
-        if (!isOpen(roomId, roundDate, found)) {
+        if (!isOpen(roomId, roundDate, found, me.getId())) {
             throw new BaseException(BaseErrorCode.CERTIFICATION_NOT_OPEN);
         }
 
@@ -78,10 +84,78 @@ public class CertificationService {
     }
 
     /**
+     * 수정은 등록과 같은 입력 기준으로 통째로 바꾸고 공양미를 다시 주지 않는다 (CERT-02).
+     * 인증 ID로 방 ID만 먼저 읽고 방 행 락을 잡는다. REPEATABLE READ면 락 전 조회가 스냅샷을 고정해
+     * 락 뒤에도 투표 시작 전 상태를 보므로 READ COMMITTED로 읽는다 (VoteSubmitService와 같은 이유).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public CertificationUpdateResponse update(Long userId, Long certificationId, CertificationUpdateRequest request) {
+        validateMemo(request.memo());
+        validateSpentAmount(request.result(), request.spentAmount());
+
+        Certification certification = findWithLock(certificationId);
+        if (certification.isDeleted()) {
+            throw new BaseException(BaseErrorCode.CERTIFICATION_NOT_FOUND);
+        }
+        checkMine(userId, certification);
+        checkNotLocked(certification, LocalDateTime.now(clock));
+        certification.update(request.result(), request.memo(), request.spentAmount());
+        return CertificationUpdateResponse.from(certification);
+    }
+
+    /** 이미 삭제한 내 인증이면 잠금과 상관없이 성공이다 (CERT-02 12번). */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public CertificationDeleteResponse delete(Long userId, Long certificationId) {
+        Certification certification = findWithLock(certificationId);
+        checkMine(userId, certification);
+        if (certification.isDeleted()) {
+            return new CertificationDeleteResponse(0);
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        checkNotLocked(certification, now);
+        certification.delete(now);
+        return new CertificationDeleteResponse(0);
+    }
+
+    /** 방 행 락을 잡은 뒤에 인증을 읽는다. 없는 인증이면 CERT_002. */
+    private Certification findWithLock(Long certificationId) {
+        Long roomId = certificationRepository.findRoomIdByCertificationId(certificationId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.CERTIFICATION_NOT_FOUND));
+        roomRepository.findWithLockById(roomId);
+        return certificationRepository.findById(certificationId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.CERTIFICATION_NOT_FOUND));
+    }
+
+    /** 방에서 나갔으면 그 방의 인증은 본인 인증으로 보지 않는다. 다시 들어오면 같은 멤버 행이라 다시 본인이다. */
+    private void checkMine(Long userId, Certification certification) {
+        Long roomId = certification.getRound().getRoom().getId();
+        boolean isMine = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
+                .map(me -> me.getId().equals(certification.getMember().getId()))
+                .orElse(false);
+        if (!isMine) {
+            throw new BaseException(BaseErrorCode.NOT_MY_CERTIFICATION);
+        }
+    }
+
+    private void checkNotLocked(Certification certification, LocalDateTime now) {
+        CertificationLock lock = certification.lockAt(now);
+        if (lock == CertificationLock.EDIT_TIME_OVER) {
+            throw new BaseException(BaseErrorCode.CERTIFICATION_EDIT_TIME_OVER);
+        }
+        if (lock == CertificationLock.VOTE_STARTED) {
+            throw new BaseException(BaseErrorCode.CERTIFICATION_VOTE_STARTED);
+        }
+    }
+
+    /**
      * 이전 회차 투표가 끝났거나 이전 회차가 없으면 열린다 (CERT-01 8번).
      * 그 회차가 이미 투표를 시작했으면 투표 시작 뒤 들어온 멤버라 다음 회차를 기다린다.
+     * 투표가 열리지 않은 회차는 그 회차에서 인증을 삭제한 멤버만 다시 인증할 수 있다 (CERT-01 10번).
      */
-    private boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round) {
+    private boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round, Long memberId) {
+        if (round.isPresent() && round.get().getStatus() == RoundStatus.NO_VOTE) {
+            return certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNotNull(round.get().getId(), memberId);
+        }
         if (round.isPresent() && !round.get().isCertifying()) {
             return false;
         }

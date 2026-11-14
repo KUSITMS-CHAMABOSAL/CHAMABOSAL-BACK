@@ -36,6 +36,10 @@ public enum BaseErrorCode implements ErrorCode {
 
     // Certification
     ALREADY_CERTIFIED(HttpStatus.CONFLICT, "CERT_001", "이미 인증했습니다."),
+    CERTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "CERT_002", "없거나 삭제된 인증입니다."),
+    NOT_MY_CERTIFICATION(HttpStatus.FORBIDDEN, "CERT_003", "본인 인증이 아닙니다."),
+    CERTIFICATION_EDIT_TIME_OVER(HttpStatus.CONFLICT, "CERT_004", "수정 시간이 지나서 인증을 바꿀 수 없어요."),
+    CERTIFICATION_VOTE_STARTED(HttpStatus.CONFLICT, "CERT_005", "투표가 시작돼서 인증을 바꿀 수 없어요."),
     CERTIFICATION_NOT_OPEN(HttpStatus.CONFLICT, "CERT_006", "아직 인증 시간이 아닙니다."),
 
     // Round
