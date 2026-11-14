@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
@@ -49,6 +50,9 @@ class CertificationCreateTest {
 
     private static final LocalDate NOV_30 = LocalDate.of(2026, 11, 30);
     private static final LocalDate DEC_1 = LocalDate.of(2026, 12, 1);
+
+    @Autowired
+    RiceHistoryRepository riceHistoryRepository;
 
     @Autowired
     MockMvc mockMvc;
@@ -102,6 +106,7 @@ class CertificationCreateTest {
 
     @AfterEach
     void tearDown() {
+        riceHistoryRepository.deleteAll();
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
