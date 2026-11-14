@@ -2,6 +2,7 @@ package com.chamabosal.domain.room.controller;
 
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
+import com.chamabosal.domain.room.dto.request.RoomSeenResultUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
 import com.chamabosal.domain.room.service.RoomService;
@@ -130,6 +131,30 @@ public class RoomController {
             @RequestBody @Valid RoomNicknameUpdateRequest request
     ) {
         roomService.updateNickname(userId, roomId, request);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
+    @PutMapping("/{roomId}/members/me/seen-result")
+    @Operation(summary = "결과 확인 (ROOM-06)",
+            description = """
+                    결과를 어디까지 봤는지 저장합니다. 결과 화면을 본 뒤 그 회차 ID를 보내 주세요. 그 회차와 이전 회차를 모두 본 것으로 처리합니다.
+                    이미 저장한 회차보다 이전 회차를 보내면 바꾸지 않고 성공합니다. 이 방의 발표된 회차가 아니면 COMMON_002입니다.
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "저장 성공"),
+            @ApiResponse(responseCode = "400", description = "COMMON_002 이 방의 발표된 회차가 아님 (field: roundId)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<Void>> markResultSeen(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId,
+            @RequestBody @Valid RoomSeenResultUpdateRequest request
+    ) {
+        roomService.markResultSeen(userId, roomId, request);
         return ResponseEntity.ok(Response.ok(null));
     }
 

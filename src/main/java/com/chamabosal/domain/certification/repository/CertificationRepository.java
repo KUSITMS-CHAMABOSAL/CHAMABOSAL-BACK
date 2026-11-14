@@ -11,6 +11,8 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
 
     boolean existsByRound_IdAndMember_IdAndDeletedAtIsNull(Long roundId, Long memberId);
 
+    Optional<Certification> findByRound_IdAndMember_IdAndDeletedAtIsNull(Long roundId, Long memberId);
+
     /** 투표가 열리지 않은 회차에서 인증을 삭제한 멤버는 다시 인증할 수 있다 (CERT-01 10번). */
     boolean existsByRound_IdAndMember_IdAndDeletedAtIsNotNull(Long roundId, Long memberId);
 

@@ -53,6 +53,16 @@ public enum BaseErrorCode implements ErrorCode {
     SELF_VOTE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "VOTE_005", "본인에게 투표할 수 없습니다."),
     INVALID_VOTE_TARGET(HttpStatus.BAD_REQUEST, "VOTE_006", "선택할 수 없는 후보입니다."),
 
+    // Result
+    RESULT_NOT_ANNOUNCED(HttpStatus.CONFLICT, "RESULT_001", "아직 발표 전인 회차입니다."),
+
+    // Tap
+    TAP_NOT_AVAILABLE(HttpStatus.CONFLICT, "TAP_001", "이마 톡톡이 없는 결과입니다."),
+    TAP_SELF(HttpStatus.FORBIDDEN, "TAP_002", "지목된 본인은 톡톡할 수 없습니다."),
+    ALREADY_TAPPED(HttpStatus.CONFLICT, "TAP_003", "이미 톡톡했습니다."),
+    TAP_EXPIRED(HttpStatus.CONFLICT, "TAP_004", "톡톡 시간이 지났어요."),
+    NOT_PICKED_MEMBER(HttpStatus.FORBIDDEN, "TAP_005", "지목된 사람만 받은 톡톡을 볼 수 있습니다."),
+
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
 
