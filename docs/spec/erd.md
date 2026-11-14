@@ -289,7 +289,7 @@ erDiagram
 | ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감(`LEAVE`)은 NULL (다시 들어오면 같은 멤버 행이라 멤버 ID로는 구분 못 함, RICE-03 7번) |
 
 - 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용 (나가기 차감만 0석 아래로 내려가지 않게 차감액을 줄임, RICE-03)
-- 방에서 모은 공양미(나가기 차감) = 그 사용자·방의 마지막 `LEAVE` 기록 뒤에 쌓인 `delta`의 합. `LEAVE`가 없으면 그 방 기록 전부 (RICE-03 2번)
+- 방에서 모은 공양미(나가기 차감) = `SUM(delta) WHERE user_id = ? AND room_id = ? AND created_at >= 그 멤버의 joined_at`. 다시 들어오면 `joined_at`이 바뀌어 그 뒤에 모은 것만 센다 (RICE-03 2번)
 - 인덱스: `(user_id, room_id)` → 나가기 차감 계산
 - 중복 지급 방지: `UNIQUE (user_id, reason, ref_type, ref_id)`
   - 인증 보상은 인증 ID 기준이라 삭제 후 다시 인증하면 새 ID로 다시 지급 (기획 확정)

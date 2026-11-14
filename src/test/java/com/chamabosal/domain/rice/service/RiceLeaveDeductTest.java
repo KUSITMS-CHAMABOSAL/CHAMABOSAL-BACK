@@ -22,6 +22,10 @@ import com.chamabosal.support.MutableClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -150,9 +154,7 @@ class RiceLeaveDeductTest {
         leave(room1).andExpect(status().isOk());
 
         clock.set(T0.plusHours(1));
-        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
-                roomMemberRepository.findById(memberA.getId()).orElseThrow()
-                        .rejoin("민지", BosalColor.PINK, LocalDateTime.now(clock)));
+        rejoin(memberA);
         earn(room1, 10);
 
         leave(room1).andExpect(status().isOk());
@@ -186,9 +188,79 @@ class RiceLeaveDeductTest {
         assertThat(leaveDeltas()).containsExactly(-100);
     }
 
+    /** 0석을 빼서 차감 기록이 없어도, 다시 들어온 뒤 또 나가면 다시 들어온 뒤 모은 것만 뺀다 (코드리뷰 반영). */
+    @Test
+    void RICE_03_9_0석을_빼고_나간_뒤_다시_들어와_또_나가면_다시_들어온_뒤_모은_것만_차감한다() throws Exception {
+        earn(room1, 100);
+        purchase(100);
+        leave(room1).andExpect(status().isOk());
+        assertThat(leaveDeltas()).isEmpty();
+
+        clock.set(T0.plusHours(1));
+        rejoin(memberA);
+        earn(room1, 10);
+        earn(room2, 100);
+
+        leave(room1).andExpect(status().isOk());
+
+        assertThat(leaveDeltas()).containsExactly(-10);
+        assertThat(balance()).isEqualTo(100);
+    }
+
+    /** 두 방은 서로 다른 방 행 락을 쓴다. 사용자 행 락이 없으면 둘 다 잔액 120석을 보고 100석씩 빼 -80석이 된다 (코드리뷰 반영). */
+    @Test
+    void RICE_03_10_같은_사람이_두_방을_동시에_나가도_잔액은_0석_아래로_내려가지_않는다() {
+        earn(room1, 100);
+        earn(room2, 100);
+        purchase(80);
+
+        CountDownLatch ready = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            CompletableFuture<Integer> leave1 = CompletableFuture.supplyAsync(() -> {
+                await(ready);
+                return statusOf(room1);
+            }, executor);
+            CompletableFuture<Integer> leave2 = CompletableFuture.supplyAsync(() -> {
+                await(ready);
+                return statusOf(room2);
+            }, executor);
+            ready.countDown();
+            assertThat(leave1.join()).isEqualTo(200);
+            assertThat(leave2.join()).isEqualTo(200);
+        } finally {
+            executor.shutdown();
+        }
+
+        assertThat(leaveDeltas().stream().mapToInt(Integer::intValue).sum()).isEqualTo(-120);
+        assertThat(balance()).isZero();
+    }
+
     private ResultActions leave(Room room) throws Exception {
         return mockMvc.perform(delete("/api/rooms/{roomId}/members/me", room.getId())
                 .header("Authorization", "Bearer " + jwtProvider.createAccessToken(userA.getId())));
+    }
+
+    private void rejoin(RoomMember member) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                roomMemberRepository.findById(member.getId()).orElseThrow()
+                        .rejoin(member.getNickname(), BosalColor.PINK, LocalDateTime.now(clock)));
+    }
+
+    private int statusOf(Room room) {
+        try {
+            return leave(room).andReturn().getResponse().getStatus();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** 인증 적립 하나를 기록하고 그 원인 ID(인증 ID 대신 쓰는 번호)를 돌려준다. */

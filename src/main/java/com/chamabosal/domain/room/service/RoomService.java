@@ -95,6 +95,9 @@ public class RoomService {
 
     @Transactional
     public void leave(Long userId, Long roomId) {
+        // 나가기 차감이 사용자 전체 잔액을 읽고 빼서, 같은 사람이 두 방을 동시에 나가지 않게 사용자 행을 먼저 잠근다.
+        // 방 만들기·입장과 같은 사용자 → 방 순서다 (RICE-03).
+        userRepository.findWithLockById(userId);
         Room room = roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
