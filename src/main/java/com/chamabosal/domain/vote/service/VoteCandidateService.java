@@ -36,7 +36,7 @@ public class VoteCandidateService {
         return roundParticipantRepository.findWithMemberByRound_Id(roundId).stream()
                 .filter(participant -> participant.isCandidate() || participant.isResting())
                 .filter(participant -> excludeMemberId == null || !participant.getMember().getId().equals(excludeMemberId))
-                .map(participant -> VoteCandidateResponse.of(
+                .map(participant -> VoteCandidateResponse.from(
                         participant, certificationsByMemberId.get(participant.getMember().getId())))
                 .toList();
     }

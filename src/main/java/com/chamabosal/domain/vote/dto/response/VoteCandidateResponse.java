@@ -19,7 +19,7 @@ public record VoteCandidateResponse(
         boolean isResting
 ) {
 
-    public static VoteCandidateResponse of(RoundParticipant participant, Certification certification) {
+    public static VoteCandidateResponse from(RoundParticipant participant, Certification certification) {
         RoomMember member = participant.getMember();
         return new VoteCandidateResponse(
                 member.getId(), member.getNickname(), member.getColor(), List.of(),

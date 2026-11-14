@@ -16,6 +16,7 @@ import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -37,23 +38,28 @@ public class VoteSubmitService {
     private final VoteCloseService voteCloseService;
     private final Clock clock;
 
-    @Transactional
+    /**
+     * MySQL 기본 격리 수준(REPEATABLE READ)은 트랜잭션의 첫 일반 조회 시점 스냅샷을 계속 읽어서,
+     * 락을 잡은 뒤에 읽어도 그 전의 일반 조회(roomId 조회)가 이미 스냅샷을 고정해 버린다.
+     * 락을 잡은 뒤의 조회가 그 시점의 커밋된 값을 보도록 READ COMMITTED로 읽는다 (InviteService.join과 같은 이유).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public VoteSubmitResponse submit(Long userId, Long roundId, VoteSubmitRequest request) {
         validateRequest(request);
-        LocalDateTime now = LocalDateTime.now(clock);
 
-        // 락을 걸기 전에 회차를 읽어 영속성 컨텍스트에 올리면, 락을 기다리는 동안 다른 트랜잭션이 바꾼 내용을 못 본다.
-        // roomId만 먼저 구하고, 방 행 락을 잡은 뒤에야 회차를 읽는다.
+        // roomId만 먼저 구하고, 방 행 락을 잡은 뒤에야 회차와 현재 시각을 읽는다.
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
         roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        LocalDateTime now = LocalDateTime.now(clock);
         RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
-        if (!round.isVoting()) {
+        // 15:00 마감 배치가 늦게 돌아 아직 VOTING으로 남아 있을 수 있어, 상태뿐 아니라 마감 시각도 같이 본다.
+        if (!round.isVoting() || !now.isBefore(round.getVoteClosesAt())) {
             throw new BaseException(BaseErrorCode.VOTE_NOT_OPEN);
         }
 
