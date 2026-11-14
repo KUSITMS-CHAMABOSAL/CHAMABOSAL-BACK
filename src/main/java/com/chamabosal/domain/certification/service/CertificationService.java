@@ -5,6 +5,9 @@ import com.chamabosal.domain.certification.dto.response.CertificationCreateRespo
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.rice.entity.RiceReason;
+import com.chamabosal.domain.rice.entity.RiceRefType;
+import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
@@ -37,6 +40,7 @@ public class CertificationService {
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
     private final VoteStartService voteStartService;
+    private final RiceService riceService;
     private final Clock clock;
 
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
@@ -66,9 +70,11 @@ public class CertificationService {
         Round round = found.orElseGet(() -> roundRepository.save(Round.create(room, roundDate)));
         Certification certification = certificationRepository.save(Certification.create(
                 round, me, request.result(), request.memo(), request.spentAmount(), now));
+        int riceEarned = riceService.accrue(room, me, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION,
+                certification.getId(), RiceService.CERTIFICATION_REWARD);
         // 마지막 인증이면 같은 락 안에서 투표를 시작한다 (CERT-01 9번).
         boolean isVoteStarted = voteStartService.startIfAllCertified(round, now);
-        return CertificationCreateResponse.from(certification, isVoteStarted);
+        return CertificationCreateResponse.from(certification, riceEarned, isVoteStarted);
     }
 
     /**

@@ -37,7 +37,7 @@ public class CertificationController {
                     오늘의 소비 절약 결과를 인증합니다. 회차는 서버가 요청을 받은 시각으로 정합니다.
                     03:00(KST) 전이면 전날 회차, 03:00부터 그날 회차입니다. 그날 회차 인증은 이전 회차 투표가 마감돼야 열립니다.
                     한 줄 기록은 1~40자(이모지도 한 글자)이고 띄어쓰기만 있으면 안 됩니다. FAILED면 금액 1~999,999원이 필수입니다.
-                    아직 사진(imageKey)과 공양미 적립 결과(riceEarned, potEarned)는 없습니다.
+                    방 인원이 2명 이상이면 개인 공양미 10석을 받습니다(riceEarned). 아직 사진(imageKey)과 한 솥 적립(potEarned)은 없습니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "등록 성공"),

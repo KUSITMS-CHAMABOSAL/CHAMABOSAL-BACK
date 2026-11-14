@@ -37,7 +37,7 @@ public class VoteController {
 
     @PostMapping("/rounds/{roundId}/votes")
     @Operation(summary = "투표 제출 (VOTE-03)",
-            description = "후보 또는 \"오늘은 모두 보살\"에 투표합니다. 공양미 적립 결과(riceEarned, potEarned)는 아직 없습니다.")
+            description = "후보 또는 \"오늘은 모두 보살\"에 투표합니다. 방 인원이 2명 이상이면 개인 공양미 5석을 받습니다(riceEarned). 한 솥 적립(potEarned)은 아직 없습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "제출 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON_002 입력값 오류",
