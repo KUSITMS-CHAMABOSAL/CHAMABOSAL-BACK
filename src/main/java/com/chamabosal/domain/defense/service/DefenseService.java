@@ -3,7 +3,9 @@ package com.chamabosal.domain.defense.service;
 import com.chamabosal.domain.defense.dto.response.DefenseTicketPurchaseResponse;
 import com.chamabosal.domain.defense.entity.DefenseTicket;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
@@ -42,6 +44,7 @@ public class DefenseService {
     private final RoundRepository roundRepository;
     private final DefenseTicketRepository defenseTicketRepository;
     private final RiceService riceService;
+    private final RiceHistoryRepository riceHistoryRepository;
     private final Clock clock;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -53,10 +56,12 @@ public class DefenseService {
     }
 
     /**
-     * 확인 순서: 없는 회차 → 방 멤버 아님 → 발표 전 → 이미 방어함(성공) → 지목된 사람 아님 → 방어 시간 지남 → 방어권 없음
+     * 확인 순서: 없는 회차 → 방 멤버 아님 → 발표 전 → 이미 방어함(성공) → 지목된 사람 아님 → 목탁 수행 마침 → 방어 시간 지남 → 방어권 없음
      * (SHIELD-02 10번). 결과를 보지 않고 바로 쓰면 이 시각을 처음 조회 시각으로 남긴다 (3번).
+     * 처음 조회 시각을 남긴 뒤 거부돼도 그 시각은 커밋한다. 롤백되면 나중 요청에서 2분이 새로 시작된다 (코드리뷰 반영).
+     * 그 전에 나는 예외에는 쓴 것이 없다.
      */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = BaseException.class)
     public void use(Long userId, Long roundId) {
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -75,6 +80,11 @@ public class DefenseService {
         }
         if (!isMePicked || round.getResultType() != RoundResultType.PICKED) {
             throw new BaseException(BaseErrorCode.NOT_PICKED_FOR_DEFENSE);
+        }
+        // 목탁 수행과 같은 방 행 락 안이라 보상 기록과 방어가 엇갈리지 않는다 (SHIELD-02 12번).
+        if (riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
+                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId)) {
+            throw new BaseException(BaseErrorCode.DEFENSE_AFTER_MOKTAK);
         }
 
         LocalDateTime now = LocalDateTime.now(clock);

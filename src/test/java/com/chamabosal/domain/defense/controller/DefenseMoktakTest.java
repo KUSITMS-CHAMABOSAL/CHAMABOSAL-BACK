@@ -296,6 +296,33 @@ class DefenseMoktakTest {
         assertThat(ticketCount(userA)).isZero();
     }
 
+    @Test
+    void SHIELD_02_12_목탁_수행을_마친_뒤_방어() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        moktak(userA, round, 5).andExpect(status().isCreated());
+
+        clock.set(AFTER_CLOSE.plusMinutes(1));
+        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_010"));
+
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
+        assertThat(beonnoe(userA)).hasSize(1);
+        assertThat(ticketCount(userA)).isEqualTo(1);
+    }
+
+    /** 3번: 결과를 열지 않고 방어권 없이 보내 거부돼도 처음 조회 시각은 남아, 나중에 사서 쓰면 그 시각부터 2분이다 (코드리뷰 반영). */
+    @Test
+    void 방어권이_없어_거부돼도_처음_조회_시각은_남는다() throws Exception {
+        Round round = pickedA(party);
+        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_002"));
+        assertThat(reload(round).getPickedSeenAt()).isEqualTo(AFTER_CLOSE);
+
+        giveTickets(userA, 1);
+        clock.set(AFTER_CLOSE.plusMinutes(5));
+        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
+    }
+
     /** 8번 (Q-76 임시 결정): 인증하지 않아 `인증 안 함`으로 지목된 사람도 쓸 수 있다. */
     @Test
     void 인증_안_함으로_지목된_사람도_방어권을_쓸_수_있다() throws Exception {

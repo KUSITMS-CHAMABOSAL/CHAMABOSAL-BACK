@@ -72,6 +72,9 @@ public class RoundResultService {
             round = roundRepository.findById(roundId).orElseThrow();
             picked = round.getPickedMember();
             pickedSeenAt = round.getPickedSeenAt();
+            // 그사이 방어가 커밋됐으면 DEFENDED로 바뀌어 있다 (코드리뷰 반영).
+            resultType = round.getResultType();
+            isPicked = resultType == RoundResultType.PICKED;
         }
 
         boolean isTapExpired = isPicked && roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(
