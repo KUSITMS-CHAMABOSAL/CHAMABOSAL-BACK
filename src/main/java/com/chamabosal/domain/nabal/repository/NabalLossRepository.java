@@ -13,6 +13,9 @@ public interface NabalLossRepository extends JpaRepository<NabalLoss, Long> {
     /** 아직 심지 않은(빠진) 나발 기록, 번호 순. */
     List<NabalLoss> findByUser_IdAndReplantedAtIsNullOrderByNabalNumber(Long userId);
 
+    /** 여러 사용자의 빠진 나발 (오늘 탭 멤버 목록, ROOM-02 12번). */
+    List<NabalLoss> findByUser_IdInAndReplantedAtIsNull(List<Long> userIds);
+
     boolean existsByUser_IdAndRoom_IdAndRoundDate(Long userId, Long roomId, LocalDate roundDate);
 
     @Query("""

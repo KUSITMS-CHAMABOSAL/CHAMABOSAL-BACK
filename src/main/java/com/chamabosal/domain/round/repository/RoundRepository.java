@@ -1,6 +1,7 @@
 package com.chamabosal.domain.round.repository;
 
 import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -48,8 +49,19 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
             """)
     boolean existsVotingTime(Long roomId, LocalDate currentRoundDate, RoundStatus voting, RoundStatus certifying);
 
+    /** 오늘 탭(ROOM-02 18번): 방에 투표 중인 회차가 있는지. */
+    boolean existsByRoom_IdAndStatus(Long roomId, RoundStatus status);
+
     /** 이 회차보다 뒤 회차의 투표가 열렸는지. 투표 없음(`NO_VOTE`) 회차는 투표가 열린 게 아니다 (RESULT-03 4번). */
     boolean existsByRoom_IdAndRoundDateAfterAndStatusIn(Long roomId, LocalDate roundDate, List<RoundStatus> statuses);
+
+    /** 오늘 탭(ROOM-02 17번): 이 방의 기간 안 지목 수를 멤버별로. 방어 성공(DEFENDED)은 세지 않는다. 결과는 [멤버 ID, 수]. */
+    @Query("""
+            select r.pickedMember.id, count(r) from Round r
+            where r.room.id = :roomId and r.resultType = :picked and r.roundDate between :from and :to
+            group by r.pickedMember.id
+            """)
+    List<Object[]> countPickedByMemberInPeriod(Long roomId, RoundResultType picked, LocalDate from, LocalDate to);
 
     /** 투표 탭 상태(VOTE-05) 판정용, 그 방의 가장 최근 회차 행 (상태 무관). */
     Optional<Round> findFirstByRoom_IdOrderByRoundDateDesc(Long roomId);

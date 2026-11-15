@@ -1,5 +1,6 @@
 package com.chamabosal.domain.tap.repository;
 
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.tap.entity.Tap;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +29,15 @@ public interface TapRepository extends JpaRepository<Tap, Long> {
             order by t.id
             """)
     List<Tap> findUnplayedWithSender(Long roundId);
+
+    /** 오늘 탭 진입 항목(ROOM-02 13번): 내가 지목된 PICKED 결과 중 아직 재생 안 한 받은 톡톡이 있는 회차, 최근 순. */
+    @Query("""
+            select distinct t.round.id, t.round.roundDate from Tap t
+            where t.round.room.id = :roomId and t.round.pickedMember.id = :memberId and t.round.resultType = :picked
+              and t.playedAt is null and t.count > 0
+            order by t.round.roundDate desc
+            """)
+    List<Object[]> findUnplayedRoundIds(Long roomId, Long memberId, RoundResultType picked);
 
     /** 그때까지 받은 미재생 톡톡을 모두 재생됨으로 바꾼다 (RESULT-03 6번). 재시도해도 바뀌는 게 없다. */
     @Modifying(clearAutomatically = true)

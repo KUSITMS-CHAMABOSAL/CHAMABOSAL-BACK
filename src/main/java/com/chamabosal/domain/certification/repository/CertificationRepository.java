@@ -1,6 +1,7 @@
 package com.chamabosal.domain.certification.repository;
 
 import com.chamabosal.domain.certification.entity.Certification;
+import com.chamabosal.domain.certification.entity.CertificationResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -11,6 +12,15 @@ import java.util.Optional;
 public interface CertificationRepository extends JpaRepository<Certification, Long> {
 
     boolean existsByRound_IdAndMember_IdAndDeletedAtIsNull(Long roundId, Long memberId);
+
+    /** 오늘 탭(ROOM-02 17번): 이 방의 기간 안 `참았어요` 수를 멤버별로. 삭제한 인증은 세지 않는다. 결과는 [멤버 ID, 수]. */
+    @Query("""
+            select c.member.id, count(c) from Certification c
+            where c.round.room.id = :roomId and c.result = :endured and c.deletedAt is null
+              and c.round.roundDate between :from and :to
+            group by c.member.id
+            """)
+    List<Object[]> countByMemberInPeriod(Long roomId, CertificationResult endured, LocalDate from, LocalDate to);
 
     /** 나발 판정(NABAL-01): 그 방·회차 날짜에 삭제하지 않은 내 인증이 있는지. */
     boolean existsByRound_Room_IdAndRound_RoundDateAndMember_IdAndDeletedAtIsNull(
