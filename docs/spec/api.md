@@ -618,8 +618,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
   "candidates": [
     {
       "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [],
-      "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" },
-      "isSelectable": true, "isResting": false
+      "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" }
     }
   ]
 }

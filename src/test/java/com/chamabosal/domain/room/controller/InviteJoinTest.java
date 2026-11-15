@@ -128,10 +128,8 @@ class InviteJoinTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_03_7_6개월_안에_다시_들어오면_같은_행을_쓰고_연속_지목이_이어진다() throws Exception {
+    void INVITE_03_7_6개월_안에_다시_들어오면_같은_행을_쓴다() throws Exception {
         RoomMember previous = addLeftMember(room, userD, "지수", BosalColor.MINT, NOW.minusMonths(5), LeaveType.LEFT);
-        ReflectionTestUtils.setField(previous, "pickedStreak", 2);
-        roomMemberRepository.save(previous);
 
         join(userD, "지수")
                 .andExpect(status().isCreated())
@@ -141,7 +139,6 @@ class InviteJoinTest extends RoomTestSupport {
         assertThat(rejoined.isCurrent()).isTrue();
         assertThat(rejoined.getLeaveType()).isNull();
         assertThat(rejoined.getJoinedAt()).isEqualTo(NOW);
-        assertThat(rejoined.getPickedStreak()).isEqualTo(2);
     }
 
     @Test

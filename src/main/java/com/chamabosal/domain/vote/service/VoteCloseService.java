@@ -2,7 +2,6 @@ package com.chamabosal.domain.vote.service;
 
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
-import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundParticipant;
@@ -33,7 +32,6 @@ import java.util.stream.Collectors;
 public class VoteCloseService {
 
     private final RoomRepository roomRepository;
-    private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final RoundParticipantRepository roundParticipantRepository;
     private final VoteRepository voteRepository;
@@ -90,17 +88,9 @@ public class VoteCloseService {
         close(round, voteRepository.findByRound_Id(round.getId()), now);
     }
 
-    /**
-     * 결과를 발표하고 같은 트랜잭션에서 그 방 현재 멤버의 연속 지목을 갱신한다 (RESULT-04). 나간 멤버는 건드리지 않아
-     * 6개월 안에 돌아오면 나가기 전 연속 지목이 이어진다 (Q-35). 방어는 발표 뒤의 일이라 발표 때 지목으로 센다 (1번, Q-23).
-     */
     private void close(Round round, List<Vote> votes, LocalDateTime now) {
         Judgement judgement = judge(votes);
         round.announce(now, judgement.resultType(), judgement.pickedMember());
-        RoomMember picked = judgement.pickedMember();
-        for (RoomMember member : roomMemberRepository.findByRoom_IdAndLeftAtIsNull(round.getRoom().getId())) {
-            member.applyRoundResult(round.getRoundDate(), picked != null && picked.getId().equals(member.getId()));
-        }
     }
 
     /**
