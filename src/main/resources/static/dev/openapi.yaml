@@ -338,6 +338,7 @@ paths:
       description: |-
         클라이언트가 받은 토스 알림 동의 결과를 저장한다.
 
+        - 알림 4종은 동의문이 따로 있어 종류마다 보낸다. 다른 종류의 동의는 바뀌지 않는다.
         - `agreementRejected`면 저장하지 않는다.
       requestBody:
         required: true
@@ -3092,8 +3093,11 @@ components:
     PushAgreementType:
       type: string
       enum:
+      - POKE
+      - RESULT
+      - VOTE_OPENED
       - CERT_REMINDER
-      description: '알림 동의 종류: `CERT_REMINDER` 인증 마감 리마인드'
+      description: '알림 동의 종류: `POKE` 콕 찌르기, `RESULT` 투표 결과, `VOTE_OPENED` 새 투표, `CERT_REMINDER` 인증 마감'
     PushAgreementResult:
       type: string
       enum:
@@ -3184,6 +3188,9 @@ components:
       required:
       - isPokePushEnabled
       - isActivityPushEnabled
+      - isPokeAgreed
+      - isResultAgreed
+      - isVoteOpenedAgreed
       - isCertReminderAgreed
       - equippedItemCodes
       - rooms
@@ -3197,10 +3204,22 @@ components:
           type: boolean
           description: 인증·투표 알림
           example: true
+        isPokeAgreed:
+          type: boolean
+          description: 콕 찌르기 알림 동의 (POKE)
+          example: false
+        isResultAgreed:
+          type: boolean
+          description: 투표 결과 알림 동의 (RESULT)
+          example: false
+        isVoteOpenedAgreed:
+          type: boolean
+          description: 새 투표 알림 동의 (VOTE_OPENED)
+          example: false
         isCertReminderAgreed:
           type: boolean
-          description: 인증 마감 리마인드 동의
-          example: false
+          description: 인증 마감 알림 동의 (CERT_REMINDER)
+          example: true
         equippedItemCodes: &id005
           type: array
           items:

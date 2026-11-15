@@ -61,7 +61,7 @@
 | InviteStatus | `JOINABLE` `ALREADY_MEMBER` `ROOM_LIMIT` `ROOM_FULL` `UNAVAILABLE` |
 | ItemSlot | `HAT` (모자) `FACE` (얼굴) `EXPRESSION` (표정) |
 | DefenseTicketStatus | `NONE` `OWNED` |
-| PushAgreementType | `CERT_REMINDER` |
+| PushAgreementType | `POKE` (콕 찌르기) `RESULT` (투표 결과) `VOTE_OPENED` (새 투표) `CERT_REMINDER` (인증 마감) |
 | PushAgreementResult | `newAgreement` `alreadyAgreed` `agreementRejected` (앱인토스 값 그대로) |
 
 ### 에러 code
@@ -157,7 +157,10 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 {
   "isPokePushEnabled": true,
   "isActivityPushEnabled": true,
-  "isCertReminderAgreed": false,
+  "isPokeAgreed": false,
+  "isResultAgreed": false,
+  "isVoteOpenedAgreed": false,
+  "isCertReminderAgreed": true,
   "equippedItemCodes": ["SANTA_HAT"],
   "rooms": [
     { "roomId": 1, "name": "배달 끊기 방", "nickname": "민지", "color": "PINK", "hasUnseen": false }
@@ -166,6 +169,7 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 }
 ```
 
+- `is…Agreed`: 알림 종류별 토스 알림 동의 (`POKE`, `RESULT`, `VOTE_OPENED`, `CERT_REMINDER`). 동의 카드를 띄울지 판단할 때 씀
 - `equippedItemCodes`: 내 보살 캐릭터에 씀. 착용은 사용자 단위라 모든 방에 같음
 - `rooms`: 현재 멤버인 방만. 비어 있으면 첫 화면. `nickname`, `color`는 그 방의 내 보살
 - `hasUnseen`: 안 본 결과나 한 솥 축하가 있음
@@ -216,6 +220,7 @@ NOTI-01. 클라이언트가 받은 토스 알림 동의 결과를 저장합니�
 { "type": "CERT_REMINDER", "result": "newAgreement" }
 ```
 
+- 알림 4종은 동의문이 따로 있어 종류마다 보냄 (Q-14). 다른 종류의 동의는 바뀌지 않음
 - `agreementRejected`면 저장하지 않음
 - 에러: `COMMON_002` (400)
 
