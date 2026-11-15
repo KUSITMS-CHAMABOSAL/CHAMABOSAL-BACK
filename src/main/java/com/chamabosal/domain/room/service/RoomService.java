@@ -54,6 +54,9 @@ public class RoomService {
     @Transactional
     public RoomCreateResponse create(Long userId, RoomCreateRequest request) {
         String name = validateRoomName(request.name());
+        if (request.potGoalAmount() % RoomCreateRequest.POT_GOAL_UNIT != 0) {
+            throw BaseException.withField(BaseErrorCode.INVALID_REQUEST, RoomCreateRequest.POT_GOAL_MESSAGE, "potGoalAmount");
+        }
         // 토큰 검사 뒤에 내 데이터 삭제가 끝났을 수 있어 락을 잡은 뒤 다시 확인한다.
         User user = userRepository.findWithLockById(userId)
                 .filter(found -> !found.isDeleted())
@@ -62,7 +65,7 @@ public class RoomService {
             throw new BaseException(BaseErrorCode.ROOM_LIMIT_EXCEEDED);
         }
 
-        Room room = roomRepository.save(Room.create(name, request.goal(), request.memberLimit()));
+        Room room = roomRepository.save(Room.create(name, request.goal(), request.memberLimit(), request.potGoalAmount()));
         RoomMember owner = roomMemberRepository.save(RoomMember.create(
                 room, user, request.nickname(), bosalColorPicker.pick(List.of()), LocalDateTime.now(clock)));
         room.assignOwner(owner.getId());
