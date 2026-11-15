@@ -134,6 +134,36 @@ public class RoomService {
     }
 
     /**
+     * 방장이 멤버를 내보낸다 (ROOM-08). 마지막 인증·03:00 배치의 투표 시작과 같은 방 행 락 안에서 투표 중인지 확인해서,
+     * 투표가 먼저 시작됐으면 막고 내보내기가 먼저면 대상은 명단에 들어가지 않는다 (8번). 방장은 남아 있어 위임·삭제는 없다.
+     * 공양미 차감은 Q-94가 정해질 때까지 하지 않는다 (removeMember의 LEFT 조건).
+     */
+    @Transactional
+    public void kick(Long userId, Long roomId, Long targetMemberId) {
+        Room room = roomRepository.findWithLockById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        if (!me.getId().equals(room.getOwnerMemberId())) {
+            throw new BaseException(BaseErrorCode.NOT_ROOM_OWNER);
+        }
+        if (me.getId().equals(targetMemberId)) {
+            throw new BaseException(BaseErrorCode.CANNOT_KICK_OWNER);
+        }
+        RoomMember target = roomMemberRepository.findById(targetMemberId)
+                .filter(found -> found.getRoom().getId().equals(room.getId()) && found.isCurrent())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.MEMBER_NOT_FOUND));
+        // 권한·대상을 먼저 보고 투표 중을 마지막에 봐서, 잘못된 요청은 회차 상태와 상관없이 같은 에러를 받는다.
+        // 03:00이 지났는데 배치가 아직 투표를 열지 않은 회차도 투표 시간이라 막는다. 지금 내보내면 그 투표 명단에서 빠진다 (8번).
+        if (roundRepository.existsVotingTime(room.getId(), Round.dateOf(LocalDateTime.now(clock)),
+                RoundStatus.VOTING, RoundStatus.CERTIFYING)) {
+            throw new BaseException(BaseErrorCode.KICK_DURING_VOTE);
+        }
+        removeMember(room, target, LeaveType.KICKED);
+    }
+
+    /**
      * 살아 있는 방의 행 락을 잡은 뒤 부른다. 내 데이터 삭제(USER-05)는 방마다 락을 잡는 공개 메서드를 이 클래스에 추가해 이 처리를 쓴다.
      * 방이 남아 있으면 남은 멤버 기준으로 투표 시작을 확인한다 (ROOM-07 10번). 투표 마감(VOTE-04, ROOM-07 9번)도 여기에 붙인다.
      */
