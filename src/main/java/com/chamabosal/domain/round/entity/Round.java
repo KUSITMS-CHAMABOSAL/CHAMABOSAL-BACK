@@ -127,7 +127,19 @@ public class Round extends BaseEntity {
         this.pickedUser = pickedMember != null ? pickedMember.getUser() : null;
     }
 
-    public boolean isVoting() {
+    /** 지목된 사람이 결과를 보지 않고 바로 방어권을 쓰면 그 시각을 처음 조회 시각으로 남긴다 (SHIELD-02 3번). */
+    public void markPickedSeenIfAbsent(LocalDateTime seenAt) {
+        if (pickedSeenAt == null) {
+            pickedSeenAt = seenAt;
+        }
+    }
+
+    /** 지목된 사람이 방어권을 쓰면 결과만 `DEFENDED`로 바꾼다. 차순위로 넘기지 않아 지목된 사람은 그대로다 (SHIELD-02 5번). */
+    public void defend() {
+        this.resultType = RoundResultType.DEFENDED;
+    }
+
+        public boolean isVoting() {
         return status == RoundStatus.VOTING;
     }
 }
