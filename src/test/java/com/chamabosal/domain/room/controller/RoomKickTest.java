@@ -109,12 +109,11 @@ class RoomKickTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.code").value("ROOM_008"));
     }
 
-    /** 오늘 탭(ROOM-02)이 아직 없어 같은 "현재 멤버만" 확인을 쓰는 인증 캘린더로 확인한다. */
     @Test
     void ROOM_08_5_내보내진_뒤_그_방을_조회하면_ROOM_002를_돌려준다() throws Exception {
         kick(userA, memberB).andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/rooms/{roomId}/members/me/calendar", room.getId()).header("Authorization", bearer(userB)))
+        mockMvc.perform(get("/api/rooms/{roomId}/today", room.getId()).header("Authorization", bearer(userB)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ROOM_002"));
     }
