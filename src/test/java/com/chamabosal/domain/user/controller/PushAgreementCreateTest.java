@@ -2,6 +2,7 @@ package com.chamabosal.domain.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -81,7 +82,6 @@ class PushAgreementCreateTest {
         userRepository.deleteAll();
     }
 
-    /** 내 정보 응답의 동의 여부 확인은 USER-01 구현 때 한다. 이번에는 저장 여부만 확인한다. */
     @Test
     void NOTI_01_1_새로_동의하면_저장한다() throws Exception {
         agree("CERT_REMINDER", "newAgreement")
@@ -91,6 +91,10 @@ class PushAgreementCreateTest {
         assertThat(agreements).hasSize(1);
         assertThat(agreements.getFirst().getType()).isEqualTo(PushAgreementType.CERT_REMINDER);
         assertThat(agreements.getFirst().getAgreedAt()).isEqualTo(NOW);
+        mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isCertReminderAgreed").value(true))
+                .andExpect(jsonPath("$.data.isPokeAgreed").value(false));
     }
 
     @Test
