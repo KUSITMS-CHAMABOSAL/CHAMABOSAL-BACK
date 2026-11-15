@@ -64,7 +64,7 @@ erDiagram
 | is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
 | deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 행은 남기고 키를 비운 뒤 신규 사용자로 처리 |
 
-- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (콕은 콕 알림, 나머지는 인증·투표 알림). 토글을 유지할지는 [미정] Q-98
+- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (콕은 콕 알림, 나머지는 인증·투표 알림) (Q-98)
   - 사용자가 토스 앱 설정(서비스별 알림)에서 끄면 서버는 알 수 없음 → 발송 응답의 `fail`로만 확인
 
 ### push_agreements

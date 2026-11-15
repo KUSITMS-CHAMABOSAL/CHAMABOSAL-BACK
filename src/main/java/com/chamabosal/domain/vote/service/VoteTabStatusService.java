@@ -98,11 +98,9 @@ public class VoteTabStatusService {
 
     /** 결과를 본 뒤 ~ 다음 투표 시작 전까지는 가장 최근 발표 회차로 안 봤는지를 가른다. */
     private VoteTabStatusResponse resultStatus(Round latestAnnounced, RoomMember me) {
-        boolean seen = me.getSeenResultRoundDate() != null
-                && !me.getSeenResultRoundDate().isBefore(latestAnnounced.getRoundDate());
-        return seen
-                ? VoteTabStatusResponse.resultSeen(latestAnnounced.getId(), latestAnnounced.getRoundDate())
-                : VoteTabStatusResponse.resultUnseen(latestAnnounced.getId(), latestAnnounced.getRoundDate());
+        return me.hasUnseenResult(latestAnnounced.getRoundDate())
+                ? VoteTabStatusResponse.resultUnseen(latestAnnounced.getId(), latestAnnounced.getRoundDate())
+                : VoteTabStatusResponse.resultSeen(latestAnnounced.getId(), latestAnnounced.getRoundDate());
     }
 
     /** 첫 번째 미인증 멤버를 고르는 순서는 아직 정하지 않아 (Q-25) 입장 순서로 임시 정렬한다. */

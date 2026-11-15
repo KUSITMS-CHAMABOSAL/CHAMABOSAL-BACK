@@ -19,6 +19,14 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     List<RoomMember> findByRoom_IdAndLeftAtIsNull(Long roomId);
 
+    /** 내 정보(USER-01)의 방 목록. 삭제되지 않은 방의 현재 멤버 행을 방과 함께, 들어온 순서로 가져온다. */
+    @Query("""
+            select m from RoomMember m join fetch m.room r
+            where m.user.id = :userId and m.leftAt is null and r.deletedAt is null
+            order by m.joinedAt, m.id
+            """)
+    List<RoomMember> findCurrentWithRoom(Long userId);
+
     long countByRoom_IdAndLeftAtIsNull(Long roomId);
 
     /** 방장을 넘겨받을 멤버. 들어온 시각이 같으면 먼저 저장된 행. 다시 들어온 멤버는 예전 행이라 id만으로는 들어온 순서가 아니다. */

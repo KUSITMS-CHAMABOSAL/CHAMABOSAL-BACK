@@ -128,6 +128,16 @@ public class RoomMember extends BaseEntity {
         this.seenResultRoundDate = latestAnnouncedRoundDate;
     }
 
+    /** 가장 최근 발표 회차를 아직 안 봤는지 (RESULT-02). 본 날짜가 없으면 안 본 것이다. */
+    public boolean hasUnseenResult(LocalDate latestAnnouncedRoundDate) {
+        return seenResultRoundDate == null || seenResultRoundDate.isBefore(latestAnnouncedRoundDate);
+    }
+
+    /** 방의 한 솥 완성 횟수가 본 횟수보다 크면 안 본 축하가 있다 (POT-01). */
+    public boolean hasUnseenPot() {
+        return room.getPotCompletedCount() > seenPotCount;
+    }
+
     /** 토큰은 한 번 정해지면 바뀌지 않는다. */
     public void issueInviteToken(String inviteToken) {
         if (this.inviteToken == null) {
