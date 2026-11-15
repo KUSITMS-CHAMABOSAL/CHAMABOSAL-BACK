@@ -107,6 +107,9 @@ class CalendarTest {
     void USER_02_1_월이_없으면_이번_달_인증_날짜와_결과를_돌려준다() throws Exception {
         certify(memberA1, LocalDate.of(2026, 11, 1), CertificationResult.ENDURED);
         certify(memberA1, LocalDate.of(2026, 11, 2), CertificationResult.FAILED);
+        RoomMember memberB1 = roomMemberRepository.save(RoomMember.create(
+                room1, userRepository.save(User.create("anon-b")), "지수", BosalColor.MINT, NOW.minusMonths(2)));
+        certify(memberB1, LocalDate.of(2026, 11, 3), CertificationResult.ENDURED);
 
         calendar(room1, null)
                 .andExpect(status().isOk())
@@ -175,6 +178,22 @@ class CalendarTest {
     }
 
     @Test
+    void 새벽_3시부터는_그날_회차이고_월을_비우면_그_달이다() throws Exception {
+        clock.set(LocalDateTime.of(2026, 12, 1, 3, 0));
+        mockMvc.perform(post("/api/rooms/{roomId}/certifications", room1.getId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"ENDURED\",\"memo\":\"집밥 해먹었어요\"}"))
+                .andExpect(status().isCreated());
+
+        calendar(room1, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2026-12"))
+                .andExpect(jsonPath("$.data.calendar.length()").value(1))
+                .andExpect(jsonPath("$.data.calendar[0].date").value("2026-12-01"));
+    }
+
+    @Test
     void 월이_없거나_비어_있으면_지금_회차_날짜의_달이다() throws Exception {
         certify(memberA1, LocalDate.of(2026, 11, 30), CertificationResult.ENDURED);
         clock.set(LocalDateTime.of(2026, 12, 1, 2, 0));
@@ -219,7 +238,7 @@ class CalendarTest {
 
     @Test
     void 월_형식이_틀리면_COMMON_002를_돌려준다() throws Exception {
-        for (String month : new String[]{"2026-13", "202611", "11월"}) {
+        for (String month : new String[]{"2026-13", "202611", "11월", "+10000-11"}) {
             calendar(room1, month)
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("COMMON_002"))

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class CalendarService {
 
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("uuuu-MM");
+    /** uuuu는 `+10000-11`처럼 부호 붙은 다섯 자리 연도도 읽어서, 파싱 전에 yyyy-MM 모양부터 확인한다 (코드리뷰 반영). */
+    private static final Pattern MONTH_PATTERN = Pattern.compile("[0-9]{4}-[0-9]{2}");
     private static final String MONTH_MESSAGE = "월은 yyyy-MM 형식입니다.";
 
     private final RoomRepository roomRepository;
@@ -50,6 +53,9 @@ public class CalendarService {
     private YearMonth parseMonth(String month) {
         if (month == null || month.isBlank()) {
             return YearMonth.from(Round.dateOf(LocalDateTime.now(clock)));
+        }
+        if (!MONTH_PATTERN.matcher(month).matches()) {
+            throw BaseException.withField(BaseErrorCode.INVALID_REQUEST, MONTH_MESSAGE, "month");
         }
         try {
             return YearMonth.parse(month, MONTH_FORMAT);
