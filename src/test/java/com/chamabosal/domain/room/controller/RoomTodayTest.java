@@ -148,6 +148,17 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
+    void ROOM_02_16_투표가_열리지_않는_2명_방에서는_마지막_인증자가_아니다() throws Exception {
+        leave(memberC.getId(), NOW.minusHours(1), LeaveType.LEFT);
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        certify(round, memberA, NOW.minusMinutes(1));
+
+        today(userB)
+                .andExpect(jsonPath("$.data.round.isCertificationOpen").value(true))
+                .andExpect(jsonPath("$.data.me.isLastCertifier").value(false));
+    }
+
+    @Test
     void ROOM_02_9_이전_회차_투표_중에는_인증이_열리지_않고_마지막_인증자도_아니다() throws Exception {
         saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
 

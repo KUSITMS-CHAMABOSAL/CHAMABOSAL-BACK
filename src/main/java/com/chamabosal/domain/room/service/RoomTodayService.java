@@ -23,6 +23,7 @@ import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
@@ -81,7 +82,11 @@ public class RoomTodayService {
 
         RoundSummary roundSummary = new RoundSummary(round.map(Round::getId).orElse(null),
                 round.map(Round::getStatus).orElse(RoundStatus.CERTIFYING), certifiedCount, isAllCertified, isOpen);
-        Me meInfo = new Me(isOpen && !certifications.containsKey(me.getId()) && certifiedCount == members.size() - 1, 0);
+        // 확인 시트가 "등록하면 바로 투표가 시작된다"고 안내해서, 투표가 시작되는 경우만 표시한다 (10번, WF 55).
+        // 3명 미만이거나 이미 투표 없음이 된 회차는 전원이 인증해도 투표가 열리지 않는다 (VOTE-01 4번).
+        boolean startsVote = members.size() >= VoteStartService.MIN_VOTERS && round.map(Round::isCertifying).orElse(true);
+        Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
+                && certifiedCount == members.size() - 1, 0);
         return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), new Pot(0, room.getPotGoalAmount()),
                 roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me));
     }
