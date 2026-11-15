@@ -85,7 +85,6 @@ public class RoomService {
         me.changeNickname(nickname);
     }
 
-    /** 완성 횟수는 늘기만 해서 락 없이 읽은 값과 비교해도 된다. 동시 요청은 조건부 update로 막아 방 행 락을 잡지 않는다. */
     /**
      * 본 결과 회차를 저장해 그 회차와 이전 회차를 모두 본 것으로 처리한다 (ROOM-06, RESULT-02 8번).
      * 이미 저장한 회차보다 이전 회차면 바꾸지 않는다. 비교와 저장을 한 문장으로 해서 동시 요청에도 뒤 회차가 남는다.
@@ -104,6 +103,7 @@ public class RoomService {
         roomMemberRepository.raiseSeenResultRoundDate(me.getId(), round.getRoundDate(), LocalDateTime.now(clock));
     }
 
+    /** 완성 횟수는 늘기만 해서 락 없이 읽은 값과 비교해도 된다. 동시 요청은 조건부 update로 막아 방 행 락을 잡지 않는다. */
     @Transactional
     public void markPotSeen(Long userId, Long roomId, RoomSeenPotUpdateRequest request) {
         Room room = roomRepository.findById(roomId)
