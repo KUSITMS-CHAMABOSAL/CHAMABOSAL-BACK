@@ -63,7 +63,7 @@ public class UserController {
     @PostMapping("/push-agreements")
     @Operation(summary = "토스 알림 동의 (NOTI-01)",
             description = """
-                    클라이언트가 받은 토스 알림 동의 결과를 저장합니다. 지금은 CERT_REMINDER만 받습니다.
+                    클라이언트가 받은 토스 알림 동의 결과를 저장합니다. 알림 4종은 동의문이 따로 있어 종류마다 보내 주세요. 다른 종류의 동의는 바뀌지 않습니다.
                     newAgreement, alreadyAgreed면 저장하고(이미 있으면 처음 동의 시각 유지), agreementRejected면 저장하지 않습니다.
                     저장 여부와 상관없이 200을 돌려줍니다.
                     """)
