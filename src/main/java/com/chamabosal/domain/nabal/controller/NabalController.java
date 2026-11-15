@@ -73,6 +73,7 @@ public class NabalController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
             @RequestBody @Valid NabalReplantRequest request
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(Response.ok(nabalService.replant(userId, request)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Response.created("나발을 심었습니다.", nabalService.replant(userId, request)));
     }
 }
