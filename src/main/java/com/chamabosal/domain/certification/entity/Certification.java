@@ -87,6 +87,29 @@ public class Certification extends BaseEntity {
         this.spentAmount = result == CertificationResult.FAILED ? spentAmount : null;
     }
 
+    /** 사진이 있고 아직 지우지 않았는지 */
+    public boolean hasImage() {
+        return imageKey != null && imageDeletedAt == null;
+    }
+
+    /** 등록하거나 새 사진으로 바꾼다. 바꾸기 전 사진 키를 돌려준다 (CERT-02 9번). */
+    public String replaceImage(String newImageKey) {
+        String previous = hasImage() ? imageKey : null;
+        this.imageKey = newImageKey;
+        this.imageDeletedAt = null;
+        return previous;
+    }
+
+    /** 사진을 지운 것으로 남기고, 지울 사진 키를 돌려준다. 사진이 없으면 null. */
+    public String removeImage(LocalDateTime removedAt) {
+        if (!hasImage()) {
+            return null;
+        }
+        String previous = imageKey;
+        this.imageDeletedAt = removedAt;
+        return previous;
+    }
+
     public void delete(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
     }
