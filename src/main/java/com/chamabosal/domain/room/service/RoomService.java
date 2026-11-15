@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class RoomService {
 
-    static final int MAX_JOINED_ROOMS = 2;
+    public static final int MAX_JOINED_ROOMS = 2;
     private static final int ROOM_NAME_MAX_LENGTH = 8;
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
     private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~8자입니다.";
