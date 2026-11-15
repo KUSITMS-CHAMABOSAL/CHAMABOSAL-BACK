@@ -81,7 +81,7 @@
 | 사용자 | GET | `/api/users/me` | USER-01 | ✅ |
 | 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 | ✅ |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
-| 사용자 | DELETE | `/api/users/me` | USER-05 |  |
+| 사용자 | DELETE | `/api/users/me` | USER-05 | ✅ |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
@@ -210,7 +210,7 @@ USER-03. 앱 안의 알림 설정을 바꿉니다. 보낸 값만 바꿉니다.
 
 ### DELETE /api/users/me
 
-USER-05. 내 데이터를 삭제합니다. 모든 방에서 나가고 사진은 바로 삭제합니다. 6개월 안에 돌아오면 복구됩니다.
+USER-05. 내 데이터를 바로 삭제합니다. 모든 방에서 나가고 공양미·아이템·방어권·알림 동의·사진을 지웁니다. 투표 결과와 지난 회차 한 줄·금액은 "떠난 보살"로 남습니다. 복구는 없고, 같은 토스 계정으로 다시 로그인하면 새 사용자입니다 (Q-102).
 
 ### POST /api/users/me/push-agreements
 
