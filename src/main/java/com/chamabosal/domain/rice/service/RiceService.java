@@ -26,6 +26,7 @@ public class RiceService {
 
     public static final int CERTIFICATION_REWARD = 10;
     public static final int VOTE_REWARD = 5;
+    public static final int REACTION_REWARD = 1;
     private static final int MIN_MEMBERS = 2;
 
     private final RiceHistoryRepository riceHistoryRepository;
