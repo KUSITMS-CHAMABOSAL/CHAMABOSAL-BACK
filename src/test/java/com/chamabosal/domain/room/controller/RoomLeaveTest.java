@@ -1,19 +1,28 @@
 package com.chamabosal.domain.room.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.rice.entity.RiceHistory;
+import com.chamabosal.domain.rice.entity.RiceReason;
+import com.chamabosal.domain.rice.entity.RiceRefType;
+import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.user.entity.User;
+import com.chamabosal.domain.vote.service.VoteCloseScheduler;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -21,9 +30,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.ResultActions;
 
 class RoomLeaveTest extends RoomTestSupport {
+
+    @Autowired
+    RiceService riceService;
+
+    @Autowired
+    VoteCloseScheduler voteCloseScheduler;
 
     private User userA;
     private Room room;
@@ -50,6 +66,39 @@ class RoomLeaveTest extends RoomTestSupport {
         assertThat(left.isCurrent()).isFalse();
         assertThat(left.getLeftAt()).isEqualTo(NOW);
         assertThat(left.getLeaveType()).isEqualTo(LeaveType.LEFT);
+    }
+
+    @Test
+    void ROOM_07_2_나가도_한_줄과_금액은_남고_기록은_떠난_보살로_보인다() throws Exception {
+        User userB = newUser();
+        addMember(room, userB, "지수");
+        Round round = saveRound(room, NOW.toLocalDate().minusDays(1), RoundStatus.VOTING);
+        Certification certification = certificationRepository.save(Certification.create(
+                round, memberA, CertificationResult.FAILED, "치킨 시켰어요", 23000, NOW.minusDays(1)));
+        round.announce(NOW.minusHours(1), RoundResultType.PICKED, memberA);
+        roundRepository.save(round);
+
+        leave(userA).andExpect(status().isOk());
+
+        Certification kept = certificationRepository.findById(certification.getId()).orElseThrow();
+        assertThat(kept.getMemo()).isEqualTo("치킨 시켰어요");
+        assertThat(kept.getSpentAmount()).isEqualTo(23000);
+        mockMvc.perform(get("/api/rounds/{roundId}/result", round.getId()).header("Authorization", bearer(userB)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.picked.memberId").value(memberA.getId()))
+                .andExpect(jsonPath("$.data.picked.isLeft").value(true))
+                .andExpect(jsonPath("$.data.picked.spentAmount").value(23000));
+    }
+
+    @Test
+    void ROOM_07_3_다른_방에서_모은_공양미는_나가도_그대로다() throws Exception {
+        addMember(room, newUser(), "지수");
+        riceHistoryRepository.save(RiceHistory.create(
+                userA, createRoom(4), 120, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION, 1L));
+
+        leave(userA).andExpect(status().isOk());
+
+        assertThat(riceService.getDisplayBalance(userA.getId())).isEqualTo(120);
     }
 
     @Test
@@ -87,6 +136,35 @@ class RoomLeaveTest extends RoomTestSupport {
         assertThat(found.isDeleted()).isTrue();
         assertThat(found.getDeletedAt()).isEqualTo(NOW);
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())).isEmpty();
+    }
+
+    @Test
+    void ROOM_07_9_투표_중_마지막_멤버가_나가면_회차는_결과_없이_남고_투표_적립은_나가기_차감만_된다() throws Exception {
+        RoomMember memberB = addMember(room, newUser(), "지수");
+        RoomMember memberC = addMember(room, newUser(), "하린");
+        Round round = roundRepository.save(Round.create(room, NOW.toLocalDate().minusDays(1)));
+        round.startVote(NOW.minusHours(9));
+        roundRepository.save(round);
+        riceHistoryRepository.save(RiceHistory.create(
+                userA, room, RiceService.VOTE_REWARD, RiceReason.VOTE, RiceRefType.VOTE, 1L));
+        leave(memberB.getId(), NOW.minusHours(2), LeaveType.LEFT);
+        leave(memberC.getId(), NOW.minusHours(1), LeaveType.LEFT);
+
+        leave(userA).andExpect(status().isOk());
+        clock.set(round.getVoteClosesAt().plusMinutes(5));
+        voteCloseScheduler.closeDueVotes();
+
+        assertThat(roomRepository.findById(room.getId()).orElseThrow().isDeleted()).isTrue();
+        Round kept = roundRepository.findById(round.getId()).orElseThrow();
+        assertThat(kept.getStatus()).isEqualTo(RoundStatus.VOTING);
+        assertThat(kept.getResultType()).isNull();
+        // 회차가 결과 없이 남아도 투표 적립은 그대로고, 빠지는 것은 나가기 차감(RICE-03) 한 번뿐이다.
+        assertThat(riceHistoryRepository.findAll())
+                .filteredOn(history -> history.getUser().getId().equals(userA.getId()))
+                .extracting(RiceHistory::getReason, RiceHistory::getDelta)
+                .containsExactlyInAnyOrder(
+                        tuple(RiceReason.VOTE, RiceService.VOTE_REWARD),
+                        tuple(RiceReason.LEAVE, -RiceService.VOTE_REWARD));
     }
 
     @Test

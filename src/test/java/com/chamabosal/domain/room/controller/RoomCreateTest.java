@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
@@ -12,11 +14,16 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.room.service.RoomService;
+import com.chamabosal.domain.round.repository.RoundParticipantRepository;
+import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import com.chamabosal.global.security.jwt.JwtProvider;
+import com.chamabosal.support.MutableClock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -29,12 +36,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(MutableClock.Config.class)
 class RoomCreateTest {
 
     @Autowired
@@ -55,15 +64,35 @@ class RoomCreateTest {
     @Autowired
     private JwtProvider jwtProvider;
 
+    @Autowired
+    private MutableClock clock;
+
+    @Autowired
+    private RoundRepository roundRepository;
+
+    @Autowired
+    private CertificationRepository certificationRepository;
+
+    @Autowired
+    private RoundParticipantRepository roundParticipantRepository;
+
+    @Autowired
+    private RiceHistoryRepository riceHistoryRepository;
+
     private User user;
 
     @BeforeEach
     void setUp() {
+        clock.set(LocalDateTime.of(2026, 11, 11, 12, 0));
         user = userRepository.save(User.create("anon-a"));
     }
 
     @AfterEach
     void tearDown() {
+        riceHistoryRepository.deleteAll();
+        roundParticipantRepository.deleteAll();
+        certificationRepository.deleteAll();
+        roundRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
@@ -132,6 +161,23 @@ class RoomCreateTest {
                 .andExpect(jsonPath("$.field").value("nickname"));
 
         assertThat(roomRepository.count()).isZero();
+    }
+
+    @Test
+    void ROOM_01_6_만든_날_인증하면_오늘_회차의_인증이다() throws Exception {
+        LocalDate today = LocalDate.of(2026, 11, 11);
+        clock.set(today.atTime(20, 0));
+        create("배달 끊기 방", 4, "민지")
+                .andExpect(status().isCreated());
+        Room room = roomRepository.findAll().getFirst();
+
+        clock.set(today.atTime(20, 10));
+        mockMvc.perform(post("/api/rooms/{roomId}/certifications", room.getId())
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"ENDURED\",\"memo\":\"집밥 해먹었어요\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.roundDate").value(today.toString()));
     }
 
     @Test

@@ -1,5 +1,8 @@
 package com.chamabosal.domain.room.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.LeaveType;
@@ -17,45 +20,37 @@ import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
-import com.chamabosal.global.config.ClockConfig;
+import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.security.jwt.JwtProvider;
-import java.time.Clock;
+import com.chamabosal.support.MutableClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
-/** 방·초대 시나리오 테스트가 함께 쓰는 방·멤버 준비 코드. 고정 Clock(NOW)을 쓴다. */
+/** 방·초대 시나리오 테스트가 함께 쓰는 방·멤버 준비 코드. 시나리오마다 Clock을 NOW로 맞추고, 시각이 흐르는 시나리오만 clock.set으로 옮긴다. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(RoomTestSupport.FixedClockConfig.class)
+@Import(MutableClock.Config.class)
 abstract class RoomTestSupport {
 
     static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 11, 12, 0);
     static final String TOKEN_A = "token-a";
 
-    @TestConfiguration
-    static class FixedClockConfig {
-
-        @Bean
-        @Primary
-        Clock fixedClock() {
-            return Clock.fixed(ZonedDateTime.of(NOW, ClockConfig.KST).toInstant(), ClockConfig.KST);
-        }
-    }
+    @Autowired
+    MutableClock clock;
 
     @Autowired
     MockMvc mockMvc;
@@ -89,8 +84,21 @@ abstract class RoomTestSupport {
     @Autowired
     CertificationRepository certificationRepository;
 
+    @Autowired
+    VoteRepository voteRepository;
+
+    @Autowired
+    RiceHistoryRepository riceHistoryRepository;
+
+    @BeforeEach
+    void resetClock() {
+        clock.set(NOW);
+    }
+
     @AfterEach
     void tearDown() {
+        riceHistoryRepository.deleteAll();
+        voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
@@ -145,6 +153,14 @@ abstract class RoomTestSupport {
         Round round = Round.create(room, roundDate);
         ReflectionTestUtils.setField(round, "status", status);
         return roundRepository.save(round);
+    }
+
+    /** 인증 API로 `참았어요`를 등록한다. 회차는 Clock 시각으로 정해진다. */
+    ResultActions certify(User user, Room room) throws Exception {
+        return mockMvc.perform(post("/api/rooms/{roomId}/certifications", room.getId())
+                .header("Authorization", bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"result\":\"ENDURED\",\"memo\":\"집밥 해먹었어요\"}"));
     }
 
     void deleteRoom(Room room) {
