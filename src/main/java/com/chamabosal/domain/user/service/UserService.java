@@ -1,6 +1,8 @@
 package com.chamabosal.domain.user.service;
 
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.nabal.repository.NabalLossRepository;
+import com.chamabosal.domain.nabal.service.NabalService;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.KickBlock;
 import com.chamabosal.domain.room.entity.LeaveType;
@@ -47,6 +49,8 @@ public class UserService {
     private final KickBlockRepository kickBlockRepository;
     private final RiceHistoryRepository riceHistoryRepository;
     private final DefenseTicketRepository defenseTicketRepository;
+    private final NabalLossRepository nabalLossRepository;
+    private final NabalService nabalService;
     private final Clock clock;
 
     /**
@@ -74,6 +78,7 @@ public class UserService {
         user.deleteData(now);
         riceHistoryRepository.deleteByUserId(userId);
         defenseTicketRepository.deleteByUserId(userId);
+        nabalLossRepository.deleteByUserId(userId);
         pushAgreementRepository.deleteByUserId(userId);
         roomMemberRepository.detachUser(userId);
     }
@@ -96,7 +101,7 @@ public class UserService {
         // 방 만들기·입장의 2개 제한과 같은 집계로 판단해 버튼과 실제 제한이 어긋나지 않게 한다.
         boolean canCreateRoom = roomMemberRepository.countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(userId)
                 < RoomService.MAX_JOINED_ROOMS;
-        return UserMeResponse.of(user, agreed, rooms, canCreateRoom);
+        return UserMeResponse.of(user, agreed, nabalService.getStatus(userId), rooms, canCreateRoom);
     }
 
     private boolean hasUnseen(RoomMember member) {

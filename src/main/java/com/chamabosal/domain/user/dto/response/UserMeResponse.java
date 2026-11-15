@@ -1,5 +1,6 @@
 package com.chamabosal.domain.user.dto.response;
 
+import com.chamabosal.domain.nabal.dto.response.NabalStatusResponse;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.user.entity.PushAgreementType;
@@ -17,6 +18,7 @@ public record UserMeResponse(
         @Schema(description = "새 투표 알림 토스 동의 (VOTE_OPENED)") boolean isVoteOpenedAgreed,
         @Schema(description = "인증 마감 알림 토스 동의 (CERT_REMINDER)") boolean isCertReminderAgreed,
         @Schema(description = "착용 아이템 코드. 착용은 사용자 단위라 모든 방에 같음") List<String> equippedItemCodes,
+        @Schema(description = "내 보살의 나발 상태 (NABAL-02)") NabalStatusResponse nabal,
         @Schema(description = "현재 멤버인 방, 들어온 순서. 비어 있으면 첫 화면") List<MyRoom> rooms,
         @Schema(description = "참여 중인 방이 2개면 false") boolean canCreateRoom
 ) {
@@ -35,10 +37,11 @@ public record UserMeResponse(
         }
     }
 
-    public static UserMeResponse of(User user, Set<PushAgreementType> agreed, List<MyRoom> rooms, boolean canCreateRoom) {
+    public static UserMeResponse of(User user, Set<PushAgreementType> agreed, NabalStatusResponse nabal, List<MyRoom> rooms,
+                                    boolean canCreateRoom) {
         return new UserMeResponse(user.isPokePushEnabled(), user.isActivityPushEnabled(),
                 agreed.contains(PushAgreementType.POKE), agreed.contains(PushAgreementType.RESULT),
                 agreed.contains(PushAgreementType.VOTE_OPENED), agreed.contains(PushAgreementType.CERT_REMINDER),
-                List.of(), rooms, canCreateRoom);
+                List.of(), nabal, rooms, canCreateRoom);
     }
 }

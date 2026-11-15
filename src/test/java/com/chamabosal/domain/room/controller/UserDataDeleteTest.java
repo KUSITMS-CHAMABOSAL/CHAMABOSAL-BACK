@@ -13,6 +13,8 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.defense.entity.DefenseTicket;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.nabal.entity.NabalLoss;
+import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
@@ -58,6 +60,9 @@ class UserDataDeleteTest extends RoomTestSupport {
     @Autowired
     KickBlockRepository kickBlockRepository;
 
+    @Autowired
+    NabalLossRepository nabalLossRepository;
+
     private User userA;
 
     @BeforeEach
@@ -68,6 +73,7 @@ class UserDataDeleteTest extends RoomTestSupport {
     @AfterEach
     void cleanUp() {
         kickBlockRepository.deleteAll();
+        nabalLossRepository.deleteAll();
         defenseTicketRepository.deleteAll();
         pushAgreementRepository.deleteAll();
     }
@@ -175,6 +181,7 @@ class UserDataDeleteTest extends RoomTestSupport {
                 userA, room, 10, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION, 1L));
         defenseTicketRepository.save(DefenseTicket.purchase(userA, NOW.minusDays(1)));
         pushAgreementRepository.save(PushAgreement.create(userA, PushAgreementType.CERT_REMINDER, NOW.minusDays(1)));
+        nabalLossRepository.save(NabalLoss.create(userA, room, NOW.toLocalDate().minusDays(1), 7));
         User other = newUser();
         riceHistoryRepository.save(RiceHistory.create(
                 other, room, 10, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION, 2L));
@@ -186,6 +193,7 @@ class UserDataDeleteTest extends RoomTestSupport {
                 .containsExactly(other.getId());
         assertThat(defenseTicketRepository.count()).isZero();
         assertThat(pushAgreementRepository.count()).isZero();
+        assertThat(nabalLossRepository.count()).isZero();
         assertThat(userRepository.findById(userA.getId()).orElseThrow().getTossAnonKey()).isNull();
     }
 
