@@ -38,6 +38,16 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
     @Query("update Round r set r.pickedSeenAt = :now, r.updatedAt = :now where r.id = :roundId and r.pickedSeenAt is null")
     int markPickedSeen(Long roundId, LocalDateTime now);
 
+    /**
+     * 내보내기(ROOM-08)가 막을 회차가 있는지. 투표 중인 회차와, 인증이 마감됐는데 03:00 배치가 아직 투표를 열지 않은 회차를 함께 본다.
+     */
+    @Query("""
+            select count(r) > 0 from Round r
+            where r.room.id = :roomId
+              and (r.status = :voting or (r.status = :certifying and r.roundDate < :currentRoundDate))
+            """)
+    boolean existsVotingTime(Long roomId, LocalDate currentRoundDate, RoundStatus voting, RoundStatus certifying);
+
     /** 이 회차보다 뒤 회차의 투표가 열렸는지. 투표 없음(`NO_VOTE`) 회차는 투표가 열린 게 아니다 (RESULT-03 4번). */
     boolean existsByRoom_IdAndRoundDateAfterAndStatusIn(Long roomId, LocalDate roundDate, List<RoundStatus> statuses);
 

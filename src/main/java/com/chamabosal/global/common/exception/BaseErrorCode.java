@@ -33,6 +33,10 @@ public enum BaseErrorCode implements ErrorCode {
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "ROOM_004", "이미 쓰는 닉네임입니다."),
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방입니다."),
     ROOM_UNAVAILABLE(HttpStatus.FORBIDDEN, "ROOM_006", "들어갈 수 없는 방입니다."),
+    NOT_ROOM_OWNER(HttpStatus.FORBIDDEN, "ROOM_007", "방장만 할 수 있습니다."),
+    KICK_DURING_VOTE(HttpStatus.CONFLICT, "ROOM_008", "투표 중에는 내보낼 수 없습니다."),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_009", "이 방에 없는 멤버입니다."),
+    CANNOT_KICK_OWNER(HttpStatus.BAD_REQUEST, "ROOM_010", "방장 본인은 내보낼 수 없습니다."),
 
     // Certification
     ALREADY_CERTIFIED(HttpStatus.CONFLICT, "CERT_001", "이미 인증했습니다."),

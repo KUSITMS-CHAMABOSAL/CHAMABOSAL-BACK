@@ -107,7 +107,7 @@ public class VoteSubmitService {
         RoundParticipant targetParticipant = roundParticipantRepository
                 .findByRound_IdAndMember_Id(roundId, request.targetMemberId())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.INVALID_VOTE_TARGET));
-        if (!targetParticipant.isCandidate() || targetParticipant.isResting()) {
+        if (!targetParticipant.isCandidate()) {
             throw new BaseException(BaseErrorCode.INVALID_VOTE_TARGET);
         }
         return targetParticipant.getMember();

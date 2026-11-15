@@ -32,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -231,26 +230,12 @@ class VoteTabStatusTest {
     }
 
     @Test
-    void VOTE_02_3_휴식_중_표시() throws Exception {
-        ReflectionTestUtils.setField(memberC, "restingRoundDate", NOV_5);
-        roomMemberRepository.save(memberC);
-        startVotingRound(memberA, memberB, memberC, memberD);
-
-        tab(room.getId(), userA)
-                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberC.getId() + ")].isResting")
-                        .value(org.hamcrest.Matchers.contains(true)))
-                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberC.getId() + ")].isSelectable")
-                        .value(org.hamcrest.Matchers.contains(false)));
-    }
-
-    @Test
     void VOTE_02_5_기존_멤버_미인증은_후보() throws Exception {
         startVotingRound(memberA, memberC, memberD);
         // B는 인증하지 않았다.
 
         tab(room.getId(), userA)
-                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberB.getId() + ")].isSelectable")
-                        .value(org.hamcrest.Matchers.contains(true)));
+                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberB.getId() + ")]").isNotEmpty());
     }
 
     @Test

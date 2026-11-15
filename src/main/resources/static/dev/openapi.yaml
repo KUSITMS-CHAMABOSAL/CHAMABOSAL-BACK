@@ -1727,8 +1727,6 @@ paths:
                           spentAmount: 23000
                           imageUrl: null
                           certifiedAt: '2026-11-04T19:24:00'
-                        isSelectable: true
-                        isResting: false
                       memberCount: null
                       memberLimit: null
                       uncertifiedCount: null
@@ -2728,8 +2726,6 @@ components:
       - color
       - equippedItemCodes
       - certification
-      - isSelectable
-      - isResting
       properties:
         memberId:
           type: integer
@@ -2751,14 +2747,6 @@ components:
           - $ref: '#/components/schemas/VoteCandidateCertification'
           nullable: true
           description: 인증하지 않았으면 `null`
-        isSelectable:
-          type: boolean
-          description: 고를 수 있는 후보
-          example: true
-        isResting:
-          type: boolean
-          description: 휴식 중
-          example: false
     VoteTabResponse:
       type: object
       description: '`status`마다 채우는 필드가 다르고 나머지는 `null`'

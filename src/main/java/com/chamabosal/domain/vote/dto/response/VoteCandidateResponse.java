@@ -14,18 +14,14 @@ public record VoteCandidateResponse(
         String nickname,
         BosalColor color,
         List<String> equippedItemCodes,
-        CertificationSummary certification,
-        boolean isSelectable,
-        boolean isResting
+        CertificationSummary certification
 ) {
 
     public static VoteCandidateResponse from(RoundParticipant participant, Certification certification) {
         RoomMember member = participant.getMember();
         return new VoteCandidateResponse(
                 member.getId(), member.getNickname(), member.getColor(), List.of(),
-                CertificationSummary.from(certification),
-                participant.isCandidate() && !participant.isResting(),
-                participant.isResting());
+                CertificationSummary.from(certification));
     }
 
     public record CertificationSummary(

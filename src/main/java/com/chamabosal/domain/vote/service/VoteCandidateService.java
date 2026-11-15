@@ -2,6 +2,7 @@ package com.chamabosal.domain.vote.service;
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.round.entity.RoundParticipant;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.vote.dto.response.VoteCandidateResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 투표 후보 계산 (VOTE-02). `RoundParticipant.isCandidate`는 "선택 가능한가"를 뜻해서 휴식 중이면 항상 false인데
- * (VOTE-01·CERT-05 스냅샷), 휴식 중인 멤버는 목록에서 빼는 게 아니라 `휴식 중`으로 보여주되 선택만 막아야 한다 (VOTE-02 3번).
- * 그래서 "오늘 들어와서 미인증"(`isCandidate`, `isResting` 모두 false, 목록에서도 제외)과
- * "휴식 중"(`isCandidate` false, `isResting` true, 목록에는 넣고 선택만 막음)을 `isResting`으로 구분한다.
+ * 투표 후보 계산 (VOTE-02). 그날 들어와서 인증하지 않은 멤버는 후보가 아니라 목록에서 뺀다.
  * 투표 중 나간 명단 멤버를 후보에서 뺄지는 아직 정하지 않아 (Q-27) 이번에는 빼지 않는다.
  */
 @Service
@@ -34,7 +32,7 @@ public class VoteCandidateService {
                 .findByRound_IdAndDeletedAtIsNull(roundId).stream()
                 .collect(Collectors.toMap(c -> c.getMember().getId(), Function.identity()));
         return roundParticipantRepository.findWithMemberByRound_Id(roundId).stream()
-                .filter(participant -> participant.isCandidate() || participant.isResting())
+                .filter(RoundParticipant::isCandidate)
                 .filter(participant -> excludeMemberId == null || !participant.getMember().getId().equals(excludeMemberId))
                 .map(participant -> VoteCandidateResponse.from(
                         participant, certificationsByMemberId.get(participant.getMember().getId())))

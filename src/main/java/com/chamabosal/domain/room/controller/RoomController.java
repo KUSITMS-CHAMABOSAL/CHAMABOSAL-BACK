@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 한 솥 확인, 나가기")
+@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 한 솥 확인, 나가기, 내보내기")
 public class RoomController {
 
     private final RoomService roomService;
@@ -246,6 +246,35 @@ public class RoomController {
             @PathVariable Long roomId
     ) {
         roomService.leave(userId, roomId);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
+    @DeleteMapping("/{roomId}/members/{memberId}")
+    @Operation(summary = "내보내기 (ROOM-08)",
+            description = """
+                    방장이 멤버를 내보냅니다. 내보낸 사람은 같은 방에 다시 들어올 수 없고, 내보낸 사유는 어디에도 표시하지 않습니다.
+                    방에 투표 중인 회차가 있으면 막습니다(어제 회차 포함, 오늘 탭 room.hasVotingRound). 인증 중에 내보내서 남은 멤버 전원이 인증한 상태가 되면 바로 투표를 시작합니다.
+                    확인 순서: ROOM_005 → ROOM_002 → ROOM_007 → ROOM_010 → ROOM_009 → ROOM_008
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "내보내기 성공"),
+            @ApiResponse(responseCode = "400", description = "ROOM_010 방장 본인",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / ROOM_007 방장이 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방 / ROOM_009 대상이 이 방의 현재 멤버가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "ROOM_008 투표 중인 회차가 있음",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<Void>> kick(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId,
+            @PathVariable Long memberId
+    ) {
+        roomService.kick(userId, roomId, memberId);
         return ResponseEntity.ok(Response.ok(null));
     }
 }

@@ -43,7 +43,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -114,12 +113,11 @@ class VoteStartTest {
     }
 
     @Test
-    void VOTE_01_1_전원_인증하면_바로_시작하고_명단에는_오늘_들어온_멤버와_휴식_중인_멤버도_있다() throws Exception {
+    void VOTE_01_1_전원_인증하면_바로_시작하고_명단에는_오늘_들어온_멤버도_있다() throws Exception {
         RoomMember a = addMember("민지");
         RoomMember b = addMember("지수");
         RoomMember c = addMember("하린");
         RoomMember d = addMemberJoinedAt("도윤", NOV_5.atTime(10, 0));
-        rest(c);
         certify(a);
         certify(b);
         certify(c);
@@ -290,7 +288,6 @@ class VoteStartTest {
 
         RoundParticipant participant = participants(nov5()).get(b.getId());
         assertThat(participant.isCandidate()).isTrue();
-        assertThat(participant.isResting()).isFalse();
     }
 
     @Test
@@ -298,18 +295,6 @@ class VoteStartTest {
         RoomMember d = startWithUncertified(addMemberJoinedAt("도윤", NOV_5.atTime(10, 0)));
 
         RoundParticipant participant = participants(nov5()).get(d.getId());
-        assertThat(participant.isCandidate()).isFalse();
-        assertThat(participant.isCanVote()).isFalse();
-    }
-
-    @Test
-    void CERT_05_3_휴식_중인_미인증_멤버는_명단에_있지만_선택할_수_없다() throws Exception {
-        RoomMember c = addMember("하린");
-        rest(c);
-        startWithUncertified(c);
-
-        RoundParticipant participant = participants(nov5()).get(c.getId());
-        assertThat(participant.isResting()).isTrue();
         assertThat(participant.isCandidate()).isFalse();
         assertThat(participant.isCanVote()).isFalse();
     }
@@ -365,11 +350,6 @@ class VoteStartTest {
     private Map<Long, RoundParticipant> participants(Round round) {
         return roundParticipantRepository.findByRound_Id(round.getId()).stream()
                 .collect(Collectors.toMap(participant -> participant.getMember().getId(), Function.identity()));
-    }
-
-    private void rest(RoomMember member) {
-        ReflectionTestUtils.setField(member, "restingRoundDate", NOV_5);
-        roomMemberRepository.save(member);
     }
 
     private RoomMember addMember(String nickname) {

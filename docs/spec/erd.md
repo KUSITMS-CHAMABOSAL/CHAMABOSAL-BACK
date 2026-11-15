@@ -47,7 +47,7 @@ erDiagram
 - **사용자(`users`)와 방 안의 보살(`room_members`)을 나눈다.** 닉네임·색상·인증·투표는 모두 `room_members` 기준
 - **공양미·방어권·꾸미기는 사용자 단위** (방 2개 합산)
 - 나간 지 6개월 안에 다시 들어오면 예전 멤버 행을 다시 써서 지난 기록이 내 닉네임 그대로 보인다 (기획 확정). 6개월이 지나서 오면 새 행을 만들고, 돌아오지 않은 사람의 기록은 "떠난 보살"로 보인다
-- 그래서 연속 지목·휴식도 `room_members`에 둔다 → 6개월 안에 나갔다 들어오면 이어짐
+- 그래서 이번 달 지목 횟수도 멤버 기준으로 집계한다 → 6개월 안에 나갔다 들어오면 이어짐
 - 지목 횟수처럼 회차 결과에서 계산할 수 있는 값은 따로 저장하지 않고 조회할 때 집계한다 (월 단위, 방 최대 4명이라 부담 적음)
 
 ---
@@ -131,8 +131,6 @@ erDiagram
 | invite_token | VARCHAR(64) | UK, NULL | 초대 링크 토큰. 처음 공유할 때 만들고 계속 재사용 (공유 전에는 NULL) |
 | seen_result_round_date | DATE | NULL | 결과 발표를 마지막으로 본 회차 날짜 |
 | seen_pot_count | INT | NOT NULL, 기본 0 | 한 솥 축하를 몇 번째 솥까지 봤는지 |
-| picked_streak | INT | NOT NULL, 기본 0 | 연속 지목 (방어 성공 포함). 다른 사람 지목·모두 무사·모두 보살·휴식 종료 시 0 |
-| resting_round_date | DATE | NULL | 휴식할 회차 날짜. 3연속이 되면 다음 회차 날짜 지정 → 그 회차 투표에서 후보 제외. 회차 행이 아직 없어도 되도록 FK 대신 날짜로 저장 |
 
 - 나간 지 6개월 안에 다시 들어오면 예전 행을 다시 씀: `left_at`·`leave_type`을 비우고 `joined_at`을 새로 기록
   - 이번 달 지목 횟수는 저장하지 않고 `rounds`에서 집계 (`picked_user_id` + 회차 월 + `result_type = PICKED`)
@@ -197,9 +195,8 @@ erDiagram
 | id | BIGINT | PK | |
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | member_id | BIGINT | FK room_members, NOT NULL | |
-| is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함·휴식 중이면 false) |
+| is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함이면 false) |
 | can_vote | BOOLEAN | NOT NULL | 투표권. 투표 시작 시점까지 인증했으면 true (11/8 회의) |
-| is_resting | BOOLEAN | NOT NULL | 휴식 중 (후보 카드에 흐리게 표시) |
 
 - `UNIQUE (round_id, member_id)`
 - 명단 3명 미만이면 행을 만들지 않고 `rounds.status = NO_VOTE`
