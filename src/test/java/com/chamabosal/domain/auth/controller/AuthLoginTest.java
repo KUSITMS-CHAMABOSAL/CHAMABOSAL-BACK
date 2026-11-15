@@ -88,21 +88,22 @@ class AuthLoginTest {
     }
 
     @Test
-    void AUTH_01_3_6개월_안에_돌아온_사용자를_복구한다() throws Exception {
-        User user = deletedUser(LocalDateTime.now(clock).minusMonths(6).plusMinutes(1));
+    void AUTH_01_3_내_데이터를_삭제한_사용자는_새_사용자로_만든다() throws Exception {
+        User user = userRepository.save(User.create(ANON_KEY));
+        user.deleteData(LocalDateTime.now(clock).minusMinutes(1));
+        userRepository.save(user);
 
         login()
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.isNewUser").value(false));
+                .andExpect(jsonPath("$.data.isNewUser").value(true));
 
-        User restored = userRepository.findById(user.getId()).orElseThrow();
-        assertThat(restored.getDeletedAt()).isNull();
-        assertThat(userRepository.count()).isEqualTo(1);
+        assertThat(userRepository.findById(user.getId()).orElseThrow().isDeleted()).isTrue();
+        assertThat(userRepository.findByTossAnonKey(ANON_KEY).orElseThrow().getId()).isNotEqualTo(user.getId());
     }
 
     @Test
-    void AUTH_01_4_6개월이_지난_사용자는_신규로_처리한다() throws Exception {
-        User user = deletedUser(LocalDateTime.now(clock).minusMonths(6).minusMinutes(1));
+    void AUTH_01_4_식별키가_남은_삭제한_사용자는_키를_비우고_새_사용자로_만든다() throws Exception {
+        User user = deletedUser(LocalDateTime.now(clock).minusMinutes(1));
 
         login()
                 .andExpect(status().isOk())
