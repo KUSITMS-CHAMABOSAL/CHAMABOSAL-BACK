@@ -4,6 +4,7 @@ import com.chamabosal.domain.certification.entity.Certification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,4 +26,12 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
 
     /** 후보 카드에 붙일 인증 내용을 한 번에 가져와서, 후보마다 인증을 따로 조회하지 않게 한다. */
     List<Certification> findByRound_IdAndDeletedAtIsNull(Long roundId);
+
+    /** 인증 캘린더 (USER-02). 그 멤버 행의 삭제하지 않은 인증을 회차 날짜 순으로 가져온다. */
+    @Query("""
+            select c from Certification c join fetch c.round r
+            where c.member.id = :memberId and c.deletedAt is null and r.roundDate between :from and :to
+            order by r.roundDate
+            """)
+    List<Certification> findCalendar(Long memberId, LocalDate from, LocalDate to);
 }
