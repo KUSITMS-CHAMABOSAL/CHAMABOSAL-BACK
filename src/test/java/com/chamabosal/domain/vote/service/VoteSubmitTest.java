@@ -112,7 +112,7 @@ class VoteSubmitTest {
     @BeforeEach
     void setUp() {
         clock.set(CERTIFIED_AT);
-        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
+        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
         userA = newUser();
         userB = newUser();
         userC = newUser();
@@ -231,7 +231,7 @@ class VoteSubmitTest {
     @Test
     void VOTE_03_9_미인증_멤버는_투표_불가() throws Exception {
         // 이 방은 한 번에 회차 하나만 투표 중일 수 있어, setUp의 회차와 겹치지 않는 새 방을 쓴다.
-        Room otherRoom = roomRepository.save(Room.create("물욕 끊기 방", RoomGoal.SHOPPING, 4));
+        Room otherRoom = roomRepository.save(Room.create("물욕 끊기 방", RoomGoal.SHOPPING, 4, 300));
         User otherUserA = newUser();
         User otherUserB = newUser();
         User otherUserD = newUser();

@@ -98,7 +98,7 @@ class VoteTabStatusTest {
     @BeforeEach
     void setUp() {
         clock.set(CERTIFIED_AT);
-        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
+        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
         userA = newUser();
         userB = newUser();
         userC = newUser();
@@ -122,7 +122,7 @@ class VoteTabStatusTest {
 
     @Test
     void VOTE_05_1_3명_미만() throws Exception {
-        Room smallRoom = roomRepository.save(Room.create("혼자 방", RoomGoal.DELIVERY, 4));
+        Room smallRoom = roomRepository.save(Room.create("혼자 방", RoomGoal.DELIVERY, 4, 300));
         User soloUser = newUser();
         roomMemberRepository.save(RoomMember.create(smallRoom, soloUser, "민지3", BosalColor.PINK, CERTIFIED_AT));
 

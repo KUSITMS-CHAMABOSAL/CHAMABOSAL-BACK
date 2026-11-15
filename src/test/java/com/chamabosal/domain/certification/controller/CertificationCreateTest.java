@@ -93,7 +93,7 @@ class CertificationCreateTest {
     @BeforeEach
     void setUp() {
         clock.set(DEC_1.atTime(20, 0));
-        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
+        room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
         userA = newUser();
         userB = newUser();
         userC = newUser();
