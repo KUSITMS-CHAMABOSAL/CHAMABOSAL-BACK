@@ -2271,10 +2271,10 @@ paths:
         다 채운 솥의 축하 화면이다.
 
         - `goalAmount`: 이 솥의 목표 석 (방 목표 석, 300~700석 50석 단위)
-        - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%, 반올림은 [미정] Q-81)
+        - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 그대로, 350석이면 35석. Q-81)
         - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺀다.
         - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
-        - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
+        - 그 솥에 넣은 기록이 있는 현재 멤버만 넣는다. 나간 멤버와 넣은 기록이 없는 멤버는 뺀다.
       parameters:
       - *id001
       - name: seq
@@ -4061,7 +4061,6 @@ components:
       - color
       - equippedItemCodes
       - amount
-      - isLeft
       properties:
         rank:
           type: integer
@@ -4079,13 +4078,9 @@ components:
         equippedItemCodes: *id005
         amount:
           type: integer
-          description: 그 솥에 넣은 석
+          description: 그 솥에 넣은 석. 인증 삭제로 회수한 석은 뺌
           example: 84
           format: int32
-        isLeft:
-          type: boolean
-          description: 나간 멤버 (떠난 보살)
-          example: false
     PotResponse:
       type: object
       required:
@@ -4112,7 +4107,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PotContribution'
-          description: 넣은 석이 많은 순
+          description: 넣은 석이 많은 순. 그 솥에 넣은 기록이 있는 현재 멤버만
   examples:
     AUTH_001:
       summary: AUTH_001 (400)
@@ -4252,7 +4247,7 @@ components:
       value:
         success: false
         code: POT_001
-        message: 아직 다 채우지 않은 솥입니다.
+        message: 다 채운 솥이 없어요.
     REACT_001:
       summary: REACT_001 (403)
       value:

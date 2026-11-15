@@ -42,7 +42,7 @@ public class TapController {
     @Operation(summary = "이마 톡톡 보내기 (RESULT-03)",
             description = """
                     톡톡을 끝낼 때(다 침·건너뛰기·화면 나가기) 친 횟수를 한 번만 보냅니다. 0번(건너뛰기)도 보냅니다.
-                    지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받습니다. 한 솥 적립(potEarned)은 아직 없습니다.
+                    지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받고 한 솥에도 5석(potEarned)이 들어갑니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "저장 성공"),
@@ -106,8 +106,8 @@ public class TapController {
                     지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보냅니다. 번뇌 완료 보상 10석(riceEarned)을 받습니다.
                     중간에 포기하면 보내지 않습니다. 두드린 횟수(count)가 그 회차에 받은 톡톡 합계보다 적으면 MOKTAK_004로 거부합니다.
                     수행 중에 톡톡이 더 와서 거부되면 받은 톡톡을 다시 불러와 이어서 두드립니다.
-                    이미 완료한 회차면 보상 없이 riceEarned 0으로 성공합니다. 받은 톡톡이 0번이거나 다음 투표가 열리면 보상이 없습니다(Q-92 임시 결정).
-                    확인 순서: ROUND_001 → ROOM_002 → TAP_005 → MOKTAK_001 → 이미 완료(성공) → MOKTAK_002 → MOKTAK_003 → MOKTAK_004
+                    이미 완료한 회차면 보상 없이 riceEarned 0으로 성공합니다. 받은 톡톡이 0번이거나 다음 투표가 열리면 보상이 없습니다(Q-92). 톡톡이 전달되기 전(투표 마감 후 5시간 전)이면 MOKTAK_005입니다.
+                    확인 순서: ROUND_001 → ROOM_002 → TAP_005 → MOKTAK_001 → 이미 완료(성공) → MOKTAK_005 → MOKTAK_002 → MOKTAK_003 → MOKTAK_004
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "완료 성공"),
@@ -118,7 +118,7 @@ public class TapController {
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "409",
-                    description = "MOKTAK_001 번뇌 보상이 없는 결과(PICKED 아님, 방어됨 포함) / MOKTAK_002 받은 톡톡 없음 / MOKTAK_003 다음 투표가 열려 기한 지남 / MOKTAK_004 받은 톡톡보다 적게 두드림",
+                    description = "MOKTAK_001 번뇌 보상이 없는 결과(PICKED 아님, 방어됨 포함) / MOKTAK_002 받은 톡톡 없음 / MOKTAK_003 다음 투표가 열려 기한 지남 / MOKTAK_004 받은 톡톡보다 적게 두드림 / MOKTAK_005 톡톡이 아직 전달되지 않음",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<Response<MoktakCompleteResponse>> completeMoktak(

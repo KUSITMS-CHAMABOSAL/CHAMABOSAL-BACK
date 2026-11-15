@@ -9,6 +9,8 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.pot.entity.PotReason;
+import com.chamabosal.domain.pot.service.PotService;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import com.chamabosal.domain.rice.service.RiceService;
@@ -47,6 +49,7 @@ public class CertificationService {
     private final CertificationRepository certificationRepository;
     private final VoteStartService voteStartService;
     private final RiceService riceService;
+    private final PotService potService;
     private final Clock clock;
 
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
@@ -78,9 +81,10 @@ public class CertificationService {
                 round, me, request.result(), request.memo(), request.spentAmount(), now));
         int riceEarned = riceService.accrue(room, me, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION,
                 certification.getId(), RiceService.CERTIFICATION_REWARD);
+        int potEarned = potService.accrue(room, me, PotReason.CERTIFICATION, certification.getId(), riceEarned);
         // 마지막 인증이면 같은 락 안에서 투표를 시작한다 (CERT-01 9번).
         boolean isVoteStarted = voteStartService.startIfAllCertified(round, now);
-        return CertificationCreateResponse.from(certification, riceEarned, isVoteStarted);
+        return CertificationCreateResponse.from(certification, riceEarned, potEarned, isVoteStarted);
     }
 
     /**
@@ -109,12 +113,14 @@ public class CertificationService {
         Certification certification = findWithLock(certificationId);
         checkMine(userId, certification);
         if (certification.isDeleted()) {
-            return new CertificationDeleteResponse(0);
+            return new CertificationDeleteResponse(0, 0);
         }
         LocalDateTime now = LocalDateTime.now(clock);
         checkNotLocked(certification, now);
         certification.delete(now);
-        return new CertificationDeleteResponse(riceService.recallCertification(certification.getMember(), certificationId));
+        int riceRecalled = riceService.recallCertification(certification.getMember(), certificationId);
+        int potRecalled = potService.recallCertification(certification.getMember(), certificationId);
+        return new CertificationDeleteResponse(riceRecalled, potRecalled);
     }
 
     /** 방 행 락을 잡은 뒤에 인증을 읽는다. 없는 인증이면 CERT_002. */

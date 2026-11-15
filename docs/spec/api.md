@@ -838,8 +838,8 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
   "goalAmount": 300,
   "rewardAmount": 30,
   "contributions": [
-    { "rank": 1, "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": [], "amount": 84, "isLeft": false },
-    { "rank": 2, "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "amount": 77, "isLeft": false }
+    { "rank": 1, "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": [], "amount": 84 },
+    { "rank": 2, "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "amount": 77 }
   ]
 }
 ```
@@ -848,7 +848,7 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 그대로, 350석이면 35석. Q-81)
 - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺌
 - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
-- 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
+- 그 솥에 넣은 기록이 있는 현재 멤버만 넣음. 나간 멤버와 넣은 기록이 없는 멤버는 뺌
 - 에러: `POT_001` (404, 없거나 아직 다 채우지 않은 솥), `ROOM_002` (403), `ROOM_005` (404)
 
 ## 12. 방어권

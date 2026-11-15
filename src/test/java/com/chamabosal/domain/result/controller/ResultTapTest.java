@@ -12,6 +12,8 @@ import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.defense.entity.DefenseTicket;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
@@ -96,6 +98,12 @@ class ResultTapTest {
     RoomMemberRepository roomMemberRepository;
 
     @Autowired
+    PotContributionRepository potContributionRepository;
+
+    @Autowired
+    RoomPotRepository roomPotRepository;
+
+    @Autowired
     RoundRepository roundRepository;
 
     @Autowired
@@ -150,6 +158,8 @@ class ResultTapTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();

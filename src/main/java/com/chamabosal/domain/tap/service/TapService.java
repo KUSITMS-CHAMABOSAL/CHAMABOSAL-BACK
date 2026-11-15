@@ -1,5 +1,7 @@
 package com.chamabosal.domain.tap.service;
 
+import com.chamabosal.domain.pot.entity.PotReason;
+import com.chamabosal.domain.pot.service.PotService;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
@@ -39,6 +41,7 @@ public class TapService {
     private final TapRepository tapRepository;
     private final RiceService riceService;
     private final RiceHistoryRepository riceHistoryRepository;
+    private final PotService potService;
     private final Clock clock;
 
     /**
@@ -72,7 +75,8 @@ public class TapService {
         int riceEarned = count > 0
                 ? riceService.accrue(room, me, RiceReason.TAP, RiceRefType.TAP, tap.getId(), TAP_REWARD)
                 : 0;
-        return new TapSendResponse(riceEarned);
+        int potEarned = potService.accrue(room, me, PotReason.TAP, tap.getId(), riceEarned);
+        return new TapSendResponse(riceEarned, potEarned);
     }
 
     @Transactional(readOnly = true)

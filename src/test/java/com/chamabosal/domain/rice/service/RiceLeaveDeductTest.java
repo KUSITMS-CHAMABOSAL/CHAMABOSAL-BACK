@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
@@ -40,7 +42,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 방 나가기 차감 (RICE-03). 공통 Given: 방 1에 A, B가 있다. 적립·회수는 장부에 직접 기록한다.
- * 한 솥(POT-01)이 아직 없어 모든 방은 목표를 채우기 전이다.
+ * 한 솥 완성 횟수를 따로 올리지 않으면 방은 목표를 채우기 전이다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -74,6 +76,12 @@ class RiceLeaveDeductTest {
     @Autowired
     RoomMemberRepository roomMemberRepository;
 
+    @Autowired
+    PotContributionRepository potContributionRepository;
+
+    @Autowired
+    RoomPotRepository roomPotRepository;
+
     private int userSequence;
     private long refSequence = 1;
     private Room room1;
@@ -96,6 +104,8 @@ class RiceLeaveDeductTest {
     @AfterEach
     void tearDown() {
         riceHistoryRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
@@ -145,6 +155,18 @@ class RiceLeaveDeductTest {
 
         assertThat(leaveDeltas()).containsExactly(-100);
         assertThat(balance()).isEqualTo(50);
+    }
+
+    @Test
+    void RICE_03_6_목표를_채운_뒤_나가면_차감하지_않는다() throws Exception {
+        earn(room1, 200);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                roomRepository.findById(room1.getId()).orElseThrow().completePot());
+
+        leave(room1).andExpect(status().isOk());
+
+        assertThat(leaveDeltas()).isEmpty();
+        assertThat(balance()).isEqualTo(200);
     }
 
     @Test

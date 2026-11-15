@@ -9,6 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.pot.entity.RoomPot;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
@@ -91,6 +94,12 @@ class CertificationEditTest {
     RoomMemberRepository roomMemberRepository;
 
     @Autowired
+    PotContributionRepository potContributionRepository;
+
+    @Autowired
+    RoomPotRepository roomPotRepository;
+
+    @Autowired
     RoundRepository roundRepository;
 
     @Autowired
@@ -126,6 +135,8 @@ class CertificationEditTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
@@ -370,6 +381,28 @@ class CertificationEditTest {
     }
 
     @Test
+    void RICE_02_3_진행_중인_솥에_들어간_적립분도_회수한다() throws Exception {
+        Long id = certify(userA, room, endured("집밥 해먹었어요"));
+        assertThat(potOf(room).getAmount()).isEqualTo(10);
+
+        remove(userA, id).andExpect(jsonPath("$.data.potRecalled").value(10));
+
+        assertThat(potOf(room).getAmount()).isZero();
+    }
+
+    @Test
+    void RICE_02_4_목표를_채운_솥은_회수하지_않는다() throws Exception {
+        Long id = certify(userA, room, endured("집밥 해먹었어요"));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> potOf(room).complete(T0));
+
+        remove(userA, id)
+                .andExpect(jsonPath("$.data.riceRecalled").value(10))
+                .andExpect(jsonPath("$.data.potRecalled").value(0));
+
+        assertThat(potOf(room).getAmount()).isEqualTo(10);
+    }
+
+    @Test
     void RICE_02_5_회수하면_잔액이_음수가_될_수_있다() throws Exception {
         Long id = certify(userA, room, endured("집밥 해먹었어요"));
         riceHistoryRepository.save(RiceHistory.create(userA, null, -5, RiceReason.PURCHASE, RiceRefType.ITEM, 1L));
@@ -469,6 +502,10 @@ class CertificationEditTest {
         return riceHistoryRepository.findAll().stream()
                 .filter(h -> h.getUser().getId().equals(user.getId()))
                 .toList();
+    }
+
+    private RoomPot potOf(Room target) {
+        return roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(target.getId()).orElseThrow();
     }
 
     private Round onlyRound(Room target) {

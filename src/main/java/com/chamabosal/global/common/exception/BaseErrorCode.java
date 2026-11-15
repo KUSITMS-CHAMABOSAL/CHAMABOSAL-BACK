@@ -77,6 +77,9 @@ public enum BaseErrorCode implements ErrorCode {
     // Store
     RICE_NOT_ENOUGH(HttpStatus.CONFLICT, "STORE_001", "공양미가 부족해요."),
 
+    // Pot
+    POT_NOT_FOUND(HttpStatus.NOT_FOUND, "POT_001", "다 채운 솥이 없어요."),
+
     // Nabal
     NABAL_NOT_FALLEN(HttpStatus.CONFLICT, "NABAL_001", "빠지지 않은 나발은 심을 수 없어요."),
 
