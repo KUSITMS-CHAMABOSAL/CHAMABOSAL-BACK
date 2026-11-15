@@ -3198,11 +3198,11 @@ components:
       properties:
         isPokePushEnabled:
           type: boolean
-          description: 콕 알림
+          description: 설정 화면 콕 알림 토글 (POKE 알림). 토스 동의와 별개
           example: true
         isActivityPushEnabled:
           type: boolean
-          description: 인증·투표 알림
+          description: 설정 화면 인증·투표 알림 토글 (RESULT·VOTE_OPENED·CERT_REMINDER 알림). 토스 동의와 별개
           example: true
         isPokeAgreed:
           type: boolean
@@ -3266,11 +3266,11 @@ components:
       properties:
         isPokePushEnabled:
           type: boolean
-          description: 보내지 않으면 그대로
+          description: 콕 알림 토글 (POKE 알림에 적용). 보내지 않으면 그대로
           example: false
         isActivityPushEnabled:
           type: boolean
-          description: 보내지 않으면 그대로
+          description: 인증·투표 알림 토글 (RESULT·VOTE_OPENED·CERT_REMINDER 알림에 적용). 보내지 않으면 그대로
           example: true
     PushAgreementRequest:
       type: object

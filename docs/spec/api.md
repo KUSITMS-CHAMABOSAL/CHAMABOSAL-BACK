@@ -78,7 +78,7 @@
 |---|---|---|---|---|
 | 인증 | POST | `/api/auth/login` | AUTH-01 | ✅ |
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
-| 사용자 | GET | `/api/users/me` | USER-01 |  |
+| 사용자 | GET | `/api/users/me` | USER-01 | ✅ |
 | 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |  |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 사용자 | DELETE | `/api/users/me` | USER-05 |  |
@@ -170,8 +170,8 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 ```
 
 - `is…Agreed`: 알림 종류별 토스 알림 동의 (`POKE`, `RESULT`, `VOTE_OPENED`, `CERT_REMINDER`). 동의 카드를 띄울지 판단할 때 씀
-- `equippedItemCodes`: 내 보살 캐릭터에 씀. 착용은 사용자 단위라 모든 방에 같음
-- `rooms`: 현재 멤버인 방만. 비어 있으면 첫 화면. `nickname`, `color`는 그 방의 내 보살
+- `equippedItemCodes`: 내 보살 캐릭터에 씀. 착용은 사용자 단위라 모든 방에 같음. 곳간(STORE-03) 구현 전에는 빈 배열
+- `rooms`: 현재 멤버인 방만, 들어온 순서. 비어 있으면 첫 화면. `nickname`, `color`는 그 방의 내 보살
 - `hasUnseen`: 안 본 결과나 한 솥 축하가 있음
 - `canCreateRoom`: 참여 중인 방이 2개면 `false`
 
