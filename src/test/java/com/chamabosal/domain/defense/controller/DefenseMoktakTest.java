@@ -66,6 +66,8 @@ class DefenseMoktakTest {
     private static final LocalDate NOV_4 = LocalDate.of(2026, 11, 4);
     private static final LocalDate NOV_5 = LocalDate.of(2026, 11, 5);
     private static final LocalDateTime AFTER_CLOSE = NOV_5.atTime(16, 0);
+    /** 11/4 회차는 11/5 15:00에 마감돼 5시간 뒤인 20:00에 톡톡이 전달되고 목탁 수행을 할 수 있다. */
+    private static final LocalDateTime DELIVERED = NOV_5.atTime(20, 0);
 
     @Autowired MockMvc mockMvc;
     @Autowired MutableClock clock;
@@ -301,9 +303,10 @@ class DefenseMoktakTest {
         giveTickets(userA, 1);
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
         moktak(userA, round, 5).andExpect(status().isCreated());
 
-        clock.set(AFTER_CLOSE.plusMinutes(1));
+        clock.set(DELIVERED.plusMinutes(1));
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_010"));
 
         assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
@@ -317,9 +320,10 @@ class DefenseMoktakTest {
         giveTickets(userA, 1);
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
-        result(userA, round).andExpect(jsonPath("$.data.canUseDefense").value(true));
-
+        clock.set(DELIVERED);
         moktak(userA, round, 5).andExpect(status().isCreated());
+
+        // 결과를 이제 처음 열어 방어 시간 안이지만, 목탁 수행을 마쳐 쓸 수 없다.
 
         result(userA, round)
                 .andExpect(jsonPath("$.data.resultType").value("PICKED"))
@@ -375,6 +379,7 @@ class DefenseMoktakTest {
     void RICE_01_10_번뇌_완료_보상() throws Exception {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
 
@@ -403,6 +408,7 @@ class DefenseMoktakTest {
     void RICE_01_13_받은_톡톡이_0번이면_번뇌_보상_없음() throws Exception {
         Round round = pickedA(party);
         tap(userB, round, 0).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_002"));
 
@@ -414,6 +420,7 @@ class DefenseMoktakTest {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
         startVoting(party, NOV_5, true);
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_003"));
 
@@ -425,11 +432,37 @@ class DefenseMoktakTest {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
         tap(userC(), round, 3).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_004"));
         assertThat(beonnoe(userA)).isEmpty();
 
         moktak(userA, round, 8).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+    }
+
+    @Test
+    void RICE_01_16_전달_전에는_번뇌_보상_없음() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED.minusSeconds(1));
+
+        moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_005"));
+
+        assertThat(beonnoe(userA)).isEmpty();
+    }
+
+    @Test
+    void RESULT_03_17_목탁_수행을_마치면_받은_톡톡에_완료로_나온다() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
+        received(userA, round).andExpect(jsonPath("$.data.isMoktakDone").value(false));
+
+        moktak(userA, round, 5).andExpect(status().isCreated());
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isMoktakDone").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(5));
     }
 
     @Test
@@ -533,6 +566,11 @@ class DefenseMoktakTest {
 
     private ResultActions defend(User user, Round round) throws Exception {
         return mockMvc.perform(post("/api/rounds/{roundId}/defenses", round.getId()).header("Authorization", bearer(user)));
+    }
+
+    private ResultActions received(User user, Round round) throws Exception {
+        return mockMvc.perform(get("/api/rounds/{roundId}/taps/received", round.getId())
+                .header("Authorization", bearer(user)));
     }
 
     private ResultActions moktak(User user, Round round, int count) throws Exception {

@@ -21,13 +21,13 @@ public interface TapRepository extends JpaRepository<Tap, Long> {
     /** 나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수 (`tappedMemberCount`). */
     long countByRound_IdAndCountGreaterThanAndFromMember_IdNot(Long roundId, int count, Long excludeMemberId);
 
-    /** 받은 톡톡: 아직 재생하지 않았고 1번 이상인 것만. 보낸 사람을 함께 가져온다. */
+    /** 받은 톡톡: 재생 여부와 상관없이 1번 이상인 것 전체. 보낸 사람을 함께 가져온다. */
     @Query("""
             select t from Tap t join fetch t.fromMember
-            where t.round.id = :roundId and t.playedAt is null and t.count > 0
+            where t.round.id = :roundId and t.count > 0
             order by t.id
             """)
-    List<Tap> findUnplayedWithSender(Long roundId);
+    List<Tap> findReceivedWithSender(Long roundId);
 
     /** 그때까지 받은 미재생 톡톡을 모두 재생됨으로 바꾼다 (RESULT-03 6번). 재시도해도 바뀌는 게 없다. */
     @Modifying(clearAutomatically = true)

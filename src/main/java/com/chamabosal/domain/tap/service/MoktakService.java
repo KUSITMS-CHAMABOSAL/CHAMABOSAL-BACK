@@ -16,6 +16,8 @@ import com.chamabosal.domain.tap.dto.response.MoktakCompleteResponse;
 import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,8 +41,9 @@ public class MoktakService {
     private final TapRepository tapRepository;
     private final RiceHistoryRepository riceHistoryRepository;
     private final RiceService riceService;
+    private final Clock clock;
 
-    /** 확인 순서: 없는 회차 → 방 멤버 아님 → 지목된 사람 아님 → 보상 없는 결과 → 이미 완료(성공) → 받은 톡톡 없음 → 기한 지남 → 덜 두드림. */
+    /** 확인 순서: 없는 회차 → 방 멤버 아님 → 지목된 사람 아님 → 보상 없는 결과 → 이미 완료(성공) → 전달 전 → 받은 톡톡 없음 → 기한 지남 → 덜 두드림. */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public MoktakCompleteResponse complete(Long userId, Long roundId, int count) {
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
@@ -60,6 +63,9 @@ public class MoktakService {
                 userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId)) {
             return new MoktakCompleteResponse(0);
         }
+        if (round.isTapOpen(LocalDateTime.now(clock))) {
+            throw new BaseException(BaseErrorCode.MOKTAK_NOT_DELIVERED);
+        }
         if (!tapRepository.existsByRound_IdAndCountGreaterThan(roundId, 0)) {
             throw new BaseException(BaseErrorCode.MOKTAK_NO_TAPS);
         }
@@ -67,7 +73,7 @@ public class MoktakService {
                 roomId, round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED))) {
             throw new BaseException(BaseErrorCode.MOKTAK_EXPIRED);
         }
-        // 수행 중에 톡톡이 더 오면 합계가 늘어나므로 "같음"이 아니라 "이상"으로 본다.
+        // 전달 뒤에는 톡톡이 더 오지 않아 합계가 바뀌지 않는다. 더 두드린 것은 막지 않는다.
         if (count < tapRepository.sumCountByRoundId(roundId)) {
             throw new BaseException(BaseErrorCode.MOKTAK_NOT_FINISHED);
         }
