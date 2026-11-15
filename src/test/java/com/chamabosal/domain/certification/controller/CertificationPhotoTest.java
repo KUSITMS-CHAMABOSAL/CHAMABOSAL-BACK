@@ -1,6 +1,8 @@
 package com.chamabosal.domain.certification.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,10 +39,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** 인증 사진 (CERT-04, CERT-02 9·10번). 저장소는 메모리 구현이고, 업로드 URL로 올리는 단계는 upload로 대신한다. */
-@SpringBootTest
+/**
+ * 인증 사진 (CERT-04, CERT-02 9·10번). 저장소는 메모리 구현이고, 업로드 URL로 올리는 단계는 upload로 대신한다.
+ * 로컬에 AWS_S3_BUCKET이 있어도 메모리 저장소를 쓰도록 버킷 설정을 비운다.
+ */
+@SpringBootTest(properties = "storage.s3.bucket=")
 @AutoConfigureMockMvc
 @Import(MutableClock.Config.class)
 class CertificationPhotoTest {
@@ -51,7 +57,7 @@ class CertificationPhotoTest {
     @Autowired MockMvc mockMvc;
     @Autowired MutableClock clock;
     @Autowired JwtProvider jwtProvider;
-    @Autowired PhotoStorage photoStorage;
+    @MockitoSpyBean PhotoStorage photoStorage;
     @Autowired RiceHistoryRepository riceHistoryRepository;
     @Autowired CertificationRepository certificationRepository;
     @Autowired RoundRepository roundRepository;
@@ -102,6 +108,20 @@ class CertificationPhotoTest {
 
         assertThat(storage().contains(saved)).isFalse();
         assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+    }
+
+    @Test
+    void CERT_01_9_사진을_옮기는_사이_03시를_넘겨도_요청을_받은_시각의_회차로_등록한다() throws Exception {
+        clock.set(LocalDate.of(2026, 12, 2).atTime(2, 59));
+        String key = uploadPhoto(userA);
+        doAnswer(invocation -> {
+            clock.set(LocalDate.of(2026, 12, 2).atTime(3, 0, 1));
+            return invocation.callRealMethod();
+        }).when(photoStorage).copy(anyString(), anyString());
+
+        certify(userA, key)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.roundDate").value("2026-12-01"));
     }
 
     @Test

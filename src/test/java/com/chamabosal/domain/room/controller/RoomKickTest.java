@@ -23,6 +23,7 @@ import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import com.chamabosal.global.common.exception.ErrorCode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -140,7 +141,8 @@ class RoomKickTest extends RoomTestSupport {
                 ready.countDown();
                 await(start);
                 certificationService.create(userD.getId(), room.getId(),
-                        new CertificationCreateRequest(CertificationResult.ENDURED, "집밥 해먹었어요", null, null), PreparedPhoto.NONE);
+                        new CertificationCreateRequest(CertificationResult.ENDURED, "집밥 해먹었어요", null, null), PreparedPhoto.NONE,
+                        LocalDateTime.now(clock));
             }, executor);
             CompletableFuture<ErrorCode> kick = CompletableFuture.supplyAsync(() -> {
                 ready.countDown();

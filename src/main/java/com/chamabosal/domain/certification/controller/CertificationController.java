@@ -1,5 +1,7 @@
 package com.chamabosal.domain.certification.controller;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import com.chamabosal.domain.certification.dto.request.CertificationCreateRequest;
 import com.chamabosal.domain.certification.dto.request.CertificationUpdateRequest;
 import com.chamabosal.domain.certification.dto.request.PhotoUploadUrlRequest;
@@ -39,6 +41,7 @@ public class CertificationController {
 
     private final CertificationService certificationService;
     private final CertificationPhotoService certificationPhotoService;
+    private final Clock clock;
 
     @PostMapping("/certifications/upload-urls")
     @Operation(summary = "인증 사진 업로드 URL 발급 (CERT-04)",
@@ -120,9 +123,11 @@ public class CertificationController {
             @PathVariable Long roomId,
             @RequestBody @Valid CertificationCreateRequest request
     ) {
+        // 회차는 요청을 받은 시각으로 정해서, 사진을 옮기기 전에 읽는다 (CERT-01 7번).
+        LocalDateTime requestedAt = LocalDateTime.now(clock);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Response.created("인증했습니다.", certificationPhotoService.withPhoto(userId, request.imageKey(),
-                        photo -> certificationService.create(userId, roomId, request, photo))));
+                        photo -> certificationService.create(userId, roomId, request, photo, requestedAt))));
     }
 
     @PatchMapping("/certifications/{certificationId}")

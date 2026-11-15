@@ -57,9 +57,10 @@ public class CertificationService {
 
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
     @Transactional
-    public CertificationCreateResponse create(Long userId, Long roomId, CertificationCreateRequest request, PreparedPhoto photo) {
-        // 회차는 요청을 받은 시각으로 정한다. 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게 락보다 먼저 읽는다.
-        LocalDateTime now = LocalDateTime.now(clock);
+    public CertificationCreateResponse create(Long userId, Long roomId, CertificationCreateRequest request, PreparedPhoto photo,
+                                              LocalDateTime now) {
+        // 회차는 요청을 받은 시각(now)으로 정한다. 사진 복사나 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게
+        // 호출하는 쪽이 사진을 옮기기 전에 읽어 넘긴다 (CERT-01 7번).
         validateMemo(request.memo());
         validateSpentAmount(request.result(), request.spentAmount());
 
