@@ -3269,6 +3269,7 @@ components:
       - name
       - goal
       - memberLimit
+      - potGoalAmount
       - nickname
       properties:
         name:
@@ -3286,6 +3287,14 @@ components:
           format: int32
           minimum: 2
           maximum: 4
+        potGoalAmount:
+          type: integer
+          description: 공양미 한 솥 목표 석. 300~700 중 50 단위
+          example: 350
+          format: int32
+          minimum: 300
+          maximum: 700
+          multipleOf: 50
         nickname:
           type: string
           description: 1~8자, 한글(완성형)·영문·숫자

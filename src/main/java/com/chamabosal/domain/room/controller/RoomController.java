@@ -39,12 +39,12 @@ public class RoomController {
 
     @PostMapping
     @Operation(summary = "방 만들기 (ROOM-01)",
-            description = "방과 방장 멤버를 한 번에 만듭니다. 보살 색은 서버가 랜덤으로 정합니다. 방 이름 앞뒤 띄어쓰기는 지우고 저장합니다.")
+            description = "방과 방장 멤버를 한 번에 만듭니다. 보살 색은 서버가 랜덤으로 정합니다. 방 이름 앞뒤 띄어쓰기는 지우고 저장합니다. 공양미 목표는 300~700석 중 50석 단위입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "생성 성공"),
             @ApiResponse(
                     responseCode = "400",
-                    description = "COMMON_002 입력값 오류 (field: name, memberLimit, nickname 등)",
+                    description = "COMMON_002 입력값 오류 (field: name, memberLimit, potGoalAmount, nickname 등)",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)

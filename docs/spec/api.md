@@ -227,13 +227,14 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 
 ```json
 // request
-{ "name": "배달 끊기 방", "goal": "DELIVERY", "memberLimit": 4, "nickname": "민지" }
+{ "name": "배달 끊기 방", "goal": "DELIVERY", "memberLimit": 4, "potGoalAmount": 350, "nickname": "민지" }
 
 // response 201
 { "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
 ```
 
 - `name`: 1~8자, `memberLimit`: 2~4, `nickname`: 1~8자 (형식은 `common.md`)
+- `potGoalAmount`: 공양미 한 솥 목표 석. 300~700 중 50 단위 (Q-80)
 - 방과 방장 멤버를 한 번에 만듦 (Q-37)
 - 에러: `ROOM_001` (409), `COMMON_002` (400)
 
@@ -777,7 +778,7 @@ RESULT-03 9번, RICE-01 6번. 지목된 사람이 받은 톡톡만큼 목탁을 
 ## 11. 한 솥
 
 > 담당자 확인
-> - 방 목표 석은 방을 만들 때 300~700석 중 50석 단위로 정함 (Q-80). 방 만들기 요청 필드는 ROOM-01 담당 확인
+> - 방 목표 석은 방을 만들 때 300~700석 중 50석 단위로 정함 (Q-80). 방 만들기 요청의 `potGoalAmount`, `rooms.pot_goal_amount`에 저장
 > - 목표를 채운 뒤 방장의 연장·종료 API는 종료된 방 화면(Q-85)이 정해지면 추가 (연장 전 상태는 Q-86으로 결정: 인증·투표·적립 계속)
 
 ### GET /api/rooms/{roomId}/pots/{seq}

@@ -493,7 +493,7 @@ class DefenseMoktakTest {
     }
 
     private Party newParty(User b) {
-        Room room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
+        Room room = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
         return new Party(room,
                 addMember(room, userA, "민지", BosalColor.PINK),
                 addMember(room, b, "지수", BosalColor.PURPLE),

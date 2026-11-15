@@ -50,7 +50,7 @@ class RoomLeaveTest extends RoomTestSupport {
     void setUp() {
         userA = newUser();
         Long roomId = roomService.create(userA.getId(),
-                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, "민지")).roomId();
+                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, 300, "민지")).roomId();
         room = roomRepository.findById(roomId).orElseThrow();
         memberA = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userA.getId()).orElseThrow();
     }

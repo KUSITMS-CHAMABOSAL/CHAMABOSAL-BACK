@@ -22,9 +22,22 @@ public record RoomCreateRequest(
         @Max(value = 4, message = "함께할 인원은 2~4명입니다.")
         Integer memberLimit,
 
+        @Schema(description = "공양미 한 솥 목표 석. 300~700 중 50 단위", example = "350", multipleOf = POT_GOAL_UNIT)
+        @NotNull(message = "공양미 목표를 정해 주세요.")
+        @Min(value = POT_GOAL_MIN, message = POT_GOAL_MESSAGE)
+        @Max(value = POT_GOAL_MAX, message = POT_GOAL_MESSAGE)
+        Integer potGoalAmount,
+
         @Schema(description = "이 방에서 쓸 닉네임. 한글·영문·숫자 1~8자", example = "민지")
         @NotNull(message = "닉네임을 입력해 주세요.")
         @Pattern(regexp = RoomNicknameUpdateRequest.NICKNAME_PATTERN, message = RoomNicknameUpdateRequest.NICKNAME_MESSAGE)
         String nickname
 ) {
+
+    public static final int POT_GOAL_MIN = 300;
+    public static final int POT_GOAL_MAX = 700;
+    /** 50석 단위는 어노테이션이 없어 서비스에서 확인한다. */
+    public static final int POT_GOAL_UNIT = 50;
+    public static final String POT_GOAL_MESSAGE =
+            "공양미 목표는 " + POT_GOAL_MIN + "~" + POT_GOAL_MAX + "석 중 " + POT_GOAL_UNIT + "석 단위입니다.";
 }

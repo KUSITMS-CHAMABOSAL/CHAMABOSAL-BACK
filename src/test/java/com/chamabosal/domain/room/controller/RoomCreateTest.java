@@ -102,7 +102,7 @@ class RoomCreateTest {
     void ROOM_01_1_방을_만들고_방장_멤버를_등록한다() throws Exception {
         joinRooms(1);
 
-        create("배달 끊기 방", 4, "민지")
+        create("배달 끊기 방", 4, 350, "민지")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.roomId").isNumber())
                 .andExpect(jsonPath("$.data.memberId").isNumber())
@@ -115,6 +115,7 @@ class RoomCreateTest {
         Room room = roomRepository.findById(owner.getRoom().getId()).orElseThrow();
         assertThat(room.getOwnerMemberId()).isEqualTo(owner.getId());
         assertThat(room.getMemberLimit()).isEqualTo(4);
+        assertThat(room.getPotGoalAmount()).isEqualTo(350);
         assertThat(owner.getUser().getId()).isEqualTo(user.getId());
         assertThat(owner.getColor()).isNotNull();
         assertThat(owner.getLeftAt()).isNull();
@@ -210,10 +211,26 @@ class RoomCreateTest {
         assertThat(roomRepository.count()).isZero();
     }
 
+    @Test
+    void ROOM_01_9_공양미_목표가_300에서_700석_50석_단위가_아니면_입력값_오류다() throws Exception {
+        for (int potGoalAmount : new int[]{250, 750, 320}) {
+            create("배달 끊기 방", 4, potGoalAmount, "민지")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("COMMON_002"))
+                    .andExpect(jsonPath("$.field").value("potGoalAmount"));
+        }
+
+        assertThat(roomRepository.count()).isZero();
+    }
+
     private ResultActions create(String name, int memberLimit, String nickname) throws Exception {
+        return create(name, memberLimit, 300, nickname);
+    }
+
+    private ResultActions create(String name, int memberLimit, int potGoalAmount, String nickname) throws Exception {
         String body = """
-                {"name":"%s","goal":"DELIVERY","memberLimit":%d,"nickname":"%s"}
-                """.formatted(name, memberLimit, nickname);
+                {"name":"%s","goal":"DELIVERY","memberLimit":%d,"potGoalAmount":%d,"nickname":"%s"}
+                """.formatted(name, memberLimit, potGoalAmount, nickname);
         return mockMvc.perform(post("/api/rooms")
                 .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId()))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -222,7 +239,7 @@ class RoomCreateTest {
 
     private void joinRooms(int count) {
         IntStream.range(0, count).forEach(i -> roomService.create(user.getId(),
-                new RoomCreateRequest("기존 방" + i, RoomGoal.CAFE, 4, "기존" + i)));
+                new RoomCreateRequest("기존 방" + i, RoomGoal.CAFE, 4, 300, "기존" + i)));
     }
 
     /** 성공하면 true, 참여 방 2개 제한에 걸리면 false. */
@@ -234,7 +251,7 @@ class RoomCreateTest {
                     ready.countDown();
                     await(start);
                     try {
-                        roomService.create(user.getId(), new RoomCreateRequest("새 방" + i, RoomGoal.ETC, 4, "새방" + i));
+                        roomService.create(user.getId(), new RoomCreateRequest("새 방" + i, RoomGoal.ETC, 4, 300, "새방" + i));
                         return true;
                     } catch (BaseException e) {
                         assertThat(e.getErrorCode()).isEqualTo(BaseErrorCode.ROOM_LIMIT_EXCEEDED);

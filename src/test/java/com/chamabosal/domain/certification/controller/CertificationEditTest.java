@@ -483,7 +483,7 @@ class CertificationEditTest {
     }
 
     private Room newRoom() {
-        return roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4));
+        return roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
     }
 
     private User newUser() {

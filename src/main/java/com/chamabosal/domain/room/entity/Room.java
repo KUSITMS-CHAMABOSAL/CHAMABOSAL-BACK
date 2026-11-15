@@ -35,6 +35,10 @@ public class Room extends BaseEntity {
     @Column(nullable = false)
     private int memberLimit;
 
+    /** 공양미 한 솥 목표 석 (ROOM-01 13번). 솥을 만들 때 복사한다. */
+    @Column(nullable = false)
+    private int potGoalAmount;
+
     /** 방을 먼저 저장해야 멤버를 만들 수 있어 NULL을 허용한다. 같은 요청 안에서 채운다. */
     private Long ownerMemberId;
 
@@ -43,11 +47,12 @@ public class Room extends BaseEntity {
 
     private LocalDateTime deletedAt;
 
-    public static Room create(String name, RoomGoal goal, int memberLimit) {
+    public static Room create(String name, RoomGoal goal, int memberLimit, int potGoalAmount) {
         Room room = new Room();
         room.name = name;
         room.goal = goal;
         room.memberLimit = memberLimit;
+        room.potGoalAmount = potGoalAmount;
         return room;
     }
 
