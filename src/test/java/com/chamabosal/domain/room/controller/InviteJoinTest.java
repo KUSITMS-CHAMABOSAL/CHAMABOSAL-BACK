@@ -1,6 +1,7 @@
 package com.chamabosal.domain.room.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,8 +12,11 @@ import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.user.entity.User;
+import com.chamabosal.domain.vote.service.VoteCloseScheduler;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.util.List;
@@ -24,11 +28,15 @@ import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.ResultActions;
 
 class InviteJoinTest extends RoomTestSupport {
+
+    @Autowired
+    VoteCloseScheduler voteCloseScheduler;
 
     private User userA;
     private User userB;
@@ -202,6 +210,63 @@ class InviteJoinTest extends RoomTestSupport {
     }
 
     @Test
+    void INVITE_03_13_인증_중에_들어오면_이번_회차에_인증할_수_있다() throws Exception {
+        certify(userA, room).andExpect(status().isCreated());
+
+        join(userD, "도윤").andExpect(status().isCreated());
+
+        certify(userD, room)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.roundDate").value(NOW.toLocalDate().toString()));
+    }
+
+    @Test
+    void INVITE_03_14_오늘_투표가_시작된_뒤_들어오면_명단은_그대로이고_다음_회차부터_참여한다() throws Exception {
+        for (User user : List.of(ownerOf(room), userA, userB)) {
+            certify(user, room).andExpect(status().isCreated());
+        }
+        Round today = roundRepository.findByRoom_IdAndRoundDate(room.getId(), NOW.toLocalDate()).orElseThrow();
+        assertThat(today.getStatus()).isEqualTo(RoundStatus.VOTING);
+
+        join(userD, "도윤").andExpect(status().isCreated());
+
+        RoomMember memberD = currentMemberOf(userD).orElseThrow();
+        assertThat(roundParticipantRepository.findByRound_Id(today.getId()))
+                .extracting(participant -> participant.getMember().getId())
+                .doesNotContain(memberD.getId())
+                .hasSize(3);
+        certify(userD, room)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CERT_006"));
+
+        clock.set(today.getVoteClosesAt());
+        voteCloseScheduler.closeDueVotes();
+        clock.set(today.getVoteClosesAt().plusMinutes(10));
+        certify(userD, room)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.roundDate").value(NOW.toLocalDate().plusDays(1).toString()));
+    }
+
+    @Test
+    void INVITE_03_17_다시_들어오면_지난_기록이_내_닉네임으로_보인다() throws Exception {
+        Round round = saveRound(room, NOW.toLocalDate().minusDays(2), RoundStatus.VOTING);
+        round.announce(NOW.minusDays(1), RoundResultType.PICKED, memberB);
+        roundRepository.save(round);
+        mockMvc.perform(delete("/api/rooms/{roomId}/members/me", room.getId()).header("Authorization", bearer(userB)))
+                .andExpect(status().isOk());
+        viewResult(userA, round)
+                .andExpect(jsonPath("$.data.picked.memberId").value(memberB.getId()))
+                .andExpect(jsonPath("$.data.picked.isLeft").value(true));
+
+        join(userB, "지수").andExpect(status().isCreated());
+
+        viewResult(userA, round)
+                .andExpect(jsonPath("$.data.picked.memberId").value(memberB.getId()))
+                .andExpect(jsonPath("$.data.picked.nickname").value("지수"))
+                .andExpect(jsonPath("$.data.picked.isLeft").value(false));
+    }
+
+    @Test
     void INVITE_03_15_마지막_자리에_동시에_들어오면_한_명만_멤버가_된다() {
         User userE = newUser();
         List<User> users = List.of(userD, userE);
@@ -233,6 +298,15 @@ class InviteJoinTest extends RoomTestSupport {
                 .header("Authorization", bearer(user))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nickname\":\"%s\"}".formatted(nickname)));
+    }
+
+    private User ownerOf(Room room) {
+        return roomMemberRepository.findById(room.getOwnerMemberId()).orElseThrow().getUser();
+    }
+
+    private ResultActions viewResult(User user, Round round) throws Exception {
+        return mockMvc.perform(get("/api/rounds/{roundId}/result", round.getId()).header("Authorization", bearer(user)))
+                .andExpect(status().isOk());
     }
 
     private Optional<RoomMember> currentMemberOf(User user) {
