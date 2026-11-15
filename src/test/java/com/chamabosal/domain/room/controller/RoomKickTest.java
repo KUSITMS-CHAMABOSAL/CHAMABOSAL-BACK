@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.chamabosal.domain.certification.dto.request.CertificationCreateRequest;
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.certification.photo.PreparedPhoto;
 import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.LeaveType;
@@ -22,6 +23,7 @@ import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import com.chamabosal.global.common.exception.ErrorCode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -139,7 +141,8 @@ class RoomKickTest extends RoomTestSupport {
                 ready.countDown();
                 await(start);
                 certificationService.create(userD.getId(), room.getId(),
-                        new CertificationCreateRequest(CertificationResult.ENDURED, "집밥 해먹었어요", null));
+                        new CertificationCreateRequest(CertificationResult.ENDURED, "집밥 해먹었어요", null, null), PreparedPhoto.NONE,
+                        LocalDateTime.now(clock));
             }, executor);
             CompletableFuture<ErrorCode> kick = CompletableFuture.supplyAsync(() -> {
                 ready.countDown();

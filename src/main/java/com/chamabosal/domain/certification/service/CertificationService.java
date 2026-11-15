@@ -8,6 +8,8 @@ import com.chamabosal.domain.certification.dto.response.CertificationUpdateRespo
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.certification.photo.CertificationPhotoService;
+import com.chamabosal.domain.certification.photo.PreparedPhoto;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.pot.entity.PotReason;
 import com.chamabosal.domain.pot.service.PotService;
@@ -48,15 +50,17 @@ public class CertificationService {
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
     private final VoteStartService voteStartService;
+    private final CertificationPhotoService certificationPhotoService;
     private final RiceService riceService;
     private final PotService potService;
     private final Clock clock;
 
     /** 방 행 락 안에서 확인하고 저장해서, 같은 방의 중복 인증과 회차 행 중복 생성을 막는다. 나가기(ROOM-07)와 같은 락이다. */
     @Transactional
-    public CertificationCreateResponse create(Long userId, Long roomId, CertificationCreateRequest request) {
-        // 회차는 요청을 받은 시각으로 정한다. 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게 락보다 먼저 읽는다.
-        LocalDateTime now = LocalDateTime.now(clock);
+    public CertificationCreateResponse create(Long userId, Long roomId, CertificationCreateRequest request, PreparedPhoto photo,
+                                              LocalDateTime now) {
+        // 회차는 요청을 받은 시각(now)으로 정한다. 사진 복사나 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게
+        // 호출하는 쪽이 사진을 옮기기 전에 읽어 넘긴다 (CERT-01 7번).
         validateMemo(request.memo());
         validateSpentAmount(request.result(), request.spentAmount());
 
@@ -75,10 +79,15 @@ public class CertificationService {
         if (!isOpen(roomId, roundDate, found, me.getId())) {
             throw new BaseException(BaseErrorCode.CERTIFICATION_NOT_OPEN);
         }
+        // 사진 키는 다른 확인을 모두 통과한 뒤 마지막에 본다 (CERT-01 예외).
+        photo.checkValid();
 
         Round round = found.orElseGet(() -> roundRepository.save(Round.create(room, roundDate)));
         Certification certification = certificationRepository.save(Certification.create(
                 round, me, request.result(), request.memo(), request.spentAmount(), now));
+        if (photo.hasPhoto()) {
+            certification.replaceImage(photo.key());
+        }
         int riceEarned = riceService.accrue(room, me, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION,
                 certification.getId(), RiceService.CERTIFICATION_REWARD);
         int potEarned = potService.accrue(room, me, PotReason.CERTIFICATION, certification.getId(), riceEarned);
@@ -93,18 +102,28 @@ public class CertificationService {
      * 락 뒤에도 투표 시작 전 상태를 보므로 READ COMMITTED로 읽는다 (VoteSubmitService와 같은 이유).
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public CertificationUpdateResponse update(Long userId, Long certificationId, CertificationUpdateRequest request) {
+    public CertificationUpdateResponse update(Long userId, Long certificationId, CertificationUpdateRequest request,
+                                              PreparedPhoto photo) {
         validateMemo(request.memo());
         validateSpentAmount(request.result(), request.spentAmount());
+        validatePhotoChoice(request);
 
         Certification certification = findWithLock(certificationId);
         if (certification.isDeleted()) {
             throw new BaseException(BaseErrorCode.CERTIFICATION_NOT_FOUND);
         }
         checkMine(userId, certification);
-        checkNotLocked(certification, LocalDateTime.now(clock));
+        LocalDateTime now = LocalDateTime.now(clock);
+        checkNotLocked(certification, now);
+        photo.checkValid();
         certification.update(request.result(), request.memo(), request.spentAmount());
-        return CertificationUpdateResponse.from(certification);
+        // 바꾸거나 지운 기존 사진은 커밋 뒤에 지운다 (CERT-02 9번, CERT-04 11번).
+        String removed = photo.hasPhoto() ? certification.replaceImage(photo.key())
+                : request.isImageKept() ? null : certification.removeImage(now);
+        if (removed != null) {
+            certificationPhotoService.deleteAfterCommit(removed);
+        }
+        return CertificationUpdateResponse.from(certification, certificationPhotoService.viewUrl(certification));
     }
 
     /** 삭제하면 그 인증으로 받은 공양미를 회수한다 (CERT-02 5번, RICE-02). 이미 삭제한 내 인증이면 잠금과 상관없이 성공이다 (CERT-02 12번). */
@@ -118,9 +137,21 @@ public class CertificationService {
         LocalDateTime now = LocalDateTime.now(clock);
         checkNotLocked(certification, now);
         certification.delete(now);
+        String removed = certification.removeImage(now);
+        if (removed != null) {
+            certificationPhotoService.deleteAfterCommit(removed);
+        }
         int riceRecalled = riceService.recallCertification(certification.getMember(), certificationId);
         int potRecalled = potService.recallCertification(certification.getMember(), certificationId);
         return new CertificationDeleteResponse(riceRecalled, potRecalled);
+    }
+
+    /** 기존 사진 유지 여부는 필수이고, 새 사진과 유지를 함께 보내면 입력값 오류다 (CERT-02 10번). */
+    private static void validatePhotoChoice(CertificationUpdateRequest request) {
+        if (request.imageKey() != null && request.isImageKept()) {
+            throw BaseException.withField(BaseErrorCode.INVALID_REQUEST,
+                    "새 사진을 보내면 기존 사진을 유지할 수 없습니다.", "isImageKept");
+        }
     }
 
     /** 방 행 락을 잡은 뒤에 인증을 읽는다. 없는 인증이면 CERT_002. */

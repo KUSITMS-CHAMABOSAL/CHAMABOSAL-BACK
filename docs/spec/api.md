@@ -509,9 +509,10 @@ CERT-04. 사진을 올릴 presigned URL과 `imageKey`를 발급합니다. 프론
 
 - 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보냄. `Content-Type` 헤더는 요청의 `contentType`과 같아야 함 (다르면 저장소가 403)
 - `expiresIn`: `uploadUrl` 유효 시간(초). 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있음
-- 허용 파일 형식·크기는 [미정] Q-30
+- `contentType`: `image/jpeg`, `image/png`, `image/heic`, `image/webp` 중 하나. 크기 상한 10MB는 화면에서 지킴 (Q-30 임시 결정)
+- `imageKey`: `tmp/{사용자 ID}/{임의 ID}`. 내가 받은 키만 인증 등록·수정에 쓸 수 있음
 - 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있음
-- 에러: `COMMON_002` (400, 허용하지 않는 형식)
+- 에러: `COMMON_002` (400, 허용하지 않는 형식), `COMMON_008` (401)
 
 ### POST /api/rooms/{roomId}/certifications
 
