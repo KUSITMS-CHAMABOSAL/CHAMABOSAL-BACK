@@ -32,7 +32,7 @@ public class RoundResultController {
             description = """
                     발표된 회차의 결과입니다. 누가 누구에게 투표했는지는 보내지 않고, voteCounts는 표를 받은 멤버만 득표 수가 많은 순입니다.
                     지목된 본인이 PICKED 결과를 처음 조회하면 그 시각을 기록하고, defenseUsableUntil은 그 시각 + 2분입니다.
-                    아직 방어권이 없어 지목된 본인의 defenseTicketCount는 0, canUseDefense는 false입니다. 결과를 본 뒤에는 seen-result로 확인을 저장해 주세요.
+                    지목된 본인에게는 보유한 방어권 개수(defenseTicketCount)와 지금 쓰면 성공하는지(canUseDefense)를 줍니다. 결과를 본 뒤에는 seen-result로 확인을 저장해 주세요.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

@@ -7,6 +7,9 @@ import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
+import com.chamabosal.domain.user.entity.User;
+import com.chamabosal.global.common.exception.BaseErrorCode;
+import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -74,6 +77,18 @@ public class RiceService {
         }
         riceHistoryRepository.save(RiceHistory.create(member.getUser(), room, -amount, RiceReason.LEAVE, null, null));
         return amount;
+    }
+
+    /**
+     * 잔액이 쓸 만큼 있으면 장부에 사용을 기록한다. 부족하면 STORE_001 (SHIELD-01 2번, 꾸미기 구매도 같은 code).
+     * 사용자 전체 잔액을 읽고 빼므로 사용자 행 락을 잡은 트랜잭션에서 부른다. 구매는 방과 무관해 방을 남기지 않는다.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void spend(User user, int amount, RiceRefType refType, Long refId) {
+        if (riceHistoryRepository.sumDeltaByUserId(user.getId()) < amount) {
+            throw new BaseException(BaseErrorCode.RICE_NOT_ENOUGH);
+        }
+        riceHistoryRepository.save(RiceHistory.create(user, null, -amount, RiceReason.PURCHASE, refType, refId));
     }
 
     /** 화면 표시 잔액. 실제 잔액이 음수면 0석이다 (RICE-01-6). */
