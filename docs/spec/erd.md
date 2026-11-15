@@ -64,7 +64,7 @@ erDiagram
 | is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
 | deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 행은 남기고 키를 비운 뒤 신규 사용자로 처리 |
 
-- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: `CERT_REMINDER`는 `push_agreements` 동의 **그리고** 인증·투표 알림 토글 `true` / 나머지는 해당 토글만 `true`면 발송
+- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (콕은 콕 알림, 나머지는 인증·투표 알림). 토글을 유지할지는 [미정] Q-98
   - 사용자가 토스 앱 설정(서비스별 알림)에서 끄면 서버는 알 수 없음 → 발송 응답의 `fail`로만 확인
 
 ### push_agreements
@@ -75,12 +75,11 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | |
-| type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_OPENED` / `VOTE_REMINDER` / `RESULT` (`push_logs.type`과 같은 값) |
+| type | VARCHAR(30) | NOT NULL | `POKE` / `RESULT` / `VOTE_OPENED` / `CERT_REMINDER` (`push_logs.type`과 같은 값) |
 | agreed_at | DATETIME | NOT NULL | 동의 시각 (`newAgreement` / `alreadyAgreed` 결과를 클라이언트가 전달) |
 
 - `UNIQUE (user_id, type)`. 행이 있으면 동의, 거부(`agreementRejected`)면 행을 만들지 않음
-- 동의문이 필요 없는 템플릿으로 판정되면 그 종류는 행 없이 발송
-- 동의는 인증 마감 리마인드(`CERT_REMINDER`) 1종만 받음. 나머지는 동의문 없는 기능성 메시지로 발송 (⏳ 앱인토스 채널톡 확인 중)
+- 알림 템플릿 4개에 동의문을 하나씩 연결 (토스 재문의 결과, Q-14). 동의가 없는 종류는 보내지 않음
 - 공양미 잔액은 컬럼으로 두지 않고 `rice_histories` 합계로 계산 (정책서 구현 메모)
   - 조회가 잦으면 나중에 `rice_balance` 캐시 컬럼 추가 검토
 
@@ -384,7 +383,7 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | 받는 사람 |
-| type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_REMINDER` / `RESULT` |
+| type | VARCHAR(30) | NOT NULL | `POKE` / `CERT_REMINDER` / `VOTE_OPENED` / `RESULT` |
 | room_id | BIGINT | FK rooms, NULL | 인증 마감 리마인드(`CERT_REMINDER`)는 방 개수와 상관없이 항상 NULL |
 | round_date | DATE | NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NULL | 콕 푸시(`POKE`)의 보낸 사람. 나머지는 NULL |
