@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.Room;
@@ -59,6 +61,12 @@ class RoomCreateTest {
     private RoomMemberRepository roomMemberRepository;
 
     @Autowired
+    private PotContributionRepository potContributionRepository;
+
+    @Autowired
+    private RoomPotRepository roomPotRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -93,6 +101,8 @@ class RoomCreateTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();

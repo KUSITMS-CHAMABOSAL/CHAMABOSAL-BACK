@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.entity.BosalColor;
@@ -71,6 +73,12 @@ class RoomNicknameUpdateTest {
     private RoomMemberRepository roomMemberRepository;
 
     @Autowired
+    private PotContributionRepository potContributionRepository;
+
+    @Autowired
+    private RoomPotRepository roomPotRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -91,6 +99,8 @@ class RoomNicknameUpdateTest {
 
     @AfterEach
     void tearDown() {
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
