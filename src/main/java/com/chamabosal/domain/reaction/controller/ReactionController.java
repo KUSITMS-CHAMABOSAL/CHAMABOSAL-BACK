@@ -87,7 +87,7 @@ public class ReactionController {
             @PathVariable Long certificationId,
             @RequestBody @Valid ReactionPutRequest request
     ) {
-        return ResponseEntity.ok(Response.ok(reactionService.put(userId, certificationId, request.type())));
+        return ResponseEntity.ok(Response.ok(reactionService.put(userId, certificationId, request.reactionType())));
     }
 
     @DeleteMapping("/{certificationId}/reactions/me")

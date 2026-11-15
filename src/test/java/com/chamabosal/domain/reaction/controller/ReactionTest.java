@@ -115,6 +115,12 @@ class ReactionTest {
 
         assertThat(countOf(certificationB, ReactionType.GOOD)).isZero();
         assertThat(countOf(certificationB, ReactionType.BAD)).isEqualTo(1);
+        // 없는 종류는 바꾸지 않고 입력값 오류다 (REACT-01 예외).
+        react(userA, certificationB, "UNKNOWN")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_002"))
+                .andExpect(jsonPath("$.field").value("type"));
+        assertThat(countOf(certificationB, ReactionType.BAD)).isEqualTo(1);
     }
 
     @Test

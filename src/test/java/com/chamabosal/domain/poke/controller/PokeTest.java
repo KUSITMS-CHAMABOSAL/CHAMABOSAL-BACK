@@ -101,6 +101,10 @@ class PokeTest {
         poke(userC, memberB, 2).andExpect(status().isCreated());
 
         assertThat(receivedCount(memberB)).isEqualTo(5);
+        // 같은 사람이 다시 찌르면 그 사람의 행에 더한다 (POKE-01 7번).
+        poke(userA, memberB, 4).andExpect(status().isCreated());
+        assertThat(receivedCount(memberB)).isEqualTo(9);
+        assertThat(pokeRepository.findAll()).hasSize(2);
     }
 
     @Test
