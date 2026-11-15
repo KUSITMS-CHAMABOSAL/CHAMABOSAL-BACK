@@ -476,11 +476,14 @@ class CertificationEditTest {
                 .content(body));
     }
 
+    /** 사진을 다루지 않는 수정은 기존 사진 유지(isImageKept: true)를 붙여 보낸다 (CERT-02 10번). */
     private ResultActions update(User user, Long certificationId, String body) throws Exception {
+        String withPhotoChoice = body.contains("isImageKept") ? body
+                : body.trim().replaceFirst("}$", ", \"isImageKept\": true}");
         return mockMvc.perform(patch("/api/certifications/{certificationId}", certificationId)
                 .header("Authorization", bearer(user))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(body));
+                .content(withPhotoChoice));
     }
 
     private ResultActions remove(User user, Long certificationId) throws Exception {
