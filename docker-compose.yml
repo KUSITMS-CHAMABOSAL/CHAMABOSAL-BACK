@@ -20,6 +20,11 @@ services:
       # 프론트 연동용 임시 기능이다. 출시 전에 끈다.
       AUTH_TEST_TOKEN_ENABLED: ${AUTH_TEST_TOKEN_ENABLED:-false}
       AUTH_TEST_TOKEN_KEY: ${AUTH_TEST_TOKEN_KEY:-}
+      # 인증 사진 저장소 (CERT-04). 접근 키는 AWS SDK가 이 이름으로 읽는다.
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     volumes:
       - /etc/chamabosal/toss:/app/toss:ro
     ports:

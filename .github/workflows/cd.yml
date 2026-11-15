@@ -104,19 +104,23 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           AUTH_TEST_TOKEN_ENABLED: ${{ secrets.AUTH_TEST_TOKEN_ENABLED }}
           AUTH_TEST_TOKEN_KEY: ${{ secrets.AUTH_TEST_TOKEN_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         with:
           host: ${{ secrets.GABIA_HOST }}
           username: ${{ secrets.GABIA_USERNAME }}
           key: ${{ secrets.GABIA_SSH_KEY }}
           port: ${{ secrets.GABIA_PORT }}
           fingerprint: ${{ secrets.GABIA_HOST_FINGERPRINT }}
-          envs: DEPLOY_DIR,IMAGE_TAG,DB_USERNAME,DB_PASSWORD,DB_ROOT_PASSWORD,DISCORD_ERROR_WEBHOOK_URL,JWT_SECRET,AUTH_TEST_TOKEN_ENABLED,AUTH_TEST_TOKEN_KEY
+          envs: DEPLOY_DIR,IMAGE_TAG,DB_USERNAME,DB_PASSWORD,DB_ROOT_PASSWORD,DISCORD_ERROR_WEBHOOK_URL,JWT_SECRET,AUTH_TEST_TOKEN_ENABLED,AUTH_TEST_TOKEN_KEY,AWS_S3_BUCKET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
           script: |
             set -eu
             cd "$DEPLOY_DIR"
 
             # 값이 비었거나 작은따옴표가 있으면 기존 컨테이너를 건드리기 전에 중단한다.
-            required="DB_USERNAME DB_PASSWORD DB_ROOT_PASSWORD DISCORD_ERROR_WEBHOOK_URL JWT_SECRET"
+            required="DB_USERNAME DB_PASSWORD DB_ROOT_PASSWORD DISCORD_ERROR_WEBHOOK_URL JWT_SECRET AWS_S3_BUCKET AWS_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY"
             optional="AUTH_TEST_TOKEN_ENABLED AUTH_TEST_TOKEN_KEY"
             for name in $required; do
               if [ -z "$(printenv "$name" || true)" ]; then

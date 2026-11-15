@@ -27,6 +27,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+	// 인증 사진 presigned URL·복사·삭제 (CERT-04)
+	implementation platform('software.amazon.awssdk:bom:2.57.5')
+	implementation 'software.amazon.awssdk:s3'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
