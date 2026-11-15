@@ -1,6 +1,7 @@
 package com.chamabosal.domain.user.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -125,7 +126,7 @@ class PushAgreementCreateTest {
 
     @Test
     void NOTI_01_4_지원하지_않는_종류면_COMMON_002를_돌려주고_저장하지_않는다() throws Exception {
-        agree("POKE", "newAgreement")
+        agree("VOTE_REMINDER", "newAgreement")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_002"))
                 .andExpect(jsonPath("$.field").value("type"));
@@ -156,6 +157,32 @@ class PushAgreementCreateTest {
         } finally {
             executor.shutdown();
         }
+    }
+
+    @Test
+    void NOTI_01_6_다른_종류에_동의해도_이미_한_동의는_그대로다() throws Exception {
+        LocalDateTime certAgreedAt = NOW.minusDays(1);
+        pushAgreementRepository.save(PushAgreement.create(user, PushAgreementType.CERT_REMINDER, certAgreedAt));
+
+        agree("POKE", "newAgreement")
+                .andExpect(status().isOk());
+
+        assertThat(pushAgreementRepository.findAll())
+                .extracting(PushAgreement::getType, PushAgreement::getAgreedAt)
+                .containsExactlyInAnyOrder(
+                        tuple(PushAgreementType.CERT_REMINDER, certAgreedAt),
+                        tuple(PushAgreementType.POKE, NOW));
+    }
+
+    @Test
+    void 알림_4종_모두_동의를_저장한다() throws Exception {
+        for (String type : List.of("POKE", "RESULT", "VOTE_OPENED", "CERT_REMINDER")) {
+            agree(type, "newAgreement").andExpect(status().isOk());
+        }
+
+        assertThat(pushAgreementRepository.findAll())
+                .extracting(PushAgreement::getType)
+                .containsExactlyInAnyOrder(PushAgreementType.values());
     }
 
     private ResultActions agree(String type, String result) throws Exception {
