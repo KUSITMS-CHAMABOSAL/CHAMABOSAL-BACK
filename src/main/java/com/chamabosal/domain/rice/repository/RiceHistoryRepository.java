@@ -4,12 +4,18 @@ import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface RiceHistoryRepository extends JpaRepository<RiceHistory, Long> {
+
+    /** 내 데이터 삭제 (USER-05). 엔티티를 하나씩 읽지 않고 한 문장으로 지운다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from RiceHistory h where h.user.id = :userId")
+    int deleteByUserId(Long userId);
 
     boolean existsByUser_IdAndReasonAndRefTypeAndRefId(Long userId, RiceReason reason, RiceRefType refType, Long refId);
 

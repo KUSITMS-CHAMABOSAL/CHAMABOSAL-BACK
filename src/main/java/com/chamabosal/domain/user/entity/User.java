@@ -19,13 +19,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
 
-    private static final int RESTORABLE_MONTHS = 6;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 정리된 사용자는 NULL로 남아 다른 테이블의 참조를 유지한다. */
+    /** 내 데이터를 삭제한 사용자는 NULL로 남아 다른 테이블의 참조를 유지한다. */
     @Column(unique = true)
     private String tossAnonKey;
 
@@ -47,12 +45,10 @@ public class User extends BaseEntity {
         return deletedAt != null;
     }
 
-    public boolean isRestorable(LocalDateTime now) {
-        return !now.isAfter(deletedAt.plusMonths(RESTORABLE_MONTHS));
-    }
-
-    public void restore() {
-        deletedAt = null;
+    /** 내 데이터 삭제 (USER-05). 식별키를 바로 비워 같은 키로 오면 새 사용자가 된다. 행은 다른 기록의 참조용으로 남긴다. */
+    public void deleteData(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+        this.tossAnonKey = null;
     }
 
     public void updatePushSettings(Boolean isPokePushEnabled, Boolean isActivityPushEnabled) {

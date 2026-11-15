@@ -1,6 +1,7 @@
 package com.chamabosal.domain.room.repository;
 
 import com.chamabosal.domain.room.entity.LeaveType;
+import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -18,6 +19,26 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
     Optional<RoomMember> findByRoom_IdAndUser_IdAndLeftAtIsNull(Long roomId, Long userId);
 
     List<RoomMember> findByRoom_IdAndLeftAtIsNull(Long roomId);
+
+    /** 내 데이터 삭제(USER-05)에서 나갈 방 ID. 락 순서를 맞추려고 방 ID 순으로 가져온다. */
+    @Query("""
+            select m.room.id from RoomMember m
+            where m.user.id = :userId and m.leftAt is null and m.room.deletedAt is null
+            order by m.room.id
+            """)
+    List<Long> findCurrentRoomIdsOrderById(Long userId);
+
+    /** 내보내진 방 (USER-05 7번). 내보내진 시각과 상관없이, 아무도 들어갈 수 없는 삭제된 방은 뺀다. */
+    @Query("""
+            select m.room from RoomMember m
+            where m.user.id = :userId and m.leaveType = :kicked and m.room.deletedAt is null
+            """)
+    List<Room> findRoomsByUserIdAndLeaveType(Long userId, LeaveType kicked);
+
+    /** 내 데이터 삭제(USER-05)로 그 사용자의 모든 멤버 행과 사용자 연결을 끊는다. 기록은 "떠난 보살"로 남는다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RoomMember m set m.user = null where m.user.id = :userId")
+    int detachUser(Long userId);
 
     /** 내 정보(USER-01)의 방 목록. 삭제되지 않은 방의 현재 멤버 행을 방과 함께, 들어온 순서로 가져온다. */
     @Query("""

@@ -43,7 +43,7 @@ public class RoomMember extends BaseEntity {
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
-    /** 내 데이터 삭제 후 6개월이 지나면 연결을 끊어 NULL이 된다. */
+    /** 내 데이터를 삭제하면 바로 연결을 끊어 NULL이 된다 (USER-05 6번). 나간 멤버의 사용자는 비어 있을 수 있다. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
