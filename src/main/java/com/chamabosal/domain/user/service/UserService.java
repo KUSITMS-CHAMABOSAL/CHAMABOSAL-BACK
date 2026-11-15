@@ -1,5 +1,6 @@
 package com.chamabosal.domain.user.service;
 
+import com.chamabosal.domain.nabal.service.NabalService;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.service.RoomService;
@@ -36,6 +37,7 @@ public class UserService {
     private final PushAgreementRepository pushAgreementRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
+    private final NabalService nabalService;
     private final Clock clock;
 
     /**
@@ -56,7 +58,7 @@ public class UserService {
         // 방 만들기·입장의 2개 제한과 같은 집계로 판단해 버튼과 실제 제한이 어긋나지 않게 한다.
         boolean canCreateRoom = roomMemberRepository.countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(userId)
                 < RoomService.MAX_JOINED_ROOMS;
-        return UserMeResponse.of(user, agreed, rooms, canCreateRoom);
+        return UserMeResponse.of(user, agreed, nabalService.getStatus(userId), rooms, canCreateRoom);
     }
 
     private boolean hasUnseen(RoomMember member) {

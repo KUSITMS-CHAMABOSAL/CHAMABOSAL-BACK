@@ -19,6 +19,13 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     List<RoomMember> findByRoom_IdAndLeftAtIsNull(Long roomId);
 
+    /** 나발 판정(NABAL-01) 대상: 삭제하지 않았고 살아 있는 방에 참여 중인 사용자. */
+    @Query("""
+            select distinct m.user.id from RoomMember m
+            where m.leftAt is null and m.room.deletedAt is null and m.user.deletedAt is null
+            """)
+    List<Long> findActiveUserIds();
+
     /** 내 정보(USER-01)의 방 목록. 삭제되지 않은 방의 현재 멤버 행을 방과 함께, 들어온 순서로 가져온다. */
     @Query("""
             select m from RoomMember m join fetch m.room r
