@@ -1,6 +1,8 @@
 package com.chamabosal.domain.result.service;
 
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.defense.service.DefenseService;
 import com.chamabosal.domain.result.dto.response.RoundResultResponse;
 import com.chamabosal.domain.result.dto.response.RoundResultResponse.Picked;
 import com.chamabosal.domain.result.dto.response.RoundResultResponse.VoteCount;
@@ -28,19 +30,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 결과 화면 (RESULT-02). 지목된 사람이 처음 열면 그 시각을 남겨서 읽기 전용이 아니다.
- * 방어권(SHIELD-01·02)이 아직 없어 지목된 본인의 보유 방어권은 0개, 사용 가능 여부는 false다.
+ * 지목된 본인에게는 보유한 미사용 방어권 개수와 지금 쓰면 성공하는지를 담는다 (SHIELD-02와 같은 기한 판단).
  */
 @Service
 @RequiredArgsConstructor
 public class RoundResultService {
-
-    private static final int DEFENSE_MINUTES = 2;
 
     private final RoundRepository roundRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final VoteRepository voteRepository;
     private final CertificationRepository certificationRepository;
     private final TapRepository tapRepository;
+    private final DefenseTicketRepository defenseTicketRepository;
+    private final DefenseService defenseService;
     private final Clock clock;
 
     /**
@@ -70,12 +72,18 @@ public class RoundResultService {
             round = roundRepository.findById(roundId).orElseThrow();
             picked = round.getPickedMember();
             pickedSeenAt = round.getPickedSeenAt();
+            // 그사이 방어가 커밋됐으면 DEFENDED로 바뀌어 있다 (코드리뷰 반영).
+            resultType = round.getResultType();
+            isPicked = resultType == RoundResultType.PICKED;
         }
 
         boolean isTapExpired = isPicked && roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(
                 roomId, round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED));
         boolean canTap = isPicked && !isMePicked && !isTapExpired
                 && !tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId());
+
+        Integer ticketCount = isMePicked && (isPicked || resultType == RoundResultType.DEFENDED)
+                ? (int) defenseTicketRepository.countByUser_IdAndUsedAtIsNull(userId) : null;
 
         List<Vote> votes = voteRepository.findWithTargetByRound_Id(roundId);
         return new RoundResultResponse(
@@ -85,9 +93,10 @@ public class RoundResultService {
                 voteCounts(votes),
                 (int) votes.stream().filter(vote -> vote.getTargetMember() == null).count(),
                 isMePicked,
-                isMePicked && isPicked ? pickedSeenAt.plusMinutes(DEFENSE_MINUTES) : null,
-                isMePicked && (isPicked || resultType == RoundResultType.DEFENDED) ? 0 : null,
-                false,
+                isMePicked && isPicked ? pickedSeenAt.plusMinutes(DefenseService.DEFENSE_MINUTES) : null,
+                ticketCount,
+                isMePicked && isPicked && ticketCount > 0 && !defenseService.isExpired(round, LocalDateTime.now(clock))
+                        && !defenseService.isMoktakDone(userId, roundId),
                 canTap,
                 isTapExpired,
                 (int) tapRepository.countByRound_IdAndCountGreaterThanAndFromMember_IdNot(roundId, 0, me.getId()));

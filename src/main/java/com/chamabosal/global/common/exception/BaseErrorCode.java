@@ -63,6 +63,21 @@ public enum BaseErrorCode implements ErrorCode {
     TAP_EXPIRED(HttpStatus.CONFLICT, "TAP_004", "톡톡 시간이 지났어요."),
     NOT_PICKED_MEMBER(HttpStatus.FORBIDDEN, "TAP_005", "지목된 사람만 받은 톡톡을 볼 수 있습니다."),
 
+    // Moktak
+    MOKTAK_NOT_AVAILABLE(HttpStatus.CONFLICT, "MOKTAK_001", "번뇌 완료 보상이 없는 결과입니다."),
+    MOKTAK_NO_TAPS(HttpStatus.CONFLICT, "MOKTAK_002", "받은 톡톡이 없습니다."),
+    MOKTAK_EXPIRED(HttpStatus.CONFLICT, "MOKTAK_003", "수행 시간이 지났어요."),
+    MOKTAK_NOT_FINISHED(HttpStatus.CONFLICT, "MOKTAK_004", "받은 톡톡만큼 두드려야 해요."),
+
+    // Store
+    RICE_NOT_ENOUGH(HttpStatus.CONFLICT, "STORE_001", "공양미가 부족해요."),
+
+    // Defense
+    NO_DEFENSE_TICKET(HttpStatus.CONFLICT, "DEFENSE_002", "보유한 방어권이 없어요."),
+    NOT_PICKED_FOR_DEFENSE(HttpStatus.FORBIDDEN, "DEFENSE_008", "지목된 사람만 방어권을 쓸 수 있습니다."),
+    DEFENSE_EXPIRED(HttpStatus.CONFLICT, "DEFENSE_009", "방어 시간이 지났어요."),
+    DEFENSE_AFTER_MOKTAK(HttpStatus.CONFLICT, "DEFENSE_010", "목탁 수행을 마친 결과는 방어할 수 없어요."),
+
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
 
