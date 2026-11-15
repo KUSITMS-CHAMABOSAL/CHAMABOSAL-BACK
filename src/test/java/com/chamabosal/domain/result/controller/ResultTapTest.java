@@ -65,6 +65,8 @@ class ResultTapTest {
     private static final LocalDate NOV_4 = LocalDate.of(2026, 11, 4);
     private static final LocalDate NOV_5 = LocalDate.of(2026, 11, 5);
     private static final LocalDateTime AFTER_CLOSE = NOV_4.plusDays(1).atTime(16, 0);
+    /** 11/4 회차는 11/5 15:00에 마감돼 5시간 뒤인 20:00에 톡톡이 전달된다. */
+    private static final LocalDateTime DELIVERED = NOV_5.atTime(20, 0);
 
     @Autowired
     MockMvc mockMvc;
@@ -220,9 +222,9 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_02_5_다음_투표가_열린_뒤_처음_열면_톡톡_시간이_지났다() throws Exception {
-        Round round = announced(NOV_3, picks(memberB, memberA, memberC, memberA, memberD, memberA, memberA, memberB));
-        startVoting(NOV_4);
+    void RESULT_02_5_투표_마감_후_5시간이_지나_처음_열면_톡톡_시간이_지났다() throws Exception {
+        Round round = pickedA();
+        clock.set(DELIVERED);
 
         result(userC, round)
                 .andExpect(jsonPath("$.data.resultType").value("PICKED"))
@@ -284,9 +286,9 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_03_4_다음_투표가_열리면_보낼_수_없다() throws Exception {
+    void RESULT_03_4_투표_마감_후_5시간이_지나면_보낼_수_없다() throws Exception {
         Round round = pickedA();
-        startVoting(NOV_5);
+        clock.set(DELIVERED);
 
         tap(userB, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_004"));
     }
@@ -310,38 +312,44 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_03_7_받은_톡톡은_재생한_뒤_다시_나오지_않는다() throws Exception {
+    void RESULT_03_7_5시간이_지나면_받은_톡톡이_한_번에_전달된다() throws Exception {
         Round round = pickedA();
         tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC, round, 3).andExpect(status().isCreated());
+        clock.set(DELIVERED);
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(8))
+                .andExpect(jsonPath("$.data.taps.length()").value(2))
+                .andExpect(jsonPath("$.data.taps[0].nickname").value("지수"))
+                .andExpect(jsonPath("$.data.taps[0].count").value(5))
+                .andExpect(jsonPath("$.data.taps[1].nickname").value("하린"));
+    }
+
+    @Test
+    void RESULT_03_8_재생_완료를_저장해도_받은_톡톡_전체가_나온다() throws Exception {
+        Round round = pickedA();
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
+        played(userA, round).andExpect(status().isOk());
+        played(userA, round).andExpect(status().isOk());
+
+        received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1))
+                .andExpect(jsonPath("$.data.totalCount").value(5));
+        assertThat(tapOf(round, memberB).getPlayedAt()).isEqualTo(DELIVERED);
+    }
+
+    @Test
+    void RESULT_03_9_건너뛴_톡톡은_빼고_전달된다() throws Exception {
+        Round round = pickedA();
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC, round, 0).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1))
                 .andExpect(jsonPath("$.data.taps[0].nickname").value("지수"))
-                .andExpect(jsonPath("$.data.taps[0].count").value(5));
-        played(userA, round).andExpect(status().isOk());
-
-        received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(0));
-    }
-
-    @Test
-    void RESULT_03_8_재생_완료_뒤_조회하면_빈_목록이다() throws Exception {
-        Round round = pickedA();
-        tap(userB, round, 5).andExpect(status().isCreated());
-        played(userA, round).andExpect(status().isOk());
-        played(userA, round).andExpect(status().isOk());
-
-        received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty());
-    }
-
-    @Test
-    void RESULT_03_9_재생_뒤에_도착한_톡톡만_나온다() throws Exception {
-        Round round = pickedA();
-        tap(userB, round, 5).andExpect(status().isCreated());
-        played(userA, round).andExpect(status().isOk());
-
-        tap(userC, round, 3).andExpect(status().isCreated());
-
-        received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1))
-                .andExpect(jsonPath("$.data.taps[0].nickname").value("하린"));
+                .andExpect(jsonPath("$.data.totalCount").value(5));
     }
 
     @Test
@@ -360,7 +368,9 @@ class ResultTapTest {
         defend(round);
 
         tap(userC, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_001"));
-        received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty());
+        clock.set(DELIVERED);
+        received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty())
+                .andExpect(jsonPath("$.data.totalCount").value(0));
     }
 
     @Test
@@ -392,6 +402,27 @@ class ResultTapTest {
         assertThat(round.getResultType()).isEqualTo(RoundResultType.PICKED);
 
         tap(userB, round, 5).andExpect(status().isCreated());
+    }
+
+    @Test
+    void RESULT_03_15_마감_직전에는_보낼_수_있다() throws Exception {
+        Round round = pickedA();
+        clock.set(DELIVERED.minusMinutes(1));
+
+        tap(userB, round, 5).andExpect(status().isCreated());
+    }
+
+    @Test
+    void RESULT_03_16_전달_전에는_빈_목록과_전달_시각이_나온다() throws Exception {
+        Round round = pickedA();
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED.minusMinutes(1));
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(false))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T20:00:00"))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.taps").isEmpty());
     }
 
     @Test
