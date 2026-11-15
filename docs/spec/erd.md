@@ -282,7 +282,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)는 NULL |
 | delta | INT | NOT NULL | +10, +5, +1, +30, -50, -100, -10 … |
 | reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) |
-| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE`. 나가기 차감은 NULL |
+| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE` / `NABAL`. 나가기 차감은 NULL |
 | ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감(`LEAVE`)은 NULL (다시 들어오면 같은 멤버 행이라 멤버 ID로는 구분 못 함, RICE-03 7번) |
 
 - 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용 (나가기 차감만 0석 아래로 내려가지 않게 차감액을 줄임, RICE-03)
@@ -355,6 +355,23 @@ erDiagram
 | display_order | INT | NOT NULL | 상점 노출 순서 |
 
 - 6종으로 시작 (정책서상 "예시"라 바뀔 수 있어서 enum 대신 테이블)
+
+### nabal_losses
+
+인증을 빠뜨린 방·회차마다 빠진 나발 한 개 (NABAL-01). 보살은 사용자 단위라 사용자에 묶는다
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK | 확인 저장(`seen-nabal-loss`)에 쓰는 기록 ID |
+| user_id | BIGINT | FK users, NOT NULL | |
+| room_id | BIGINT | FK rooms, NOT NULL | 인증을 빠뜨린 방 |
+| round_date | DATE | NOT NULL | 인증을 빠뜨린 회차 날짜 |
+| nabal_number | INT | NOT NULL | 빠진 나발 번호 0~37 (서버 랜덤, Q-103) |
+| seen_at | DATETIME | NULL | 빠지는 연출을 본 시각 |
+| replanted_at | DATETIME | NULL | 다시 심은 시각. NULL이면 빠진 상태 |
+
+- `UNIQUE (user_id, room_id, round_date)`: 같은 방·회차는 한 번만 빠짐. 인덱스 `(user_id, replanted_at)`
+- 빠진 나발 = `replanted_at IS NULL`. 심기는 장부에 `PURCHASE`, 원인 `NABAL`(이 기록 ID)로 -15석
 
 ### user_items
 
