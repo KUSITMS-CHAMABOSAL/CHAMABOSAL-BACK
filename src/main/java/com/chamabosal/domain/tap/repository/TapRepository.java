@@ -11,6 +11,13 @@ public interface TapRepository extends JpaRepository<Tap, Long> {
 
     boolean existsByRound_IdAndFromMember_Id(Long roundId, Long fromMemberId);
 
+    /** 목탁 수행 대상: 그 회차에 1번 이상 받은 톡톡이 있는지 (Q-92 임시 결정). */
+    boolean existsByRound_IdAndCountGreaterThan(Long roundId, int count);
+
+    /** 목탁 수행에서 두드려야 하는 횟수: 그 회차에 받은 톡톡 합계. */
+    @Query("select coalesce(sum(t.count), 0) from Tap t where t.round.id = :roundId")
+    long sumCountByRoundId(Long roundId);
+
     /** 나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수 (`tappedMemberCount`). */
     long countByRound_IdAndCountGreaterThanAndFromMember_IdNot(Long roundId, int count, Long excludeMemberId);
 
