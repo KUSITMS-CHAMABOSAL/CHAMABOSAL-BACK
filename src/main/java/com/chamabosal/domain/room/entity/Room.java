@@ -60,6 +60,11 @@ public class Room extends BaseEntity {
         ownerMemberId = memberId;
     }
 
+    /** 한 솥을 다 채울 때마다 쌀가마 배지를 +1 한다 (POT-01 10번). 방 행 락 안에서 부른다. */
+    public void completePot() {
+        potCompletedCount++;
+    }
+
     public void delete(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
     }
