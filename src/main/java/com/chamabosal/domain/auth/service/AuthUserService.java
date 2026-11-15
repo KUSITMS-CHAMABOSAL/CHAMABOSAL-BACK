@@ -6,15 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class AuthUserService {
 
     private final UserRepository userRepository;
-    private final Clock clock;
 
     @Transactional
     public AuthUser findOrCreate(String tossAnonKey) {
@@ -23,12 +20,9 @@ public class AuthUserService {
                 .orElseGet(() -> create(tossAnonKey));
     }
 
+    /** 내 데이터를 삭제하면 키가 비워져 찾히지 않는다. 키가 남은 삭제 사용자(예전 데이터)도 복구 없이 새 사용자로 만든다 (AUTH-01 5·6번). */
     private AuthUser resolve(User user, String tossAnonKey) {
         if (!user.isDeleted()) {
-            return new AuthUser(user.getId(), false);
-        }
-        if (user.isRestorable(LocalDateTime.now(clock))) {
-            user.restore();
             return new AuthUser(user.getId(), false);
         }
         // UNIQUE 제약에 걸리지 않도록 기존 행의 키를 먼저 비운다.

@@ -1,7 +1,13 @@
 package com.chamabosal.domain.user.service;
 
+import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
 import com.chamabosal.domain.nabal.service.NabalService;
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
+import com.chamabosal.domain.room.entity.KickBlock;
+import com.chamabosal.domain.room.entity.LeaveType;
+import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.room.repository.KickBlockRepository;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.service.RoomService;
 import com.chamabosal.domain.round.entity.RoundStatus;
@@ -19,6 +25,7 @@ import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -37,8 +44,41 @@ public class UserService {
     private final PushAgreementRepository pushAgreementRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
+    private final RoomService roomService;
+    private final KickBlockRepository kickBlockRepository;
+    private final RiceHistoryRepository riceHistoryRepository;
+    private final DefenseTicketRepository defenseTicketRepository;
     private final NabalService nabalService;
     private final Clock clock;
+
+    /**
+     * 내 데이터 즉시 삭제 (USER-05, Q-102). 사용자 → 방 순서로 락을 잡아 같은 사용자의 방 만들기·입장·나가기와 하나씩 처리한다.
+     * 식별키를 비우기 전에 내보내진 방의 차단 해시를 남긴다 (7번). 지우는 쿼리는 영속성 컨텍스트를 비우므로 사용자 변경을 먼저 한다.
+     * 사진 삭제(4번)는 CERT-04에서 붙인다. 락 전 조회가 스냅샷을 고정하지 않도록 READ COMMITTED로 읽어서, 방 락 뒤에
+     * 다른 사람이 막 들어오거나 나간 결과를 보고 방장 위임·방 삭제를 판단한다 (입장과 같은 이유, 코드리뷰 반영).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void deleteData(Long userId) {
+        User user = userRepository.findWithLockById(userId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.UNAUTHENTICATED));
+        LocalDateTime now = LocalDateTime.now(clock);
+        roomService.leaveAllForDataDeletion(userId);
+        String anonKey = user.getTossAnonKey();
+        if (anonKey != null) {
+            String hash = KickBlock.hash(anonKey);
+            for (Room room : roomMemberRepository.findRoomsByUserIdAndLeaveType(userId, LeaveType.KICKED)) {
+                kickBlockRepository.findByAnonKeyHashAndRoom_Id(hash, room.getId()).ifPresentOrElse(
+                        block -> block.renew(now),
+                        () -> kickBlockRepository.save(KickBlock.create(anonKey, room, now)));
+            }
+        }
+        user.deleteData(now);
+        riceHistoryRepository.deleteByUserId(userId);
+        defenseTicketRepository.deleteByUserId(userId);
+        pushAgreementRepository.deleteByUserId(userId);
+        roomMemberRepository.detachUser(userId);
+    }
 
     /**
      * 앱을 열 때 어느 화면으로 갈지 판단할 값 (USER-01). 방은 많아야 2개라 방마다 최근 발표 회차를 따로 읽는다.

@@ -6,9 +6,11 @@ import com.chamabosal.domain.room.dto.response.InvitePreviewResponse;
 import com.chamabosal.domain.room.dto.response.InvitePreviewResponse.RoomSummary;
 import com.chamabosal.domain.room.dto.response.InviteTokenResponse;
 import com.chamabosal.domain.room.entity.BosalColor;
+import com.chamabosal.domain.room.entity.KickBlock;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.room.repository.KickBlockRepository;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
@@ -34,6 +36,7 @@ public class InviteService {
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
+    private final KickBlockRepository kickBlockRepository;
     private final UserRepository userRepository;
     private final RoundRepository roundRepository;
     private final RoomService roomService;
@@ -113,7 +116,8 @@ public class InviteService {
         if (roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId).isPresent()) {
             return InviteStatus.ALREADY_MEMBER;
         }
-        if (roomMemberRepository.existsByRoom_IdAndUser_IdAndLeaveType(room.getId(), userId, LeaveType.KICKED)) {
+        if (roomMemberRepository.existsByRoom_IdAndUser_IdAndLeaveType(room.getId(), userId, LeaveType.KICKED)
+                || isKickedBeforeDataDeletion(room.getId(), userId)) {
             return InviteStatus.UNAVAILABLE;
         }
         if (roomMemberRepository.countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(userId)
@@ -124,6 +128,15 @@ public class InviteService {
             return InviteStatus.ROOM_FULL;
         }
         return InviteStatus.JOINABLE;
+    }
+
+    /** 내보내진 뒤 내 데이터를 삭제하고 다시 가입했으면, 같은 식별키의 차단 기록이 만료 전까지 그 방 입장을 막는다 (USER-05 7번, Q-51). */
+    private boolean isKickedBeforeDataDeletion(Long roomId, Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getTossAnonKey)
+                .filter(anonKey -> kickBlockRepository.existsByAnonKeyHashAndRoom_IdAndExpiresAtAfter(
+                        KickBlock.hash(anonKey), roomId, LocalDateTime.now(clock)))
+                .isPresent();
     }
 
     /** 나간 지 6개월이 안 됐으면 예전 행을 다시 쓰고, 아니면 새 행을 만든다. */

@@ -37,7 +37,7 @@ paths:
       description: |-
         앱인토스 인증 코드로 로그인한다. 처음 온 사용자는 새로 만든다.
 
-        - `isNewUser`: 6개월 안에 돌아와 복구한 사용자는 `false`
+        - `isNewUser`: 새로 만든 사용자. 내 데이터를 삭제한 뒤 같은 계정으로 오면 `true`
       requestBody:
         required: true
         content:
@@ -197,7 +197,7 @@ paths:
       - '[USER] 사용자'
       operationId: deleteMe
       summary: 내 데이터 삭제
-      description: 내 데이터를 삭제한다. 모든 방에서 나가고 사진은 바로 삭제한다. 6개월 안에 돌아오면 복구된다.
+      description: 내 데이터를 바로 삭제한다. 모든 방에서 나가고 공양미·아이템·방어권·알림 동의·사진을 지운다. 투표 결과와 지난 회차 한 줄·금액은 "떠난 보살"로 남는다. 복구는 없다.
       responses:
         '200':
           description: 성공 (data 없음)
