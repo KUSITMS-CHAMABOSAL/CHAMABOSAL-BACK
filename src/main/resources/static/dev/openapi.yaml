@@ -220,9 +220,9 @@ paths:
       operationId: getMyCalendar
       summary: 인증 캘린더
       description: |-
-        내 보살 탭의 방별 인증 캘린더다. `month`를 비우면 이번 달이다.
+        내 보살 탭의 방별 인증 캘린더다.
 
-        - 회차 날짜 기준. 05:00 전 인증은 전날로 들어간다.
+        - 회차 날짜 기준. 03:00 전 인증은 전날로 들어간다. `month`를 비우면 지금 회차 날짜의 달이다.
         - 인증이 없는 날과 삭제한 인증은 빠진다.
         - 이 방의 이번 달 참은 횟수·지목 횟수는 오늘 탭 `members[]`에 있다.
       parameters:
@@ -237,7 +237,7 @@ paths:
       - name: month
         in: query
         required: false
-        description: '`yyyy-MM`. 비우면 이번 달'
+        description: '`yyyy-MM`. 비우면 지금 회차 날짜의 달'
         schema:
           type: string
           example: 2026-11
