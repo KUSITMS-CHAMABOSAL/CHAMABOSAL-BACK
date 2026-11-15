@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.defense.entity.DefenseTicket;
+import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
@@ -109,6 +111,9 @@ class ResultTapTest {
     @Autowired
     RiceHistoryRepository riceHistoryRepository;
 
+    @Autowired
+    DefenseTicketRepository defenseTicketRepository;
+
     private int userSequence;
     private Room room;
     private User userA;
@@ -136,6 +141,7 @@ class ResultTapTest {
 
     @AfterEach
     void tearDown() {
+        defenseTicketRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         tapRepository.deleteAll();
         voteRepository.deleteAll();
@@ -192,16 +198,17 @@ class ResultTapTest {
                 .andExpect(jsonPath("$.data.canTap").value(false));
     }
 
-    /** 방어권(SHIELD-01)이 아직 없어 보유 개수는 0, 사용 가능 여부는 false다. 명세의 "2개, true"는 방어권 PR에서 확인한다. */
     @Test
     void RESULT_02_4_지목된_사람만_방어_마감_시각을_받는다() throws Exception {
         Round round = announced(NOV_2, picks(memberB, memberA, memberC, memberA, memberD, memberA, memberA, memberB));
+        defenseTicketRepository.save(DefenseTicket.purchase(userA, NOV_2.atStartOfDay()));
+        defenseTicketRepository.save(DefenseTicket.purchase(userA, NOV_2.atStartOfDay()));
 
         clock.set(NOV_3.atTime(8, 0));
         result(userA, round)
                 .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T08:02:00"))
-                .andExpect(jsonPath("$.data.defenseTicketCount").value(0))
-                .andExpect(jsonPath("$.data.canUseDefense").value(false));
+                .andExpect(jsonPath("$.data.defenseTicketCount").value(2))
+                .andExpect(jsonPath("$.data.canUseDefense").value(true));
         result(userB, round)
                 .andExpect(jsonPath("$.data.defenseUsableUntil").doesNotExist())
                 .andExpect(jsonPath("$.data.defenseTicketCount").doesNotExist())
