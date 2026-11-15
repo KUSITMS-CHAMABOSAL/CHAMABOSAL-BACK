@@ -54,8 +54,11 @@ public class NabalLossService {
         }
         Set<Integer> fallen = new HashSet<>(nabalLossRepository.findByUser_IdAndReplantedAtIsNullOrderByNabalNumber(userId)
                 .stream().map(NabalLoss::getNabalNumber).toList());
-        for (RoomMember member : roomMemberRepository.findCurrentWithRoom(userId)) {
-            roomRepository.findWithLockById(member.getRoom().getId());
+        List<RoomMember> members = roomMemberRepository.findCurrentWithRoom(userId);
+        // 내 데이터 삭제(USER-05)와 같은 방 ID 순서로 먼저 모두 잠가, 두 사용자가 방을 반대 순서로 잡아 교착하지 않게 한다 (코드리뷰 반영).
+        members.stream().map(member -> member.getRoom().getId()).sorted()
+                .forEach(roomRepository::findWithLockById);
+        for (RoomMember member : members) {
             if (!isUncertified(member, roundDate)
                     || nabalLossRepository.existsByUser_IdAndRoom_IdAndRoundDate(userId, member.getRoom().getId(), roundDate)) {
                 continue;
