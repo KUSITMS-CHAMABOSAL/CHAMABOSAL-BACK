@@ -21,6 +21,11 @@ public interface NabalLossRepository extends JpaRepository<NabalLoss, Long> {
             """)
     boolean existsSeenOrReplanted(Long userId);
 
+    /** 내 데이터 삭제 (USER-05). 보살은 사용자 단위라 나발 기록도 함께 지운다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from NabalLoss l where l.user.id = :userId")
+    int deleteByUserId(Long userId);
+
     /** 보낸 기록 ID 이하의 안 본 기록을 본 것으로 처리한다 (NABAL-02 5번). 비교와 저장을 한 문장으로 한다. */
     @Modifying(clearAutomatically = true)
     @Query("""

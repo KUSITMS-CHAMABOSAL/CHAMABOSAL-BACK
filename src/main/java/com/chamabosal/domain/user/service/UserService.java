@@ -1,6 +1,7 @@
 package com.chamabosal.domain.user.service;
 
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.nabal.service.NabalService;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.KickBlock;
@@ -48,6 +49,7 @@ public class UserService {
     private final KickBlockRepository kickBlockRepository;
     private final RiceHistoryRepository riceHistoryRepository;
     private final DefenseTicketRepository defenseTicketRepository;
+    private final NabalLossRepository nabalLossRepository;
     private final NabalService nabalService;
     private final Clock clock;
 
@@ -76,6 +78,7 @@ public class UserService {
         user.deleteData(now);
         riceHistoryRepository.deleteByUserId(userId);
         defenseTicketRepository.deleteByUserId(userId);
+        nabalLossRepository.deleteByUserId(userId);
         pushAgreementRepository.deleteByUserId(userId);
         roomMemberRepository.detachUser(userId);
     }
