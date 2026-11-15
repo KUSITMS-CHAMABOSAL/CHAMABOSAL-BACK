@@ -91,8 +91,6 @@ public class VoteStartService {
 
     /** 명단 3명 미만이거나 인증한 멤버가 0명이면 투표 없음 (VOTE-01 4번). */
     private boolean start(Round round, List<RoomMember> members, Set<Long> certified, LocalDateTime now) {
-        // 휴식 날짜가 지난 멤버는 이번 투표가 시작되기 전에 연속 지목을 0으로 정리한다 (RESULT-04 5번, 코드리뷰 반영).
-        members.forEach(member -> member.finishRestBefore(round.getRoundDate()));
         boolean anyCertified = members.stream().anyMatch(member -> certified.contains(member.getId()));
         if (members.size() < MIN_VOTERS || !anyCertified) {
             round.markNoVote(now);
@@ -108,13 +106,12 @@ public class VoteStartService {
     }
 
     /**
-     * 휴식 중이거나 그날 들어와서 인증하지 않은 멤버는 후보가 아니다. 인증하지 않은 기존 멤버는 `인증 안 함` 후보다 (CERT-05).
+     * 그날 들어와서 인증하지 않은 멤버는 후보가 아니다. 인증하지 않은 기존 멤버는 `인증 안 함` 후보다 (CERT-05).
      * 배치가 늦게 돌면 회차 날짜 다음 날 들어온 멤버도 명단에 들어올 수 있어서, 회차 날짜 이후에 들어왔으면 "그날 들어옴"으로 본다.
      */
     private RoundParticipant snapshot(Round round, RoomMember member, boolean hasCertified, LocalDate roundDate) {
-        boolean isResting = roundDate.equals(member.getRestingRoundDate());
         boolean joinedThisRoundOrLater = !Round.dateOf(member.getJoinedAt()).isBefore(roundDate);
-        boolean isCandidate = !isResting && (hasCertified || !joinedThisRoundOrLater);
-        return RoundParticipant.create(round, member, isCandidate, hasCertified, isResting);
+        boolean isCandidate = hasCertified || !joinedThisRoundOrLater;
+        return RoundParticipant.create(round, member, isCandidate, hasCertified);
     }
 }

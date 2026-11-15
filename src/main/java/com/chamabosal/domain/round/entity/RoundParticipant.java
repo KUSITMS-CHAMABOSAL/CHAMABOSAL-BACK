@@ -37,7 +37,7 @@ public class RoundParticipant extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private RoomMember member;
 
-    /** 휴식 중이거나, 그날 들어와서 인증하지 않았으면 후보가 아니다. */
+    /** 그날 들어와서 인증하지 않았으면 후보가 아니다. */
     @Column(nullable = false)
     private boolean isCandidate;
 
@@ -45,17 +45,12 @@ public class RoundParticipant extends BaseEntity {
     @Column(nullable = false)
     private boolean canVote;
 
-    @Column(nullable = false)
-    private boolean isResting;
-
-    public static RoundParticipant create(Round round, RoomMember member, boolean isCandidate, boolean canVote,
-                                          boolean isResting) {
+    public static RoundParticipant create(Round round, RoomMember member, boolean isCandidate, boolean canVote) {
         RoundParticipant participant = new RoundParticipant();
         participant.round = round;
         participant.member = member;
         participant.isCandidate = isCandidate;
         participant.canVote = canVote;
-        participant.isResting = isResting;
         return participant;
     }
 }
