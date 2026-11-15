@@ -79,7 +79,7 @@
 | 인증 | POST | `/api/auth/login` | AUTH-01 | ✅ |
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
 | 사용자 | GET | `/api/users/me` | USER-01 |  |
-| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 |  |
+| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 | ✅ |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 사용자 | DELETE | `/api/users/me` | USER-05 |  |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
@@ -173,7 +173,7 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 
 ### GET /api/rooms/{roomId}/members/me/calendar
 
-USER-02. 내 보살 탭의 방별 인증 캘린더입니다. `month`를 비우면 이번 달입니다.
+USER-02. 내 보살 탭의 방별 인증 캘린더입니다. `month`를 비우면 지금 회차 날짜의 달입니다.
 
 ```
 GET /api/rooms/1/members/me/calendar?month=2026-11
@@ -189,7 +189,7 @@ GET /api/rooms/1/members/me/calendar?month=2026-11
 }
 ```
 
-- 회차 날짜 기준. 05:00 전 인증은 전날로 들어감
+- 회차 날짜 기준. 03:00 전 인증은 전날로 들어감. `month`를 비우면 지금 회차 날짜의 달
 - 인증이 없는 날과 삭제한 인증은 빠짐
 - 이 방의 이번 달 참은 횟수·지목 횟수는 오늘 탭 `members[]`에 있음
 - 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 월 형식)
