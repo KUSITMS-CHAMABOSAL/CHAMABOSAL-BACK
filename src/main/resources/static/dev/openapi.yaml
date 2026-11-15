@@ -1245,7 +1245,8 @@ paths:
         - 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보낸다. `Content-Type` 헤더는 요청에 보낸 `contentType`과 같아야 한다. 다르면 저장소가 403으로 거부한다.
         - `expiresIn`은 `uploadUrl`의 유효 시간이다. 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있다.
         - 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있다.
-        - 허용 형식·크기는 [미정] Q-30. 허용하지 않는 형식이면 `COMMON_002`
+        - `contentType`은 `image/jpeg`, `image/png`, `image/heic`, `image/webp` 중 하나. 크기 상한 10MB는 화면에서 지킨다 (Q-30 임시 결정). 허용하지 않는 형식이면 `COMMON_002`
+        - `imageKey`는 `tmp/{사용자 ID}/{임의 ID}`. 내가 받은 키만 인증 등록·수정에 쓸 수 있고, 다른 사람의 키나 없거나 만료된 키는 `COMMON_002`(field: `imageKey`)
       requestBody:
         required: true
         content:
@@ -2634,6 +2635,11 @@ components:
         contentType:
           type: string
           description: 사진 형식
+          enum:
+          - image/jpeg
+          - image/png
+          - image/heic
+          - image/webp
           example: image/jpeg
     CertificationUploadUrlCreateResponse:
       type: object
