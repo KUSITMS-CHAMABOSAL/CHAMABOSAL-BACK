@@ -311,6 +311,22 @@ class DefenseMoktakTest {
         assertThat(ticketCount(userA)).isEqualTo(1);
     }
 
+    /** 결과 화면의 사용 가능 여부도 SHIELD-02 12번을 따른다 (코드리뷰 반영). */
+    @Test
+    void 목탁_수행을_마치면_결과_화면에서_방어권을_쓸_수_없다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        result(userA, round).andExpect(jsonPath("$.data.canUseDefense").value(true));
+
+        moktak(userA, round, 5).andExpect(status().isCreated());
+
+        result(userA, round)
+                .andExpect(jsonPath("$.data.resultType").value("PICKED"))
+                .andExpect(jsonPath("$.data.defenseTicketCount").value(1))
+                .andExpect(jsonPath("$.data.canUseDefense").value(false));
+    }
+
     /** 3번: 결과를 열지 않고 방어권 없이 보내 거부돼도 처음 조회 시각은 남아, 나중에 사서 쓰면 그 시각부터 2분이다 (코드리뷰 반영). */
     @Test
     void 방어권이_없어_거부돼도_처음_조회_시각은_남는다() throws Exception {

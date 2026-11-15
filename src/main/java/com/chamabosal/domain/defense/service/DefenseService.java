@@ -82,8 +82,7 @@ public class DefenseService {
             throw new BaseException(BaseErrorCode.NOT_PICKED_FOR_DEFENSE);
         }
         // 목탁 수행과 같은 방 행 락 안이라 보상 기록과 방어가 엇갈리지 않는다 (SHIELD-02 12번).
-        if (riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
-                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId)) {
+        if (isMoktakDone(userId, roundId)) {
             throw new BaseException(BaseErrorCode.DEFENSE_AFTER_MOKTAK);
         }
 
@@ -103,6 +102,12 @@ public class DefenseService {
         return now.isAfter(round.getPickedSeenAt().plusMinutes(DEFENSE_MINUTES))
                 || roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(round.getRoom().getId(),
                 round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED));
+    }
+
+    /** 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았으면 방어할 수 없다 (SHIELD-02 12번). 결과 화면도 이 값으로 사용 가능 여부를 정한다. */
+    public boolean isMoktakDone(Long userId, Long roundId) {
+        return riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
+                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId);
     }
 
     private User lockUser(Long userId) {

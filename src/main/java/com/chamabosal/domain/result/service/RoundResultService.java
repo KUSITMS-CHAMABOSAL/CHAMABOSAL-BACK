@@ -95,7 +95,8 @@ public class RoundResultService {
                 isMePicked,
                 isMePicked && isPicked ? pickedSeenAt.plusMinutes(DefenseService.DEFENSE_MINUTES) : null,
                 ticketCount,
-                isMePicked && isPicked && ticketCount > 0 && !defenseService.isExpired(round, LocalDateTime.now(clock)),
+                isMePicked && isPicked && ticketCount > 0 && !defenseService.isExpired(round, LocalDateTime.now(clock))
+                        && !defenseService.isMoktakDone(userId, roundId),
                 canTap,
                 isTapExpired,
                 (int) tapRepository.countByRound_IdAndCountGreaterThanAndFromMember_IdNot(roundId, 0, me.getId()));
