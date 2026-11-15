@@ -7,5 +7,6 @@ public enum RiceRefType {
     ROUND,
     ROOM_POT,
     ITEM,
-    DEFENSE
+    DEFENSE,
+    NABAL
 }

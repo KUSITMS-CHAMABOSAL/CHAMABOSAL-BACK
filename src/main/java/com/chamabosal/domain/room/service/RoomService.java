@@ -22,6 +22,7 @@ import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -134,6 +135,23 @@ public class RoomService {
     }
 
     /**
+     * 내 데이터 삭제(USER-05 1번). 사용자 행 락을 잡은 트랜잭션에서 부른다. 참여 중인 방을 방 ID 순서로 하나씩 락을 잡아
+     * 나가기와 같은 처리를 `DATA_DELETED`로 한다. 공양미 기록을 모두 지우므로 나가기 차감은 하지 않는다 (2번).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void leaveAllForDataDeletion(Long userId) {
+        // 락 전에 멤버 엔티티를 읽으면 락 뒤에도 캐시된 옛 상태를 봐서, 방 ID만 먼저 읽고 멤버는 방 락을 잡은 뒤 읽는다 (코드리뷰 반영).
+        for (Long roomId : roomMemberRepository.findCurrentRoomIdsOrderById(userId)) {
+            Room room = roomRepository.findWithLockById(roomId).orElseThrow();
+            if (room.isDeleted()) {
+                continue;
+            }
+            roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
+                    .ifPresent(member -> removeMember(room, member, LeaveType.DATA_DELETED));
+        }
+    }
+
+    /**
      * 방장이 멤버를 내보낸다 (ROOM-08). 마지막 인증·03:00 배치의 투표 시작과 같은 방 행 락 안에서 투표 중인지 확인해서,
      * 투표가 먼저 시작됐으면 막고 내보내기가 먼저면 대상은 명단에 들어가지 않는다 (8번). 방장은 남아 있어 위임·삭제는 없다.
      * 공양미 차감은 Q-94가 정해질 때까지 하지 않는다 (removeMember의 LEFT 조건).
@@ -164,12 +182,12 @@ public class RoomService {
     }
 
     /**
-     * 살아 있는 방의 행 락을 잡은 뒤 부른다. 내 데이터 삭제(USER-05)는 방마다 락을 잡는 공개 메서드를 이 클래스에 추가해 이 처리를 쓴다.
+     * 살아 있는 방의 행 락을 잡은 뒤 부른다.
      * 방이 남아 있으면 남은 멤버 기준으로 투표 시작을 확인한다 (ROOM-07 10번). 투표 마감(VOTE-04, ROOM-07 9번)도 여기에 붙인다.
      */
     void removeMember(Room room, RoomMember member, LeaveType leaveType) {
         LocalDateTime now = LocalDateTime.now(clock);
-        // 스스로 나갈 때만 뺀다. 내보내기는 Q-94가 정해지면, 내 데이터 삭제는 복구하면 공양미를 유지해서 빼지 않는다 (RICE-03).
+        // 스스로 나갈 때만 뺀다. 내보내기는 Q-94가 정해지면, 내 데이터 삭제는 공양미 기록을 모두 지워서 빼지 않는다 (RICE-03, USER-05 2번).
         if (leaveType == LeaveType.LEFT) {
             riceService.deductOnLeave(room, member);
         }

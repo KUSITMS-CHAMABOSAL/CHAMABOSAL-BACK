@@ -10,6 +10,7 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -85,10 +86,20 @@ public class RiceService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void spend(User user, int amount, RiceRefType refType, Long refId) {
-        if (riceHistoryRepository.sumDeltaByUserId(user.getId()) < amount) {
+        spendEach(user, amount, refType, List.of(refId));
+    }
+
+    /**
+     * 같은 가격의 여러 개를 한 번에 산다 (나발 심기 NABAL-03). 전체 금액을 한 번에 확인하고 원인마다 하나씩 기록한다.
+     * spend와 같이 사용자 행 락을 잡은 트랜잭션에서 부른다.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void spendEach(User user, int unitAmount, RiceRefType refType, List<Long> refIds) {
+        if (riceHistoryRepository.sumDeltaByUserId(user.getId()) < (long) unitAmount * refIds.size()) {
             throw new BaseException(BaseErrorCode.RICE_NOT_ENOUGH);
         }
-        riceHistoryRepository.save(RiceHistory.create(user, null, -amount, RiceReason.PURCHASE, refType, refId));
+        refIds.forEach(refId -> riceHistoryRepository.save(
+                RiceHistory.create(user, null, -unitAmount, RiceReason.PURCHASE, refType, refId)));
     }
 
     /** 화면 표시 잔액. 실제 잔액이 음수면 0석이다 (RICE-01-6). */

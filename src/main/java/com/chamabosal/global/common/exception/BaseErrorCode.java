@@ -77,6 +77,9 @@ public enum BaseErrorCode implements ErrorCode {
     // Store
     RICE_NOT_ENOUGH(HttpStatus.CONFLICT, "STORE_001", "공양미가 부족해요."),
 
+    // Nabal
+    NABAL_NOT_FALLEN(HttpStatus.CONFLICT, "NABAL_001", "빠지지 않은 나발은 심을 수 없어요."),
+
     // Defense
     NO_DEFENSE_TICKET(HttpStatus.CONFLICT, "DEFENSE_002", "보유한 방어권이 없어요."),
     NOT_PICKED_FOR_DEFENSE(HttpStatus.FORBIDDEN, "DEFENSE_008", "지목된 사람만 방어권을 쓸 수 있습니다."),

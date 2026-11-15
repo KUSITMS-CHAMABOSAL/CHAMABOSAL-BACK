@@ -62,7 +62,7 @@ erDiagram
 | toss_anon_key | VARCHAR(255) | UK, NULL | 앱인토스 익명 사용자 식별키 (API 필드 `anonKey`). 정리된 사용자는 NULL. 나중에 토스 로그인을 붙이면 `toss_user_key`를 옆에 추가 |
 | is_poke_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 콕 알림 |
 | is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
-| deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 6개월 안에 같은 `toss_anon_key`로 돌아오면 기존 사용자로 복구, 6개월이 지나면 행은 남기고 키를 비운 뒤 신규 사용자로 처리 |
+| deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 삭제하면 `toss_anon_key`를 바로 NULL로 비우고 행은 다른 기록의 참조용으로 남김. 같은 키로 오면 새 사용자 (Q-102) |
 
 - 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (콕은 콕 알림, 나머지는 인증·투표 알림) (Q-98)
   - 사용자가 토스 앱 설정(서비스별 알림)에서 끄면 서버는 알 수 없음 → 발송 응답의 `fail`로만 확인
@@ -84,6 +84,20 @@ erDiagram
   - 조회가 잦으면 나중에 `rice_balance` 캐시 컬럼 추가 검토
 
 ---
+
+### kick_blocks
+
+내 데이터를 삭제한 사람이 다시 가입해 내보내진 방에 들어오는 것을 막는 기록 (USER-05 7번, Q-51)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| anon_key_hash | CHAR(64) | NOT NULL | 삭제 전 `toss_anon_key`의 SHA-256 (16진수). 원래 키는 남기지 않음 |
+| room_id | BIGINT | FK rooms, NOT NULL | 내보내진 방 |
+| expires_at | DATETIME | NOT NULL | 삭제 시각 + 6개월. 입장 판단은 이 시각과 비교 |
+
+- `UNIQUE (anon_key_hash, room_id)`
+- 내보내진 적 있는 사용자만 만듦. 만료되면 CLEAN-02가 지움
 
 ## 3. 방
 
@@ -108,7 +122,7 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
-| user_id | BIGINT | FK users, NULL | 내 데이터 삭제 후 6개월이 지나면 연결을 끊음 (NULL) |
+| user_id | BIGINT | FK users, NULL | 내 데이터를 삭제하면 바로 연결을 끊음 (NULL, USER-05 6번) |
 | nickname | VARCHAR(8) | NOT NULL | 방 안 닉네임 |
 | color | VARCHAR(20) | NOT NULL | `PINK` / `PURPLE` / `MINT` / `YELLOW`. 들어올 때 방 멤버가 안 쓰는 색 중 랜덤. 기본보살은 인증 작성 화면에서만 쓰는 고정 이미지라 저장 안 함 (기획 확정) |
 | joined_at | DATETIME | NOT NULL | 방장 위임 순서("가장 먼저 들어온 멤버") 기준. 다시 들어오면 새로 기록 |
@@ -126,7 +140,7 @@ erDiagram
 - 현재 멤버와 6개월 안에 나간 멤버의 닉네임은 쓸 수 없음 (대소문자 무시, 기획 확정)
   - 6개월 조건은 UNIQUE로 걸 수 없어서 `rooms` 행 락을 잡고 서비스에서 확인 (입장·닉네임 변경 모두). 방 멤버를 추가하거나 바꾸는 코드는 모두 이 락을 먼저 잡아야 함
   - 현재 멤버끼리의 닉네임·색상 중복과 같은 사람의 중복 입장도 같은 `rooms` 행 락 안에서 확인한다. MySQL은 부분 인덱스가 없어 생성 컬럼 UNIQUE가 필요한데, 테스트(H2)와 운영 스키마가 달라져서 넣지 않음 (ROOM-01 계획서)
-- 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지
+- 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지, 또는 `kick_blocks`에 (room_id, 입장자 `toss_anon_key`의 SHA-256 해시) 행이 있고 `expires_at`이 지금보다 뒤인지 (내 데이터 삭제 후 다시 가입한 경우, Q-51)
 - 인덱스: `(room_id, left_at)` → 방의 현재 멤버 목록·인원 수 / `(user_id, left_at)` → 내가 참여 중인 방 목록·개수
   - 인원 수는 컬럼으로 저장하지 않고 매번 셈 (방당 최대 4명이라 인덱스로 몇 행만 읽음)
   - 동시 입장으로 `member_limit`을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
@@ -282,7 +296,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)는 NULL |
 | delta | INT | NOT NULL | +10, +5, +1, +30, -50, -100, -10 … |
 | reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) |
-| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE`. 나가기 차감은 NULL |
+| ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE` / `NABAL`. 나가기 차감은 NULL |
 | ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감(`LEAVE`)은 NULL (다시 들어오면 같은 멤버 행이라 멤버 ID로는 구분 못 함, RICE-03 7번) |
 
 - 잔액 = `SUM(delta) WHERE user_id = ?`, 음수 허용 (나가기 차감만 0석 아래로 내려가지 않게 차감액을 줄임, RICE-03)
@@ -356,6 +370,23 @@ erDiagram
 
 - 6종으로 시작 (정책서상 "예시"라 바뀔 수 있어서 enum 대신 테이블)
 
+### nabal_losses
+
+인증을 빠뜨린 방·회차마다 빠진 나발 한 개 (NABAL-01). 보살은 사용자 단위라 사용자에 묶는다
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK | 확인 저장(`seen-nabal-loss`)에 쓰는 기록 ID |
+| user_id | BIGINT | FK users, NOT NULL | |
+| room_id | BIGINT | FK rooms, NOT NULL | 인증을 빠뜨린 방 |
+| round_date | DATE | NOT NULL | 인증을 빠뜨린 회차 날짜 |
+| nabal_number | INT | NOT NULL | 빠진 나발 번호 0~37 (서버 랜덤, Q-103) |
+| seen_at | DATETIME | NULL | 빠지는 연출을 본 시각 |
+| replanted_at | DATETIME | NULL | 다시 심은 시각. NULL이면 빠진 상태 |
+
+- `UNIQUE (user_id, room_id, round_date)`: 같은 방·회차는 한 번만 빠짐. 인덱스 `(user_id, replanted_at)`
+- 빠진 나발 = `replanted_at IS NULL`. 심기는 장부에 `PURCHASE`, 원인 `NABAL`(이 기록 ID)로 -15석
+
 ### user_items
 
 | 컬럼 | 타입 | 제약 | 설명 |
@@ -413,8 +444,8 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | 인증 사진 | 회차 투표 종료 + 7일 (`NO_VOTE` 회차는 확정 시각(`vote_started_at`) + 7일, 삭제된 방의 마감되지 않은 회차는 방 삭제 시각 + 7일) | 파일 삭제, `image_deleted_at` 기록 |
 | 나간·내보내진 멤버의 사진 | 일반 사진과 같음 (나가도 즉시 삭제 안 함) | 같은 방식 |
 | 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
-| 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. `users` 행은 6개월 보관. 그 안에 돌아오면 공양미·아이템·방어권 그대로 (기획 확정) |
-| 내 데이터 삭제 후 6개월 | `deleted_at` + 6개월 | `users` 행은 남기고 `toss_anon_key` NULL, `room_members.user_id` NULL → 이후 같은 키로 오면 신규 사용자 |
+| 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. 공양미 기록·아이템·방어권·알림 동의·나발 기록 삭제, `toss_anon_key` NULL, `room_members.user_id` NULL. `users` 행은 빈 행으로 남김. 복구 없음 (Q-102) |
+| 내보내기 차단 해시 | `expires_at` (삭제 + 6개월) | `kick_blocks` 행 삭제 (CLEAN-02) |
 | 인증에 안 쓰인 업로드 사진 | 업로드 + 1일 | S3 `tmp/` 경로 수명 주기 규칙으로 자동 삭제 (서버 작업 없음) |
 
 ---

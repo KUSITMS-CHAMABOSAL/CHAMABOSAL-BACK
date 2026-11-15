@@ -12,6 +12,10 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
 
     boolean existsByRound_IdAndMember_IdAndDeletedAtIsNull(Long roundId, Long memberId);
 
+    /** 나발 판정(NABAL-01): 그 방·회차 날짜에 삭제하지 않은 내 인증이 있는지. */
+    boolean existsByRound_Room_IdAndRound_RoundDateAndMember_IdAndDeletedAtIsNull(
+            Long roomId, LocalDate roundDate, Long memberId);
+
     Optional<Certification> findByRound_IdAndMember_IdAndDeletedAtIsNull(Long roundId, Long memberId);
 
     /** 투표가 열리지 않은 회차에서 인증을 삭제한 멤버는 다시 인증할 수 있다 (CERT-01 10번). */

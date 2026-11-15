@@ -81,7 +81,9 @@
 | 사용자 | GET | `/api/users/me` | USER-01 | ✅ |
 | 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 | ✅ |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
-| 사용자 | DELETE | `/api/users/me` | USER-05 |  |
+| 나발 | PUT | `/api/users/me/seen-nabal-loss` | NABAL-02 | ✅ |
+| 나발 | POST | `/api/users/me/nabal-replants` | NABAL-03 | ✅ |
+| 사용자 | DELETE | `/api/users/me` | USER-05 | ✅ |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
@@ -162,6 +164,7 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
   "isVoteOpenedAgreed": false,
   "isCertReminderAgreed": true,
   "equippedItemCodes": ["SANTA_HAT"],
+  "nabal": { "fallenNumbers": [3, 7], "unseenFallenNumbers": [7], "lastNabalLossId": 12, "isFirstLoss": false },
   "rooms": [
     { "roomId": 1, "name": "배달 끊기 방", "nickname": "민지", "color": "PINK", "hasUnseen": false }
   ],
@@ -174,6 +177,38 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 - `rooms`: 현재 멤버인 방만, 들어온 순서. 비어 있으면 첫 화면. `nickname`, `color`는 그 방의 내 보살
 - `hasUnseen`: 안 본 결과나 한 솥 축하가 있음
 - `canCreateRoom`: 참여 중인 방이 2개면 `false`
+- `nabal` (NABAL-02): 내 보살의 나발 상태. 보살은 사용자 단위라 모든 방에 같은 모습
+  - `fallenNumbers`: 빠진 나발 번호(0~37), 오름차순. 비어 있으면 보살, 하나라도 있으면 중생
+  - `unseenFallenNumbers`: 아직 빠지는 연출을 안 본 번호. 있으면 앱 진입 때 연출 → 본 뒤 `PUT /api/users/me/seen-nabal-loss`
+  - `lastNabalLossId`: 확인 저장에 보낼 값. 기록이 없으면 `null`
+  - `isFirstLoss`: 처음 빠짐. `true`면 보살 → 중생 회귀 스토리
+
+### PUT /api/users/me/seen-nabal-loss
+
+NABAL-02. 나발 빠지는 연출을 본 뒤 확인을 저장합니다.
+
+```json
+{ "nabalLossId": 12 }
+```
+
+- 보낸 기록과 그 이전 기록을 모두 본 것으로 처리. 화면을 그린 뒤 새로 빠진 나발은 다음에 다시 옴
+- 에러: `COMMON_002` (400, `nabalLossId` 없음)
+
+### POST /api/users/me/nabal-replants
+
+NABAL-03. 화면에서 고른 빠진 나발을 개당 15석으로 다시 심습니다.
+
+```json
+// request
+{ "nabalNumbers": [3, 7] }
+
+// response 201
+{ "riceBalance": 10, "fallenNumbers": [] }
+```
+
+- 하나라도 빠지지 않은 나발이면 아무것도 심지 않음. 빠진 나발을 모두 심으면 보살로 돌아옴
+- 확인 순서: `COMMON_002`(빈 목록, 0~37 밖, 중복) → `NABAL_001` → `STORE_001`
+- 에러: `COMMON_002` (400), `NABAL_001` (409, 빠지지 않은 나발), `STORE_001` (409, 공양미 부족)
 
 ### GET /api/rooms/{roomId}/members/me/calendar
 
@@ -210,7 +245,7 @@ USER-03. 앱 안의 알림 설정을 바꿉니다. 보낸 값만 바꿉니다.
 
 ### DELETE /api/users/me
 
-USER-05. 내 데이터를 삭제합니다. 모든 방에서 나가고 사진은 바로 삭제합니다. 6개월 안에 돌아오면 복구됩니다.
+USER-05. 내 데이터를 바로 삭제합니다. 모든 방에서 나가고 공양미·아이템·방어권·알림 동의·나발·사진을 지웁니다. 투표 결과와 지난 회차 한 줄·금액은 "떠난 보살"로 남습니다. 복구는 없고, 같은 토스 계정으로 다시 로그인하면 새 사용자입니다 (Q-102).
 
 ### POST /api/users/me/push-agreements
 
