@@ -122,7 +122,7 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
-| user_id | BIGINT | FK users, NULL | 내 데이터 삭제 후 6개월이 지나면 연결을 끊음 (NULL) |
+| user_id | BIGINT | FK users, NULL | 내 데이터를 삭제하면 바로 연결을 끊음 (NULL, USER-05 6번) |
 | nickname | VARCHAR(8) | NOT NULL | 방 안 닉네임 |
 | color | VARCHAR(20) | NOT NULL | `PINK` / `PURPLE` / `MINT` / `YELLOW`. 들어올 때 방 멤버가 안 쓰는 색 중 랜덤. 기본보살은 인증 작성 화면에서만 쓰는 고정 이미지라 저장 안 함 (기획 확정) |
 | joined_at | DATETIME | NOT NULL | 방장 위임 순서("가장 먼저 들어온 멤버") 기준. 다시 들어오면 새로 기록 |
