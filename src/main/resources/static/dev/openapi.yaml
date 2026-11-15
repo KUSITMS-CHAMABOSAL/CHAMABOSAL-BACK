@@ -1553,6 +1553,7 @@ paths:
 
         - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 `DELETE`를 부른다.
         - `riceEarned`, `potEarned`: 이 인증에 처음 리액션을 남길 때만 1, 바꾸거나 다시 남기면 0. 방 인원이 1명이면 0 (RICE-01)
+        - 인증이 속한 회차가 인증 중일 때만 남기거나 바꿀 수 있다. 투표가 열리지 않은 회차도 확정되면 마감한다 (Q-33 임시 결정).
         - 확인 순서: 요청 형식(`COMMON_002`) → 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`)
       parameters:
       - *id003
@@ -1689,6 +1690,7 @@ paths:
         같은 방 멤버를 콕 찌른다. 인증 여부와 회차 상태에 상관없이 언제나 보낼 수 있다. 연타는 화면에서 1~2초 모아 횟수로 보내고, 서버는 받은 횟수를 더한다.
 
         - `count`: 요청 한 번에 1~30. 앱 안 누적 횟수에는 제한이 없다.
+        - 확인 순서: `COMMON_002` → `ROOM_005` → `ROOM_002` → `POKE_001` → `ROOM_009`
       parameters:
       - *id001
       requestBody:
@@ -4241,7 +4243,7 @@ components:
       value:
         success: false
         code: POKE_001
-        message: 나를 찌를 수 없습니다.
+        message: 나를 찌를 수 없어요.
     POT_001:
       summary: POT_001 (404)
       value:
@@ -4253,13 +4255,13 @@ components:
       value:
         success: false
         code: REACT_001
-        message: 내 인증에는 리액션을 남길 수 없습니다.
+        message: 내 인증에는 리액션을 남길 수 없어요.
     REACT_002:
       summary: REACT_002 (409)
       value:
         success: false
         code: REACT_002
-        message: 투표가 시작되어 리액션을 바꿀 수 없습니다.
+        message: 투표가 시작되어 리액션을 바꿀 수 없어요.
     RESULT_001:
       summary: RESULT_001 (409)
       value:
