@@ -320,6 +320,7 @@ erDiagram
 | completed_at | DATETIME | NULL | 가득 찬 시각. NULL이면 진행 중인 솥 |
 
 - `UNIQUE (room_id, seq)`. 진행 중인 솥은 방마다 1개
+- 첫 솥은 방을 만들 때가 아니라 그 방에 처음 적립할 때 만든다. 솥 행이 없으면 진행도 0석, 목표는 `rooms.pot_goal_amount`로 본다 (POT-01)
 - 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%) → `rooms.pot_completed_count` +1 → 방 기간 종료. 방장이 연장하면 다음 솥을 같은 목표, 넘친 석으로 생성 (POT-01)
 
 ### pot_contributions
@@ -334,7 +335,6 @@ erDiagram
 | ref_id | BIGINT | NOT NULL | 인증, 투표, 톡톡 ID (리액션은 리액션을 남긴 인증 ID) |
 
 - 인증이 지워질 때: 그 인증이 들어간 솥이 `completed_at IS NULL`이면 차감 (0 아래로는 안 내려감), 이미 찬 솥이면 차감 안 함
-- 넘쳐서 두 솥에 나뉘어 들어간 경우는 🛠 가득 찬 솥 기준으로 기록 (이미 보상이 나갔으니 차감 대상 아님)
 
 ---
 
