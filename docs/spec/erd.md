@@ -259,7 +259,7 @@ erDiagram
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NOT NULL | 두드린 사람 |
 | count | INT | NOT NULL | 0~999 |
-| played_at | DATETIME | NULL | 받은 사람 화면에서 재생된 시각. NULL이면 아직 안 본 톡톡 → 다음에 열 때 재생 |
+| played_at | DATETIME | NULL | 전달 뒤 받은 사람의 앱 진입 화면에서 재생된 시각. NULL이면 아직 안 본 톡톡 → 다음에 열 때 재생 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트
 - `count`가 1 이상이면 보낸 사람에게 톡톡 완료 보상(`rice_histories.reason = TAP`, 한 솥 +5) 적립 (RICE-01 4번)
