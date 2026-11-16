@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record RoomCreateRequest(
-        @Schema(description = "방 이름. 앞뒤 띄어쓰기를 지운 뒤 1~8자, 한글·영문·숫자·띄어쓰기", example = "배달 끊기 방")
+        @Schema(description = "방 이름. 앞뒤 띄어쓰기를 지운 뒤 1~12자, 한글·영문·숫자·띄어쓰기", example = "배달 끊기 방")
         @NotNull(message = "방 이름을 입력해 주세요.")
         String name,
 
@@ -28,11 +28,15 @@ public record RoomCreateRequest(
         @Max(value = POT_GOAL_MAX, message = POT_GOAL_MESSAGE)
         Integer potGoalAmount,
 
-        @Schema(description = "이 방에서 쓸 닉네임. 한글·영문·숫자 1~8자", example = "민지")
+        @Schema(description = "이 방에서 쓸 닉네임. 앞뒤 띄어쓰기를 지운 뒤 한글·영문·숫자 1~8자", example = "민지")
         @NotNull(message = "닉네임을 입력해 주세요.")
         @Pattern(regexp = RoomNicknameUpdateRequest.NICKNAME_PATTERN, message = RoomNicknameUpdateRequest.NICKNAME_MESSAGE)
         String nickname
 ) {
+
+    public RoomCreateRequest {
+        nickname = RoomNicknameUpdateRequest.normalizeNickname(nickname);
+    }
 
     public static final int POT_GOAL_MIN = 300;
     public static final int POT_GOAL_MAX = 700;

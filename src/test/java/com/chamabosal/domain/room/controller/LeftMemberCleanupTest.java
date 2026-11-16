@@ -107,7 +107,7 @@ class LeftMemberCleanupTest extends RoomTestSupport {
     }
 
     @Test
-    void 월말에_나간_멤버도_닉네임이_풀리는_시각부터_정리_대상이다() {
+    void 월말에_나간_멤버도_다시_들어올_수_없게_된_시각부터_정리_대상이다() {
         Room room = createRoom(4);
         RoomMember a = addMember(room, newUser(), "민지");
         Certification certification = certifyFailed(room, a);
@@ -115,7 +115,7 @@ class LeftMemberCleanupTest extends RoomTestSupport {
         leave(a.getId(), leftAt, LeaveType.LEFT);
         LocalDateTime afterRetention = LocalDateTime.of(2027, 2, 28, 12, 10);
         clock.set(afterRetention);
-        assertThat(roomMemberRepository.findById(a.getId()).orElseThrow().holdsNickname(afterRetention)).isFalse();
+        assertThat(roomMemberRepository.findById(a.getId()).orElseThrow().canRejoin(afterRetention)).isFalse();
 
         leftMemberCleanupScheduler.clearExpiredRecords();
 
