@@ -353,6 +353,22 @@ class CertificationEditTest {
     }
 
     @Test
+    void VOTE_01_4_투표가_시작된_뒤_인증을_삭제하면_거부되고_판정에_쓰는_인증은_그대로다() throws Exception {
+        clock.set(DEC_1.plusDays(1).atTime(2, 55));
+        Long id = certify(userA, room, endured("집밥 해먹었어요"));
+        voteStartService.startAtDeadline(room.getId(), onlyRound(room).getId(), DEC_1.plusDays(1).atTime(3, 0));
+
+        clock.set(DEC_1.plusDays(1).atTime(3, 1));
+        remove(userA, id)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CERT_005"));
+
+        Certification saved = certificationRepository.findById(id).orElseThrow();
+        assertThat(saved.isDeleted()).isFalse();
+        assertThat(saved.getMemo()).isEqualTo("집밥 해먹었어요");
+    }
+
+    @Test
     void RICE_02_1_인증을_삭제하면_개인_공양미를_회수한다() throws Exception {
         Long id = certify(userA, room, endured("집밥 해먹었어요"));
 
