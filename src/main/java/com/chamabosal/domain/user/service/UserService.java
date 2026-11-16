@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
-    private static final String UNSUPPORTED_TYPE_MESSAGE = "동의를 받지 않는 알림 종류입니다.";
+    private static final String UNSUPPORTED_TYPE_MESSAGE = "동의를 받지 않는 알림 종류예요.";
 
     private final UserRepository userRepository;
     private final PushAgreementRepository pushAgreementRepository;

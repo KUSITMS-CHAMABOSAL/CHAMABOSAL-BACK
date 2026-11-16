@@ -42,9 +42,9 @@ public class RoomService {
     public static final int MAX_JOINED_ROOMS = 2;
     private static final int ROOM_NAME_MAX_LENGTH = 12;
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
-    private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~12자입니다.";
-    private static final String SEEN_POT_MESSAGE = "본 완성 횟수가 방의 완성 횟수보다 큽니다.";
-    private static final String SEEN_RESULT_MESSAGE = "이 방의 발표된 회차가 아닙니다.";
+    private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~12자예요.";
+    private static final String SEEN_POT_MESSAGE = "본 완성 횟수가 방의 완성 횟수보다 커요.";
+    private static final String SEEN_RESULT_MESSAGE = "이 방의 발표된 회차가 아니에요.";
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;

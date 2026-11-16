@@ -22,5 +22,5 @@ public record RoomNicknameUpdateRequest(
         return nickname == null ? null : nickname.strip();
     }
 
-    public static final String NICKNAME_MESSAGE = "닉네임은 한글, 영문, 숫자 1~8자입니다.";
+    public static final String NICKNAME_MESSAGE = "닉네임은 한글, 영문, 숫자 1~8자예요.";
 }

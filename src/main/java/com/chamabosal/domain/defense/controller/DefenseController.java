@@ -40,7 +40,7 @@ public class DefenseController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("방어권을 샀습니다.", defenseService.purchase(userId)));
+                .body(Response.created("방어권을 샀어요.", defenseService.purchase(userId)));
     }
 
     @PostMapping("/rounds/{roundId}/defenses")
@@ -66,6 +66,6 @@ public class DefenseController {
             @PathVariable Long roundId
     ) {
         defenseService.use(userId, roundId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("방어권을 썼습니다.", null));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("방어권을 썼어요.", null));
     }
 }

@@ -12,8 +12,8 @@ public record PokeSendRequest(
 
         @Schema(description = "화면에서 1~2초 모아 보낸 횟수 1~30", example = "5")
         @NotNull(message = "콕 횟수를 입력해 주세요.")
-        @Min(value = 1, message = "콕 횟수는 1~30번입니다.")
-        @Max(value = 30, message = "콕 횟수는 1~30번입니다.")
+        @Min(value = 1, message = "콕 횟수는 1~30번이에요.")
+        @Max(value = 30, message = "콕 횟수는 1~30번이에요.")
         Integer count
 ) {
 }

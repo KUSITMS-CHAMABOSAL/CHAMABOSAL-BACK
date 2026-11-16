@@ -14,11 +14,11 @@
 ### 응답 형식
 
 ```json
-{ "success": true, "code": "200", "message": "요청이 성공했습니다.", "data": { } }
+{ "success": true, "code": "200", "message": "요청이 성공했어요.", "data": { } }
 ```
 
 ```json
-{ "success": false, "code": "ROOM_004", "message": "이미 쓰는 닉네임입니다.", "field": "nickname" }
+{ "success": false, "code": "ROOM_004", "message": "이미 쓰는 닉네임이에요.", "field": "nickname" }
 ```
 
 - 새로 만들면 201, 조회·수정·삭제는 200입니다. 이미 있어서 새로 만들지 않고 기존 값을 돌려주면 200입니다.

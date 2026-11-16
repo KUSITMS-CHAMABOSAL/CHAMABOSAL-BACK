@@ -229,15 +229,16 @@ return ResponseEntity.ok(Response.ok(response));   // 메시지 없이
 - `code`는 프론트와의 약속이므로 한 번 정하면 바꾸지 않고, 중복되면 서버가 기동되지 않음
 - 실패 시 `throw new BaseException(BaseErrorCode.ROOM_NOT_FOUND)`처럼 예외를 던짐
 - 정의된 에러코드는 `/docs/error-codes` 페이지에서 자동으로 확인 가능 (별도 문서 수정 불필요)
+- 에러·성공·입력값 검증 메시지는 해요체("~요")로 작성 (토스 말투, 화면에 그대로 띄워도 되게)
 
 ```java
 public enum BaseErrorCode implements ErrorCode {
     // Common
-    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_002", "요청 값이 올바르지 않습니다."),
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_002", "요청 값이 올바르지 않아요."),
     ...
 
     // Room
-    ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방입니다."),
+    ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방이에요."),
 
     ;
     ...

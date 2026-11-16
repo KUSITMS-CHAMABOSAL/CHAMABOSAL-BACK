@@ -57,7 +57,7 @@ public class VoteController {
             @RequestBody @Valid VoteSubmitRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("투표했습니다.", voteSubmitService.submit(userId, roundId, request)));
+                .body(Response.created("투표했어요.", voteSubmitService.submit(userId, roundId, request)));
     }
 
     @GetMapping("/rooms/{roomId}/vote")

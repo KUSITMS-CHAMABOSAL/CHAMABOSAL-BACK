@@ -13,7 +13,7 @@ public record PushAgreementCreateRequest(
         @Schema(description = "토스 알림 동의 결과 (앱인토스 값 그대로)",
                 allowableValues = {"newAgreement", "alreadyAgreed", "agreementRejected"}, example = "newAgreement")
         @NotNull(message = "동의 결과를 입력해 주세요.")
-        @Pattern(regexp = "newAgreement|alreadyAgreed|agreementRejected", message = "동의 결과가 올바르지 않습니다.")
+        @Pattern(regexp = "newAgreement|alreadyAgreed|agreementRejected", message = "동의 결과가 올바르지 않아요.")
         String result
 ) {
 
