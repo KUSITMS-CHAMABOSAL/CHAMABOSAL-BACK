@@ -1,6 +1,8 @@
 package com.chamabosal.domain.room.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,6 +24,11 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.store.entity.Item;
+import com.chamabosal.domain.store.entity.ItemSlot;
+import com.chamabosal.domain.store.entity.UserItem;
+import com.chamabosal.domain.store.repository.ItemRepository;
+import com.chamabosal.domain.store.repository.UserItemRepository;
 import com.chamabosal.domain.tap.entity.Tap;
 import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.user.entity.User;
@@ -31,6 +38,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -51,6 +59,12 @@ class RoomTodayTest extends RoomTestSupport {
 
     @Autowired
     PokeRepository pokeRepository;
+
+    @Autowired
+    ItemRepository itemRepository;
+
+    @Autowired
+    UserItemRepository userItemRepository;
 
     private User userA;
     private User userB;
@@ -81,6 +95,9 @@ class RoomTodayTest extends RoomTestSupport {
         nabalLossRepository.deleteAll();
         reactionRepository.deleteAll();
         pokeRepository.deleteAll();
+        userItemRepository.deleteAll();
+        // 시작 때 넣은 카탈로그는 남기고 테스트가 만든 아이템만 지운다.
+        itemRepository.findByCode("EQUIP_HAT").ifPresent(itemRepository::delete);
     }
 
     @Test
@@ -376,6 +393,29 @@ class RoomTodayTest extends RoomTestSupport {
         today(userA).andExpect(jsonPath("$.data.me.receivedPokeCount").value(5));
         today(userB).andExpect(jsonPath("$.data.me.receivedPokeCount").value(4));
         today(userC).andExpect(jsonPath("$.data.me.receivedPokeCount").value(0));
+    }
+
+    @Test
+    void STORE_03_5_착용하면_두_방의_오늘_탭에서_같은_착용_목록이_보인다() throws Exception {
+        Room otherRoom = createRoom(4);
+        RoomMember otherA = addMember(otherRoom, userA, "다른방");
+        Item hat = itemRepository.save(Item.create("EQUIP_HAT", "모자", 100, ItemSlot.HAT, 99));
+        UserItem owned = UserItem.acquire(userA, hat);
+        owned.unequip();
+        userItemRepository.save(owned);
+
+        mockMvc.perform(put("/api/users/me/equipped-items").header("Authorization", bearer(userA))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itemIds\": [" + hat.getId() + "]}"))
+                .andExpect(status().isOk());
+
+        today(userA).andExpect(jsonPath("$.data.members[?(@.memberId == " + memberA.getId() + ")].equippedItemCodes[*]")
+                .value(contains("EQUIP_HAT")));
+        today(userB).andExpect(jsonPath("$.data.members[?(@.memberId == " + memberA.getId() + ")].equippedItemCodes[*]")
+                .value(contains("EQUIP_HAT")));
+        mockMvc.perform(get("/api/rooms/{roomId}/today", otherRoom.getId()).header("Authorization", bearer(userA)))
+                .andExpect(jsonPath("$.data.members[?(@.memberId == " + otherA.getId() + ")].equippedItemCodes[*]")
+                        .value(contains("EQUIP_HAT")));
     }
 
     private RoomMember join(User user, String nickname, LocalDateTime joinedAt) {
