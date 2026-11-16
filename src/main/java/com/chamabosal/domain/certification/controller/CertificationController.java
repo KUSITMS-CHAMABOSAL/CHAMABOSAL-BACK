@@ -62,7 +62,7 @@ public class CertificationController {
             @RequestBody @Valid PhotoUploadUrlRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("업로드 URL을 발급했습니다.",
+                .body(Response.created("업로드 URL을 발급했어요.",
                         certificationPhotoService.issueUploadUrl(userId, request.contentType())));
     }
 
@@ -126,7 +126,7 @@ public class CertificationController {
         // 회차는 요청을 받은 시각으로 정해서, 사진을 옮기기 전에 읽는다 (CERT-01 7번).
         LocalDateTime requestedAt = LocalDateTime.now(clock);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("인증했습니다.", certificationPhotoService.withPhoto(userId, request.imageKey(),
+                .body(Response.created("인증했어요.", certificationPhotoService.withPhoto(userId, request.imageKey(),
                         photo -> certificationService.create(userId, roomId, request, photo, requestedAt))));
     }
 
@@ -155,7 +155,7 @@ public class CertificationController {
             @PathVariable Long certificationId,
             @RequestBody @Valid CertificationUpdateRequest request
     ) {
-        return ResponseEntity.ok(Response.ok("인증을 수정했습니다.",
+        return ResponseEntity.ok(Response.ok("인증을 수정했어요.",
                 certificationPhotoService.withPhoto(userId, request.imageKey(),
                         photo -> certificationService.update(userId, certificationId, request, photo))));
     }
@@ -181,6 +181,6 @@ public class CertificationController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
             @PathVariable Long certificationId
     ) {
-        return ResponseEntity.ok(Response.ok("인증을 삭제했습니다.", certificationService.delete(userId, certificationId)));
+        return ResponseEntity.ok(Response.ok("인증을 삭제했어요.", certificationService.delete(userId, certificationId)));
     }
 }

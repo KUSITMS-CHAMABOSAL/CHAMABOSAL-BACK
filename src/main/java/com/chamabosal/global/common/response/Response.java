@@ -9,7 +9,7 @@ public record Response<T>(
         String message,
         @JsonInclude(JsonInclude.Include.NON_NULL) T data
 ) {
-    private static final String DEFAULT_MESSAGE = "요청이 성공했습니다.";
+    private static final String DEFAULT_MESSAGE = "요청이 성공했어요.";
 
     public static <T> Response<T> ok(T data) {
         return of(HttpStatus.OK, DEFAULT_MESSAGE, data);

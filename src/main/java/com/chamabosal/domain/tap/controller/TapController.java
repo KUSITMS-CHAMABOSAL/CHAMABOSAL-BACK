@@ -62,7 +62,7 @@ public class TapController {
             @RequestBody @Valid TapSendRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("톡톡했습니다.", tapService.send(userId, roundId, request.count())));
+                .body(Response.created("톡톡했어요.", tapService.send(userId, roundId, request.count())));
     }
 
     @GetMapping("/rounds/{roundId}/taps/received")
@@ -127,6 +127,6 @@ public class TapController {
             @Valid @RequestBody MoktakCompleteRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("목탁 수행을 마쳤습니다.", moktakService.complete(userId, roundId, request.count())));
+                .body(Response.created("목탁 수행을 마쳤어요.", moktakService.complete(userId, roundId, request.count())));
     }
 }

@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NabalService {
 
     public static final int REPLANT_PRICE = 15;
-    private static final String DUPLICATE_MESSAGE = "같은 나발을 두 번 고를 수 없습니다.";
+    private static final String DUPLICATE_MESSAGE = "같은 나발을 두 번 고를 수 없어요.";
 
     private final UserRepository userRepository;
     private final NabalLossRepository nabalLossRepository;

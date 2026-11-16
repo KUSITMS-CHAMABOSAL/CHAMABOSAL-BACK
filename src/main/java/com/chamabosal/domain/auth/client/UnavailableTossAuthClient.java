@@ -8,6 +8,6 @@ public class UnavailableTossAuthClient implements TossAuthClient {
 
     @Override
     public String exchangeAnonKey(String authorizationCode) {
-        throw new BaseException(BaseErrorCode.TOSS_API_FAILED, "이 환경에서는 앱인토스 로그인을 사용할 수 없습니다.");
+        throw new BaseException(BaseErrorCode.TOSS_API_FAILED, "이 환경에서는 앱인토스 로그인을 쓸 수 없어요.");
     }
 }

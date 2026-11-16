@@ -96,7 +96,7 @@ public class VoteSubmitService {
         boolean allBosalHasTarget = request.targetType() == VoteTargetType.ALL_BOSAL && request.targetMemberId() != null;
         if (memberTargetMissing || allBosalHasTarget) {
             throw BaseException.withField(BaseErrorCode.INVALID_REQUEST,
-                    "targetType이 MEMBER면 targetMemberId가 필요하고, ALL_BOSAL이면 보낼 수 없습니다.", "targetMemberId");
+                    "targetType이 MEMBER면 targetMemberId가 필요하고, ALL_BOSAL이면 보낼 수 없어요.", "targetMemberId");
         }
     }
 

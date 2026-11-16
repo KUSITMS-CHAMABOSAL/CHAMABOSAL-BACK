@@ -14,5 +14,5 @@ public record NabalReplantRequest(
                 @Max(value = 37, message = NABAL_NUMBER_MESSAGE) Integer> nabalNumbers
 ) {
 
-    public static final String NABAL_NUMBER_MESSAGE = "나발 번호는 0~37입니다.";
+    public static final String NABAL_NUMBER_MESSAGE = "나발 번호는 0~37이에요.";
 }

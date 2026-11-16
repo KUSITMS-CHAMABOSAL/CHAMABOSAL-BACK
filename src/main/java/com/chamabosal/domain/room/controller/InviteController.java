@@ -73,7 +73,7 @@ public class InviteController {
         CreationResult<InviteTokenResponse> result = inviteService.issueToken(userId, roomId);
         if (result.isCreated()) {
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Response.created("초대 토큰을 만들었습니다.", result.response()));
+                    .body(Response.created("초대 토큰을 만들었어요.", result.response()));
         }
         return ResponseEntity.ok(Response.ok(result.response()));
     }
@@ -155,7 +155,7 @@ public class InviteController {
         CreationResult<InviteJoinResponse> result = inviteService.join(userId, token, request);
         if (result.isCreated()) {
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Response.created("방에 들어왔습니다.", result.response()));
+                    .body(Response.created("방에 들어왔어요.", result.response()));
         }
         return ResponseEntity.ok(Response.ok(result.response()));
     }

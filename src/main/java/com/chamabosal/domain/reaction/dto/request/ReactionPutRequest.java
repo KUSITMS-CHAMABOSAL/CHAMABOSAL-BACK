@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 public record ReactionPutRequest(
         @Schema(description = "GOOD(잘 참았어요) 또는 BAD(아쉬워요)", allowableValues = {"GOOD", "BAD"}, example = "GOOD")
         @NotNull(message = "리액션 종류를 입력해 주세요.")
-        @Pattern(regexp = "GOOD|BAD", message = "리액션 종류는 GOOD 또는 BAD입니다.")
+        @Pattern(regexp = "GOOD|BAD", message = "리액션 종류는 GOOD 또는 BAD예요.")
         String type
 ) {
 
