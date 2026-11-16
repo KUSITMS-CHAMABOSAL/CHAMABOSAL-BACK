@@ -8,6 +8,10 @@ import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
+import com.chamabosal.domain.poke.repository.PokeRepository;
+import com.chamabosal.domain.reaction.entity.Reaction;
+import com.chamabosal.domain.reaction.entity.ReactionType;
+import com.chamabosal.domain.reaction.repository.ReactionRepository;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.CertificationInfo;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.Entry;
@@ -58,6 +62,8 @@ public class RoomTodayService {
     private final TapRepository tapRepository;
     private final RoomPotRepository roomPotRepository;
     private final NabalLossRepository nabalLossRepository;
+    private final ReactionRepository reactionRepository;
+    private final PokeRepository pokeRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -88,8 +94,9 @@ public class RoomTodayService {
         // 확인 시트가 "등록하면 바로 투표가 시작된다"고 안내해서, 투표가 시작되는 경우만 표시한다 (10번, WF 55).
         // 3명 미만이거나 이미 투표 없음이 된 회차는 전원이 인증해도 투표가 열리지 않는다 (VOTE-01 4번).
         boolean startsVote = members.size() >= VoteStartService.MIN_VOTERS && round.map(Round::isCertifying).orElse(true);
+        int receivedPokeCount = round.map(found -> pokeRepository.sumReceived(found.getId(), me.getId())).orElse(0);
         Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
-                && certifiedCount == members.size() - 1, 0);
+                && certifiedCount == members.size() - 1, receivedPokeCount);
         return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), pot(room),
                 roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me, now));
     }
@@ -110,6 +117,10 @@ public class RoomTodayService {
                 room.getId(), CertificationResult.ENDURED, month.atDay(1), month.atEndOfMonth()));
         Map<Long, Long> picked = toCounts(roundRepository.countPickedByMemberInPeriod(
                 room.getId(), RoundResultType.PICKED, month.atDay(1), month.atEndOfMonth()));
+        Map<Long, ReactionType> myReactions = certifications.isEmpty() ? Map.of()
+                : reactionRepository.findByMember_IdAndCertification_IdIn(me.getId(), certifications.values().stream()
+                        .map(Certification::getId).toList()).stream()
+                .collect(Collectors.toMap(reaction -> reaction.getCertification().getId(), Reaction::getType));
         Map<Long, List<Integer>> nabals = nabalLossRepository.findByUser_IdInAndReplantedAtIsNull(
                         members.stream().map(member -> member.getUser().getId()).toList()).stream()
                 .collect(Collectors.groupingBy(loss -> loss.getUser().getId(),
@@ -120,12 +131,14 @@ public class RoomTodayService {
                         member.getId().equals(me.getId()),
                         endured.getOrDefault(member.getId(), 0L).intValue(),
                         picked.getOrDefault(member.getId(), 0L).intValue(),
-                        certificationInfo(certifications.get(member.getId()), now)))
+                        certificationInfo(certifications.get(member.getId()), myReactions, now)))
                 .toList();
     }
 
-    private CertificationInfo certificationInfo(Certification certification, LocalDateTime now) {
-        return CertificationInfo.from(certification, certificationPhotoService.viewUrl(certification), now);
+    private CertificationInfo certificationInfo(Certification certification, Map<Long, ReactionType> myReactions,
+                                                LocalDateTime now) {
+        return CertificationInfo.from(certification, certificationPhotoService.viewUrl(certification),
+                certification == null ? null : myReactions.get(certification.getId()), now);
     }
 
     /** 지금 쌓고 있는 솥. 첫 적립 전에는 솥 행이 없어 0석과 방 목표 석으로 돌려준다 (POT-01). */

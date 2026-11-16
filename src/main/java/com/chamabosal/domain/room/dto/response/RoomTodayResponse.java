@@ -3,6 +3,7 @@ package com.chamabosal.domain.room.dto.response;
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.reaction.entity.ReactionType;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.round.entity.RoundStatus;
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 오늘 탭 (ROOM-02). 아직 없는 기능의 값은 임시 값이다: 받은 콕 수는 0, 내 리액션은 null, 착용 아이템은 빈 배열.
+ * 오늘 탭 (ROOM-02). 착용 아이템은 곳간(STORE-03) 전이라 빈 배열이다.
  */
 public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Member> members, Me me, Entry entry) {
 
@@ -54,13 +55,14 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
             @Schema(description = "FAILED일 때만") Integer spentAmount,
             @Schema(description = "사진이 없거나 지웠으면 null") String imageUrl,
             LocalDateTime certifiedAt,
-            @Schema(description = "내 리액션. 리액션(REACT-01) 전에는 null") String myReaction,
+            @Schema(description = "내가 남긴 리액션. 없으면 null. 누가 눌렀는지는 돌려주지 않음") ReactionType myReaction,
             @Schema(description = "수정·삭제 마감 시각 (인증 후 10분)") LocalDateTime editableUntil,
             @Schema(description = "수정·삭제할 수 있으면 null, 아니면 TIME_OVER 또는 VOTE_STARTED") String lockReason
     ) {
 
         /** 인증 전이면 null. 잠금 사유는 CERT-03 잠금을 화면 값으로 바꾼다 (6번). */
-        public static CertificationInfo from(Certification certification, String imageUrl, LocalDateTime now) {
+        public static CertificationInfo from(Certification certification, String imageUrl, ReactionType myReaction,
+                                             LocalDateTime now) {
             if (certification == null) {
                 return null;
             }
@@ -70,7 +72,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
                 case VOTE_STARTED -> "VOTE_STARTED";
             };
             return new CertificationInfo(certification.getId(), certification.getResult(), certification.getMemo(),
-                    certification.getSpentAmount(), imageUrl, certification.getCertifiedAt(), null,
+                    certification.getSpentAmount(), imageUrl, certification.getCertifiedAt(), myReaction,
                     certification.getEditableUntil(), lockReason);
         }
     }
@@ -79,7 +81,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
             @Schema(description = "내가 등록하면 바로 투표가 시작됨. 등록 전 확인 시트(WF 55)를 띄울 때 씀. "
                     + "인증이 열려 있고, 나만 인증 전이고, 현재 멤버 3명 이상이고, 회차가 인증 중일 때만 true. "
                     + "3명 미만 방은 전원 인증해도 투표가 열리지 않아 false") boolean isLastCertifier,
-            @Schema(description = "이번 회차에 받은 콕 수. 콕(POKE-01) 전에는 0") int receivedPokeCount
+            @Schema(description = "이번 회차에 받은 콕 수. 누가 찔렀는지는 돌려주지 않음") int receivedPokeCount
     ) {
     }
 

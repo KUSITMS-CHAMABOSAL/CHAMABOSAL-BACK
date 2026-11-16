@@ -8,7 +8,12 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
+import com.chamabosal.domain.poke.entity.Poke;
+import com.chamabosal.domain.poke.repository.PokeRepository;
 import com.chamabosal.domain.pot.entity.RoomPot;
+import com.chamabosal.domain.reaction.entity.Reaction;
+import com.chamabosal.domain.reaction.entity.ReactionType;
+import com.chamabosal.domain.reaction.repository.ReactionRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
@@ -41,6 +46,12 @@ class RoomTodayTest extends RoomTestSupport {
     @Autowired
     TapRepository tapRepository;
 
+    @Autowired
+    ReactionRepository reactionRepository;
+
+    @Autowired
+    PokeRepository pokeRepository;
+
     private User userA;
     private User userB;
     private User userC;
@@ -68,6 +79,8 @@ class RoomTodayTest extends RoomTestSupport {
     void cleanUp() {
         tapRepository.deleteAll();
         nabalLossRepository.deleteAll();
+        reactionRepository.deleteAll();
+        pokeRepository.deleteAll();
     }
 
     @Test
@@ -330,6 +343,39 @@ class RoomTodayTest extends RoomTestSupport {
         today(userA)
                 .andExpect(jsonPath("$.data.pot.amount").value(186))
                 .andExpect(jsonPath("$.data.pot.goalAmount").value(300));
+    }
+
+    @Test
+    void 인증마다_내가_남긴_리액션만_돌려준다() throws Exception {
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        Certification certificationB = certify(round, memberB, NOW.minusMinutes(5));
+        reactionRepository.save(Reaction.create(certificationB, memberA, ReactionType.GOOD));
+
+        today(userA).andExpect(jsonPath("$.data.members[1].certification.myReaction").value("GOOD"));
+        today(userC).andExpect(jsonPath("$.data.members[1].certification.myReaction").doesNotExist());
+    }
+
+    @Test
+    void 다른_멤버가_남긴_리액션은_내_리액션으로_보이지_않는다() throws Exception {
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        Certification certificationB = certify(round, memberB, NOW.minusMinutes(5));
+        reactionRepository.save(Reaction.create(certificationB, memberA, ReactionType.BAD));
+
+        today(userC).andExpect(jsonPath("$.data.members[1].certification.myReaction").doesNotExist());
+    }
+
+    @Test
+    void 이번_회차에_내가_받은_콕_수를_돌려준다() throws Exception {
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        pokeRepository.save(Poke.create(round, memberB, memberA, 3));
+        pokeRepository.save(Poke.create(round, memberC, memberA, 2));
+        pokeRepository.save(Poke.create(round, memberA, memberB, 4));
+        Round yesterday = saveRound(room, TODAY.minusDays(1), RoundStatus.ANNOUNCED);
+        pokeRepository.save(Poke.create(yesterday, memberB, memberA, 7));
+
+        today(userA).andExpect(jsonPath("$.data.me.receivedPokeCount").value(5));
+        today(userB).andExpect(jsonPath("$.data.me.receivedPokeCount").value(4));
+        today(userC).andExpect(jsonPath("$.data.me.receivedPokeCount").value(0));
     }
 
     private RoomMember join(User user, String nickname, LocalDateTime joinedAt) {
