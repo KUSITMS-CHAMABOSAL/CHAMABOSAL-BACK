@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 오늘 탭 (ROOM-02). 착용 아이템은 곳간(STORE-03) 전이라 빈 배열이다.
+ * 오늘 탭 (ROOM-02).
  */
 public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Member> members, Me me, Entry entry) {
 
@@ -41,7 +41,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
 
     public record Member(
             Long memberId, String nickname, BosalColor color,
-            @Schema(description = "착용 아이템 코드. 곳간(STORE-03) 전에는 빈 배열") List<String> equippedItemCodes,
+            @Schema(description = "착용 아이템 코드, 상점 노출 순서. 착용은 사용자 단위라 모든 방에 같음") List<String> equippedItemCodes,
             @Schema(description = "빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음") List<Integer> fallenNabalNumbers,
             boolean isMe,
             @Schema(description = "이 방의 이번 달 참았어요 수") int monthlyEnduredCount,

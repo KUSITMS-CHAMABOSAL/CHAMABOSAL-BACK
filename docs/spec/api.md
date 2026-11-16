@@ -325,7 +325,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `certification`: 인증 전이면 `null`
 - `editableUntil`: 수정·삭제 마감 시각 (인증 후 10분). `lockReason`이 `null`일 때 남은 시간 표시에 씀
 - `lockReason`: 수정·삭제할 수 있으면 `null`. 10분이 지나면 `TIME_OVER`, 10분 안이어도 투표가 시작되면 `VOTE_STARTED`
-- `equippedItemCodes`: 착용 중인 아이템 코드 목록. 없으면 빈 배열. 곳간(STORE-03) 전에는 항상 빈 배열
+- `equippedItemCodes`: 착용 중인 아이템 코드 목록, 상점 노출 순서. 없으면 빈 배열
 - `fallenNabalNumbers`: 그 멤버 보살의 빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음 (NABAL-02, Q-101)
 - `members[]`: 홈 카드, 방 정보, 멤버 프로필 시트에 같이 씀. 멤버 프로필 API는 따로 없음
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음

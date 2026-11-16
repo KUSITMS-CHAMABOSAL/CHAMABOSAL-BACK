@@ -30,6 +30,11 @@ import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.store.entity.Item;
+import com.chamabosal.domain.store.entity.ItemSlot;
+import com.chamabosal.domain.store.entity.UserItem;
+import com.chamabosal.domain.store.repository.ItemRepository;
+import com.chamabosal.domain.store.repository.UserItemRepository;
 import com.chamabosal.domain.tap.entity.Tap;
 import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.user.entity.User;
@@ -129,6 +134,12 @@ class ResultTapTest {
     @Autowired
     LeftMemberCleanupScheduler leftMemberCleanupScheduler;
 
+    @Autowired
+    ItemRepository itemRepository;
+
+    @Autowired
+    UserItemRepository userItemRepository;
+
     private int userSequence;
     private Room room;
     private User userA;
@@ -156,6 +167,9 @@ class ResultTapTest {
 
     @AfterEach
     void tearDown() {
+        userItemRepository.deleteAll();
+        // 시작 때 넣은 카탈로그는 남기고 테스트가 만든 아이템만 지운다.
+        itemRepository.findByCode("EQUIP_HAT").ifPresent(itemRepository::delete);
         defenseTicketRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         tapRepository.deleteAll();
@@ -497,6 +511,21 @@ class ResultTapTest {
 
         assertThat(roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(otherRoom.getId(), userB.getId())
                 .orElseThrow().getSeenResultRoundDate()).isNull();
+    }
+
+    @Test
+    void 결과_화면은_지목된_사람의_착용_아이템_코드를_돌려준다() throws Exception {
+        wear(userA, "EQUIP_HAT", ItemSlot.HAT);
+        Round round = announced(NOV_4, picks(memberB, memberA, memberC, memberA, memberD, null, memberA, memberB));
+
+        result(userC, round).andExpect(jsonPath("$.data.picked.equippedItemCodes[0]").value("EQUIP_HAT"));
+    }
+
+    /** 착용한 아이템 하나를 준다. 시작 때 넣은 카탈로그와 겹치지 않는 코드를 쓴다. */
+    private void wear(User user, String code, ItemSlot slot) {
+        Item item = itemRepository.findByCode(code)
+                .orElseGet(() -> itemRepository.save(Item.create(code, code, 100, slot, 99)));
+        userItemRepository.save(UserItem.acquire(user, item));
     }
 
     // ---------- CLEAN-01 떠난 보살 기록 ----------

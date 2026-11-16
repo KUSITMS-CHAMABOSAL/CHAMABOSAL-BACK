@@ -5,6 +5,7 @@ import com.chamabosal.domain.certification.photo.CertificationPhotoService;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.round.entity.RoundParticipant;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
+import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.domain.vote.dto.response.VoteCandidateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class VoteCandidateService {
     private final RoundParticipantRepository roundParticipantRepository;
     private final CertificationRepository certificationRepository;
     private final CertificationPhotoService certificationPhotoService;
+    private final StoreService storeService;
 
     /** excludeMemberId가 null이면 아무도 빼지 않는다 (투표권 없음 상태의 내 화면은 나도 `인증 안 함`으로 보여준다, VOTE-05-10). */
     @Transactional(readOnly = true)
@@ -33,13 +35,17 @@ public class VoteCandidateService {
         Map<Long, Certification> certificationsByMemberId = certificationRepository
                 .findByRound_IdAndDeletedAtIsNull(roundId).stream()
                 .collect(Collectors.toMap(c -> c.getMember().getId(), Function.identity()));
-        return roundParticipantRepository.findWithMemberByRound_Id(roundId).stream()
+        List<RoundParticipant> candidates = roundParticipantRepository.findWithMemberByRound_Id(roundId).stream()
                 .filter(RoundParticipant::isCandidate)
                 .filter(participant -> excludeMemberId == null || !participant.getMember().getId().equals(excludeMemberId))
+                .toList();
+        Map<Long, List<String>> equipped = storeService.getEquippedItemCodesByMember(
+                candidates.stream().map(RoundParticipant::getMember).toList());
+        return candidates.stream()
                 .map(participant -> {
                     Certification certification = certificationsByMemberId.get(participant.getMember().getId());
-                    return VoteCandidateResponse.from(
-                            participant, certification, certificationPhotoService.viewUrl(certification));
+                    return VoteCandidateResponse.from(participant, certification,
+                            certificationPhotoService.viewUrl(certification), equipped.get(participant.getMember().getId()));
                 })
                 .toList();
     }

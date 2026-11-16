@@ -2922,8 +2922,9 @@ components:
           type: array
           items:
             type: string
-          description: 착용 아이템 코드. 없으면 빈 배열
-          example: []
+          description: 착용 아이템 코드, 상점 노출 순서. 없으면 빈 배열
+          example:
+          - SANTA_HAT
         certification:
           allOf:
           - $ref: '#/components/schemas/VoteCandidateCertification'
@@ -3048,7 +3049,9 @@ components:
           type: array
           items:
             type: string
-          example: []
+          description: 착용 아이템 코드, 상점 노출 순서. 떠난 보살도 그 사용자의 착용, 내 데이터를 삭제했으면 빈 배열
+          example:
+          - SANTA_HAT
         isLeft:
           type: boolean
           description: 나간 멤버면 `true` (떠난 보살)
@@ -3506,7 +3509,7 @@ components:
           type: array
           items:
             type: string
-          description: 착용 아이템 코드. 없으면 빈 배열
+          description: 착용 아이템 코드, 상점 노출 순서. 없으면 빈 배열
           example:
           - SANTA_HAT
         nabal:

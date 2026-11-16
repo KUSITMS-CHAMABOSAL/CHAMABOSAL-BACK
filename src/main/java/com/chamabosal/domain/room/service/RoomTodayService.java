@@ -27,6 +27,7 @@ import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
@@ -64,6 +65,7 @@ public class RoomTodayService {
     private final NabalLossRepository nabalLossRepository;
     private final ReactionRepository reactionRepository;
     private final PokeRepository pokeRepository;
+    private final StoreService storeService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -121,12 +123,13 @@ public class RoomTodayService {
                 : reactionRepository.findByMember_IdAndCertification_IdIn(me.getId(), certifications.values().stream()
                         .map(Certification::getId).toList()).stream()
                 .collect(Collectors.toMap(reaction -> reaction.getCertification().getId(), Reaction::getType));
+        Map<Long, List<String>> equipped = storeService.getEquippedItemCodesByMember(members);
         Map<Long, List<Integer>> nabals = nabalLossRepository.findByUser_IdInAndReplantedAtIsNull(
                         members.stream().map(member -> member.getUser().getId()).toList()).stream()
                 .collect(Collectors.groupingBy(loss -> loss.getUser().getId(),
                         Collectors.mapping(NabalLoss::getNabalNumber, Collectors.toList())));
         return members.stream()
-                .map(member -> new Member(member.getId(), member.getNickname(), member.getColor(), List.of(),
+                .map(member -> new Member(member.getId(), member.getNickname(), member.getColor(), equipped.get(member.getId()),
                         nabals.getOrDefault(member.getUser().getId(), List.of()).stream().sorted().toList(),
                         member.getId().equals(me.getId()),
                         endured.getOrDefault(member.getId(), 0L).intValue(),

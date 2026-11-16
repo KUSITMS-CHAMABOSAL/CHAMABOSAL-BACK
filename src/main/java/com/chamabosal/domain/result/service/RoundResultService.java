@@ -12,6 +12,7 @@ import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.vote.entity.Vote;
 import com.chamabosal.domain.vote.repository.VoteRepository;
@@ -43,6 +44,7 @@ public class RoundResultService {
     private final TapRepository tapRepository;
     private final DefenseTicketRepository defenseTicketRepository;
     private final DefenseService defenseService;
+    private final StoreService storeService;
     private final Clock clock;
 
     /**
@@ -88,7 +90,8 @@ public class RoundResultService {
         return new RoundResultResponse(
                 round.getId(), round.getRoundDate(), resultType,
                 picked == null ? null : Picked.from(picked, certificationRepository
-                        .findByRound_IdAndMember_IdAndDeletedAtIsNull(roundId, picked.getId()).orElse(null)),
+                        .findByRound_IdAndMember_IdAndDeletedAtIsNull(roundId, picked.getId()).orElse(null),
+                        storeService.getEquippedItemCodesByMember(List.of(picked)).get(picked.getId())),
                 voteCounts(votes),
                 (int) votes.stream().filter(vote -> vote.getTargetMember() == null).count(),
                 isMePicked,

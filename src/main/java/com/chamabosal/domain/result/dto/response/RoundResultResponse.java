@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 결과 화면 (RESULT-02). 누가 누구에게 투표했는지는 담지 않는다. 꾸미기 아이템은 아직 없어 항상 빈 배열이다. */
+/** 결과 화면 (RESULT-02). 누가 누구에게 투표했는지는 담지 않는다. */
 public record RoundResultResponse(
         Long roundId,
         LocalDate roundDate,
@@ -28,13 +28,15 @@ public record RoundResultResponse(
 ) {
 
     public record Picked(
-            Long memberId, String nickname, BosalColor color, List<String> equippedItemCodes, boolean isLeft,
+            Long memberId, String nickname, BosalColor color,
+            @Schema(description = "착용 아이템 코드, 상점 노출 순서. 떠난 보살도 그 사용자의 착용, 내 데이터를 삭제했으면 빈 배열") List<String> equippedItemCodes,
+            boolean isLeft,
             @Schema(description = "인증하지 않았으면 null") CertificationResult certificationResult,
             @Schema(description = "인증하지 않았거나 ENDURED면 null") Integer spentAmount
     ) {
 
-        public static Picked from(RoomMember member, Certification certification) {
-            return new Picked(member.getId(), member.getNickname(), member.getColor(), List.of(), !member.isCurrent(),
+        public static Picked from(RoomMember member, Certification certification, List<String> equippedItemCodes) {
+            return new Picked(member.getId(), member.getNickname(), member.getColor(), equippedItemCodes, !member.isCurrent(),
                     certification == null ? null : certification.getResult(),
                     certification == null ? null : certification.getSpentAmount());
         }

@@ -3,6 +3,7 @@ package com.chamabosal.domain.store.service;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import com.chamabosal.domain.rice.service.RiceService;
+import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.store.dto.request.EquippedItemsUpdateRequest;
 import com.chamabosal.domain.store.dto.response.ItemPurchaseResponse;
@@ -27,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -118,6 +120,18 @@ public class StoreService {
                 userItem.unequip();
             }
         });
+    }
+
+    /**
+     * 보살 캐릭터를 그리는 응답에 쓰는 착용 아이템 코드를 멤버 ID별로, 노출 순서. 착용은 사용자 단위라 사용자의 착용을 보여준다.
+     * 내 데이터를 삭제해 사용자 연결이 끊긴 멤버는 빈 목록이다. 멤버마다 조회하지 않고 한 번에 읽는다.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, List<String>> getEquippedItemCodesByMember(Collection<RoomMember> members) {
+        Map<Long, List<String>> byUser = getEquippedItemCodes(members.stream()
+                .map(RoomMember::getUser).filter(Objects::nonNull).map(User::getId).distinct().toList());
+        return members.stream().collect(Collectors.toMap(RoomMember::getId, member -> member.getUser() == null
+                ? List.of() : byUser.getOrDefault(member.getUser().getId(), List.of())));
     }
 
     /** 보살 캐릭터를 그리는 응답에 쓰는 착용 아이템 코드, 노출 순서. 착용이 없는 사용자는 빈 목록이다. */
