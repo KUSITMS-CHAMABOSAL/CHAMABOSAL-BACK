@@ -79,7 +79,7 @@
 | 인증 | POST | `/api/auth/login` | AUTH-01 | ✅ |
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
 | 사용자 | GET | `/api/users/me` | USER-01 | ✅ |
-| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 | ✅ |
+| 사용자 | GET | `/api/users/me/calendar` | USER-02 | ✅ |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 나발 | PUT | `/api/users/me/seen-nabal-loss` | NABAL-02 | ✅ |
 | 나발 | POST | `/api/users/me/nabal-replants` | NABAL-03 | ✅ |
@@ -213,17 +213,20 @@ NABAL-03. 화면에서 고른 빠진 나발을 개당 15석으로 다시 심습�
 - 확인 순서: `COMMON_002`(빈 목록, 0~37 밖, 중복) → `NABAL_001` → `STORE_001`
 - 에러: `COMMON_002` (400), `NABAL_001` (409, 빠지지 않은 나발), `STORE_001` (409, 공양미 부족)
 
-### GET /api/rooms/{roomId}/members/me/calendar
+### GET /api/users/me/calendar
 
-USER-02. 내 보살 탭의 방별 인증 캘린더입니다. `month`를 비우면 지금 회차 날짜의 달입니다.
+USER-02. 내 보살 탭의 이번 달 기록입니다. 참여한 방을 합쳐 나 기준으로 돌려줍니다. 지금은 나간 방의 기록도 들어갑니다.
 
 ```
-GET /api/rooms/1/members/me/calendar?month=2026-11
+GET /api/users/me/calendar?month=2026-11
 ```
 
 ```json
 {
   "month": "2026-11",
+  "enduredCount": 12,
+  "pickedCount": 2,
+  "streakDays": 5,
   "calendar": [
     { "date": "2026-11-01", "result": "ENDURED" },
     { "date": "2026-11-02", "result": "FAILED" }
@@ -232,9 +235,11 @@ GET /api/rooms/1/members/me/calendar?month=2026-11
 ```
 
 - 회차 날짜 기준. 03:00 전 인증은 전날로 들어감. `month`를 비우면 지금 회차 날짜의 달
-- 인증이 없는 날과 삭제한 인증은 빠짐
-- 이 방의 이번 달 참은 횟수·지목 횟수는 오늘 탭 `members[]`에 있음
-- 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 월 형식)
+- `enduredCount`: 그 달 참았어요 인증 수 (방 합산)
+- `pickedCount`: 그 달 지목된 횟수 (방 합산, 방어 성공 제외)
+- `streakDays`: 하나라도 인증한 날이 이어진 일수. `month`와 상관없이 지금 기준이고, 오늘 아직 인증 전이면 어제까지
+- `calendar`: 그날 인증 중 하나라도 못 참았으면 `FAILED`. 인증이 없는 날과 삭제한 인증은 빠짐
+- 에러: `COMMON_002` (400, 월 형식)
 
 ### PATCH /api/users/me/settings
 

@@ -45,14 +45,6 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
     /** 후보 카드에 붙일 인증 내용을 한 번에 가져와서, 후보마다 인증을 따로 조회하지 않게 한다. */
     List<Certification> findByRound_IdAndDeletedAtIsNull(Long roundId);
 
-    /** 인증 캘린더 (USER-02). 그 멤버 행의 삭제하지 않은 인증을 회차 날짜 순으로 가져온다. */
-    @Query("""
-            select c from Certification c join fetch c.round r
-            where c.member.id = :memberId and c.deletedAt is null and r.roundDate between :from and :to
-            order by r.roundDate
-            """)
-    List<Certification> findCalendar(Long memberId, LocalDate from, LocalDate to);
-
     /** 떠난 보살 정리 후보 (CLEAN-01). 한 줄·금액·사진이 모두 비워진 멤버는 빠져서 정리가 끝난 멤버를 다시 읽지 않는다. */
     @Query("""
             select distinct m from Certification c join c.member m
@@ -112,4 +104,20 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             where c.member.user.id = :userId and c.imageKey is not null and c.imageDeletedAt is null
             """)
     List<String> findImageKeysOfUser(Long userId);
+
+    /** 내 보살 기록 (USER-02): 나간 방까지 포함한 내 인증의 [회차 날짜, 결과], 회차 날짜 순. 삭제한 인증은 뺀다. */
+    @Query("""
+            select r.roundDate, c.result from Certification c join c.round r
+            where c.member.user.id = :userId and c.deletedAt is null and r.roundDate between :from and :to
+            order by r.roundDate
+            """)
+    List<Object[]> findMyResultsInPeriod(Long userId, LocalDate from, LocalDate to);
+
+    /** 내 보살 연속 인증 (USER-02 6번): 하나라도 인증한 회차 날짜, 최근 순. */
+    @Query("""
+            select distinct r.roundDate from Certification c join c.round r
+            where c.member.user.id = :userId and c.deletedAt is null and r.roundDate <= :until
+            order by r.roundDate desc
+            """)
+    List<LocalDate> findMyCertifiedDatesUntil(Long userId, LocalDate until);
 }
