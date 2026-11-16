@@ -139,6 +139,19 @@ public class RoomMember extends BaseEntity {
         }
     }
 
+    /** 나간 지 6개월이 지났는지 (CLEAN-01). 닉네임 보유·다시 들어오기와 같은 기준이다. */
+    public boolean isPastRetention(LocalDateTime now) {
+        return !isCurrent() && !isWithinRetention(now);
+    }
+
+    /**
+     * 나간 시각이 이보다 앞이면 6개월이 지났을 수 있다. 월말 날짜 보정으로 생기는 며칠 차이를 덮도록 넉넉히 잡는다.
+     * DB에서 후보만 고르는 데 쓰고, 정확한 판단은 isPastRetention으로 한다.
+     */
+    public static LocalDateTime retentionCandidateBefore(LocalDateTime now) {
+        return now.minusMonths(RETENTION_MONTHS).plusDays(4);
+    }
+
     private boolean isWithinRetention(LocalDateTime now) {
         return !now.isAfter(leftAt.plusMonths(RETENTION_MONTHS));
     }
