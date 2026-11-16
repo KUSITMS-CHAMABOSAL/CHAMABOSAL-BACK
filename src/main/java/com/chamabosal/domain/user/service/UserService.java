@@ -1,5 +1,7 @@
 package com.chamabosal.domain.user.service;
 
+import com.chamabosal.domain.certification.photo.CertificationPhotoService;
+import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.nabal.service.NabalService;
@@ -51,12 +53,14 @@ public class UserService {
     private final DefenseTicketRepository defenseTicketRepository;
     private final NabalLossRepository nabalLossRepository;
     private final NabalService nabalService;
+    private final CertificationRepository certificationRepository;
+    private final CertificationPhotoService certificationPhotoService;
     private final Clock clock;
 
     /**
      * 내 데이터 즉시 삭제 (USER-05, Q-102). 사용자 → 방 순서로 락을 잡아 같은 사용자의 방 만들기·입장·나가기와 하나씩 처리한다.
      * 식별키를 비우기 전에 내보내진 방의 차단 해시를 남긴다 (7번). 지우는 쿼리는 영속성 컨텍스트를 비우므로 사용자 변경을 먼저 한다.
-     * 사진 삭제(4번)는 CERT-04에서 붙인다. 락 전 조회가 스냅샷을 고정하지 않도록 READ COMMITTED로 읽어서, 방 락 뒤에
+     * 사진(4번)은 멤버 행 연결을 끊기 전에 읽어 지운 것으로 표시하고 저장소에서는 커밋 뒤에 지운다. 락 전 조회가 스냅샷을 고정하지 않도록 READ COMMITTED로 읽어서, 방 락 뒤에
      * 다른 사람이 막 들어오거나 나간 결과를 보고 방장 위임·방 삭제를 판단한다 (입장과 같은 이유, 코드리뷰 반영).
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -80,6 +84,11 @@ public class UserService {
         defenseTicketRepository.deleteByUserId(userId);
         nabalLossRepository.deleteByUserId(userId);
         pushAgreementRepository.deleteByUserId(userId);
+        List<String> photoKeys = certificationRepository.findImageKeysOfUser(userId);
+        if (!photoKeys.isEmpty()) {
+            certificationRepository.markImagesDeleted(photoKeys, now);
+            photoKeys.forEach(certificationPhotoService::deleteAfterCommit);
+        }
         roomMemberRepository.detachUser(userId);
     }
 
