@@ -19,7 +19,7 @@ public record RoundResultResponse(
         @Schema(description = "표를 받은 멤버만, 득표 수가 많은 순") List<VoteCount> voteCounts,
         int allBosalCount,
         boolean isMePicked,
-        @Schema(description = "내가 지목된 PICKED 결과일 때만, 처음 조회 + 2분") LocalDateTime defenseUsableUntil,
+        @Schema(description = "내가 지목된 PICKED 결과일 때만, 결과 발표 + 2분") LocalDateTime defenseUsableUntil,
         @Schema(description = "내가 지목된 PICKED·DEFENDED 결과일 때만, 보유한 방어권 개수") Integer defenseTicketCount,
         boolean canUseDefense,
         boolean canTap,

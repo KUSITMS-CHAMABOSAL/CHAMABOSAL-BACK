@@ -29,7 +29,7 @@ public class VoteCloseScheduler {
         LocalDateTime now = LocalDateTime.now(clock);
         for (DueRound due : voteCloseService.findDueRounds(now)) {
             try {
-                voteCloseService.closeAtDeadline(due.roomId(), due.roundId(), now);
+                voteCloseService.closeAtDeadline(due.roomId(), due.roundId());
             } catch (RuntimeException e) {
                 log.error("15:00 투표 마감 실패 roundId={}", due.roundId(), e);
             }

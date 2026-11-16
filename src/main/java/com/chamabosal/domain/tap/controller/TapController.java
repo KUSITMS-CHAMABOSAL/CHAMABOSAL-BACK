@@ -53,7 +53,7 @@ public class TapController {
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "409",
-                    description = "TAP_001 톡톡이 없는 결과(PICKED 아님, 방어됨 포함) / TAP_003 이미 톡톡함 / TAP_004 톡톡 시간 지남",
+                    description = "TAP_001 톡톡이 없는 결과(PICKED 아님, 방어됨, 지목된 사람이 나감 포함) / TAP_003 이미 톡톡함 / TAP_004 톡톡 시간 지남",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<Response<TapSendResponse>> send(
@@ -84,7 +84,7 @@ public class TapController {
 
     @PutMapping("/rounds/{roundId}/taps/received/played")
     @Operation(summary = "받은 톡톡 재생 완료 (RESULT-03)",
-            description = "그때까지 받은 톡톡을 모두 재생됨으로 저장합니다. 이미 재생했으면 바꾸지 않고 성공합니다.")
+            description = "그때까지 받은 톡톡을 모두 재생됨으로 저장합니다. 이미 재생했거나, 전달 전이거나, 방어된 회차면 바꾸지 않고 성공합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "저장 성공"),
             @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_005 지목된 사람이 아님",

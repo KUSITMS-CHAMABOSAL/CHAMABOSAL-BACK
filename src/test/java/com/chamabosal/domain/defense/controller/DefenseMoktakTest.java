@@ -70,7 +70,8 @@ class DefenseMoktakTest {
 
     private static final LocalDate NOV_4 = LocalDate.of(2026, 11, 4);
     private static final LocalDate NOV_5 = LocalDate.of(2026, 11, 5);
-    private static final LocalDateTime AFTER_CLOSE = NOV_5.atTime(16, 0);
+    /** 11/4 회차는 11/5 15:00에 마감(결과 발표)된다. 방어권은 15:02까지 쓸 수 있다. */
+    private static final LocalDateTime AFTER_CLOSE = NOV_5.atTime(15, 0);
     /** 11/4 회차는 11/5 15:00에 마감돼 5시간 뒤인 20:00에 톡톡이 전달되고 목탁 수행을 할 수 있다. */
     private static final LocalDateTime DELIVERED = NOV_5.atTime(20, 0);
 
@@ -284,13 +285,16 @@ class DefenseMoktakTest {
     }
 
     @Test
-    void SHIELD_02_6_결과를_보지_않고_바로_사용() throws Exception {
+    void SHIELD_02_6_인증하지_않은_지목자는_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
-        Round round = pickedA(party);
+        Round round = announced(party, NOV_4, false);
 
-        defend(userA, round).andExpect(status().isCreated());
+        clock.set(AFTER_CLOSE.plusMinutes(1));
+        result(userA, round).andExpect(jsonPath("$.data.canUseDefense").value(false));
+        defend(userA, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("DEFENSE_011"));
 
-        assertThat(reload(round).getPickedSeenAt()).isEqualTo(AFTER_CLOSE);
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
+        assertThat(ticketCount(userA)).isEqualTo(1);
     }
 
     @Test
@@ -374,54 +378,15 @@ class DefenseMoktakTest {
         assertThat(ticketCount(userA)).isEqualTo(1);
     }
 
-    /** 결과 화면의 사용 가능 여부도 SHIELD-02 12번을 따른다 (코드리뷰 반영). */
     @Test
-    void 목탁_수행을_마치면_결과_화면에서_방어권을_쓸_수_없다() throws Exception {
+    void RESULT_02_6_방어_시간이_지난_뒤_처음_조회하면_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
-        tap(userB, round, 5).andExpect(status().isCreated());
-        clock.set(DELIVERED);
-        moktak(userA, round, 5).andExpect(status().isCreated());
 
-        // 결과를 이제 처음 열어 방어 시간 안이지만, 목탁 수행을 마쳐 쓸 수 없다.
-
+        clock.set(AFTER_CLOSE.plusMinutes(3));
         result(userA, round)
-                .andExpect(jsonPath("$.data.resultType").value("PICKED"))
-                .andExpect(jsonPath("$.data.defenseTicketCount").value(1))
+                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-05T15:02:00"))
                 .andExpect(jsonPath("$.data.canUseDefense").value(false));
-    }
-
-    /** 3번: 결과를 열지 않고 방어권 없이 보내 거부돼도 처음 조회 시각은 남아, 나중에 사서 쓰면 그 시각부터 2분이다 (코드리뷰 반영). */
-    @Test
-    void 방어권이_없어_거부돼도_처음_조회_시각은_남는다() throws Exception {
-        Round round = pickedA(party);
-        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_002"));
-        assertThat(reload(round).getPickedSeenAt()).isEqualTo(AFTER_CLOSE);
-
-        giveTickets(userA, 1);
-        clock.set(AFTER_CLOSE.plusMinutes(5));
-        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
-    }
-
-    /** 8번 (Q-76 임시 결정): 인증하지 않아 `인증 안 함`으로 지목된 사람도 쓸 수 있다. */
-    @Test
-    void 인증_안_함으로_지목된_사람도_방어권을_쓸_수_있다() throws Exception {
-        giveTickets(userA, 1);
-        Round round = announced(party, NOV_4, false);
-
-        defend(userA, round).andExpect(status().isCreated());
-
-        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.DEFENDED);
-    }
-
-    /** 3번 (Q-77 임시 결정): 결과를 열지 않은 채 다음 투표가 열리면 처음 열어도 쓸 수 없다. */
-    @Test
-    void 결과를_열지_않고_다음_투표가_열리면_방어권을_쓸_수_없다() throws Exception {
-        giveTickets(userA, 1);
-        Round round = pickedA(party);
-        startVoting(party, NOV_5, true);
-
-        result(userA, round).andExpect(jsonPath("$.data.canUseDefense").value(false));
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
     }
 

@@ -35,6 +35,7 @@ public class Round extends BaseEntity {
     private static final LocalTime ROUND_START = LocalTime.of(3, 0);
     private static final LocalTime VOTE_DEADLINE = LocalTime.of(15, 0);
     public static final int TAP_HOURS = 5;
+    private static final int DEFENSE_MINUTES = 2;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,9 +71,6 @@ public class Round extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "picked_user_id")
     private User pickedUser;
-
-    /** 지목된 사람이 결과를 처음 조회한 시각. 방어 마감(+2분) 기준이다. */
-    private LocalDateTime pickedSeenAt;
 
     /** 전원 인증·투표 이벤트와 03:00·15:00 배치가 같은 회차를 동시에 바꾸면 나중 쪽을 실패시킨다. */
     @Version
@@ -143,11 +141,9 @@ public class Round extends BaseEntity {
         this.pickedUser = pickedMember != null ? pickedMember.getUser() : null;
     }
 
-    /** 지목된 사람이 결과를 보지 않고 바로 방어권을 쓰면 그 시각을 처음 조회 시각으로 남긴다 (SHIELD-02 3번). */
-    public void markPickedSeenIfAbsent(LocalDateTime seenAt) {
-        if (pickedSeenAt == null) {
-            pickedSeenAt = seenAt;
-        }
+    /** 방어권은 결과 발표 직후 2분 안에만 쓴다. 그때 앱을 켜지 않았으면 쓸 수 없다 (SHIELD-02 3번, Q-75). */
+    public LocalDateTime getDefenseClosesAt() {
+        return voteClosedAt.plusMinutes(DEFENSE_MINUTES);
     }
 
     /** 지목된 사람이 방어권을 쓰면 결과만 `DEFENDED`로 바꾼다. 차순위로 넘기지 않아 지목된 사람은 그대로다 (SHIELD-02 5번). */

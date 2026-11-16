@@ -682,7 +682,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
   "votedCount": 2, "voterCount": 4,
   "candidates": [
     {
-      "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [],
+      "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "badCount": 2,
       "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" }
     }
   ]
@@ -724,7 +724,8 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 - `uncertifiedCount`, `firstUncertifiedMember`: 나를 뺀 미인증 멤버 수와 그중 첫 번째 멤버. 미인증 멤버가 없으면 `0`, `null` (순서는 [미정] Q-25)
 - `closesAt`: 늦어도 닫히는 시각 (회차 날짜 다음 날 15:00). 그 전에 투표권 있는 명단 전원이 투표하면 그때 닫힘
 - `voterCount`: 투표권 있는 인원 (명단 중 인증한 멤버)
-- `candidates`: `certification`이 `null`이면 인증 안 함. 투표권이 없는 사람(`NO_VOTING_RIGHT`)도 후보로 들어감 (CERT-05)
+- `candidates`: `certification`이 `null`이면 인증 안 함. 투표권이 없는 사람(`NO_VOTING_RIGHT`)도 후보로 들어감 (CERT-05). 투표 중에 나간 사람도 후보로 남음 (Q-27)
+- `candidates[].badCount`: 투표 시작 시점에 그 인증이 받은 배드(아쉬워요) 수. 투표 중에는 바뀌지 않고 동점 판정에 씀 (Q-79). 화면에 표시할지는 디자인을 따름 (최신 디자인에는 없음)
 - `certification.certifiedAt`: 후보 카드의 인증 시각 표시
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
@@ -773,13 +774,13 @@ RESULT-02. 결과 화면입니다.
 ```
 
 - 누가 누구에게 투표했는지는 보내지 않음
-- `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같음
+- `canTap`: `PICKED`이고, 지목된 사람이 방에 남아 있고(Q-27), 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같음
 - `isTapExpired`: `PICKED` 결과인데 투표 마감 후 5시간이 지나 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
 - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
-- `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록함 (SHIELD-02)
+- `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null` (SHIELD-02)
 - `defenseTicketCount`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 보유한 미사용 방어권 개수 ("보유 방어권 n개" 표시, 보유 개수 제한 없음). 나머지는 `null`
-- `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 1개 이상 보유). 결과를 열지 않았으면 다음 투표가 열릴 때까지 쓸 수 있음 (Q-77 임시 결정, 기획 확인 중)
+- `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 그 회차에 인증함, 결과 발표 뒤 2분 안, 방어권 1개 이상 보유)
 - `picked.certificationResult`, `picked.spentAmount`: 결과 화면(디자인 p91)에 씀. 인증 안 했으면 둘 다 `null`, `ENDURED`면 `spentAmount`가 `null`
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 아직 발표 전)
 - "모두 보살"이 과반이 아닐 때 지목은 [미정] Q-22
@@ -799,7 +800,7 @@ RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보�
 - `count`: 0~999 (안전용 상한)
 - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0이면 0. 방 인원이 1명이면 0 (RICE-01)
 - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있음. 방어되면 보낸 톡톡은 무효
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아님, 방어된 결과 포함), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 투표 마감 후 5시간이 지남), `COMMON_002` (400, `count` 범위)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아님, 방어된 결과, 지목된 사람이 방을 나간 결과 포함), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 투표 마감 후 5시간이 지남), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
@@ -831,6 +832,7 @@ RESULT-03. 지목된 사람이 받은 톡톡입니다. 투표 마감 후 5시간
 RESULT-03. 받은 톡톡 재생 완료를 저장합니다. 앱 진입 이벤트(ROOM-02 `entry`)에서 한 번 띄운 뒤 다시 띄우지 않으려고 씁니다.
 
 - 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
+- 전달 전(투표 마감 후 5시간 전)이거나 방어된 회차면 아무것도 바꾸지 않고 성공. 전달 뒤 재생할 톡톡이 미리 재생됨으로 바뀌지 않게 하기 위함
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
 
 ### POST /api/rounds/{roundId}/moktak
@@ -884,7 +886,7 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 ## 12. 방어권
 
 > 담당자 확인
-> - Q-76 (`인증 안 함`으로 지목된 사람도 사용 가능), Q-77 (결과를 열지 않으면 다음 투표가 열릴 때까지)은 임시 결정, 기획 확인 중
+> - Q-75·Q-76·Q-77: 정책서대로 결과 발표 직후 2분 안, 인증하지 않은 방에서는 못 씀 (2026-11-17)
 > - [미정] Q-78 (톡톡 재생과 결과 순서)
 
 ### POST /api/defense-tickets
@@ -900,17 +902,16 @@ SHIELD-01. 공양미 100석으로 방어권을 삽니다. 보유 개수 제한�
 
 ### POST /api/rounds/{roundId}/defenses
 
-SHIELD-02. 지목된 사람이 결과를 처음 본 때부터 2분 안에 그 회차에 방어권을 씁니다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀝니다. 차순위로 넘기지 않습니다.
+SHIELD-02. 지목된 사람이 결과 발표 직후 2분 안에 그 회차에 방어권을 씁니다. 그 회차에 인증하지 않았으면 쓸 수 없습니다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀝니다. 차순위로 넘기지 않습니다.
 
 ```json
 // response 201 (data 없음)
 ```
 
 - 결과 화면(`GET /api/rounds/{roundId}/result`)의 `defenseUsableUntil`, `canUseDefense`로 버튼과 남은 시간을 표시
-- 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 조회 시각으로 기록함
 - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않음
 - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공 (재시도해도 안전)
 - 사용 횟수 제한이 없음. 방어하면 그 회차 번뇌 완료 보상(10석)은 받지 않음
 - 목탁 수행을 마친 회차에는 방어할 수 없음 (받은 보상을 되돌리지 않음)
-- 확인 순서: `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002` (고칠 수 없는 사유부터)
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 발표 전), `DEFENSE_008` (403, 지목된 사람 아님), `DEFENSE_010` (409, 목탁 수행을 마침), `DEFENSE_009` (409, 방어 시간 지남), `DEFENSE_002` (409, 방어권 없음)
+- 확인 순서: `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_011` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002` (고칠 수 없는 사유부터)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 발표 전), `DEFENSE_008` (403, 지목된 사람 아님), `DEFENSE_011` (403, 그 회차에 인증하지 않음), `DEFENSE_010` (409, 목탁 수행을 마침), `DEFENSE_009` (409, 방어 시간 지남), `DEFENSE_002` (409, 방어권 없음)

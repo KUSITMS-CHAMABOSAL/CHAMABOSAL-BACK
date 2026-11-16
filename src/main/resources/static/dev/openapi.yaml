@@ -2083,13 +2083,13 @@ paths:
       description: |-
         결과 화면이다. 누가 누구에게 투표했는지는 보내지 않는다.
 
-        - `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같다.
+        - `canTap`: `PICKED`이고, 지목된 사람이 방에 남아 있고(Q-27), 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같다.
         - `isTapExpired`: `PICKED` 결과인데 투표 마감 후 5시간이 지나 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
-        - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록한다 (SHIELD-02).
+        - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null` (SHIELD-02).
         - `defenseTicketCount`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 보유한 미사용 방어권 개수 ("보유 방어권 n개" 표시, 보유 개수 제한 없음). 나머지는 `null`
-        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 2분 안, 방어권 1개 이상 보유). 결과를 열지 않았을 때 언제까지 쓸 수 있는지는 [미정] Q-77
+        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 그 회차에 인증함, 결과 발표 뒤 2분 안, 방어권 1개 이상 보유)
       parameters:
       - *id004
       responses:
@@ -2154,7 +2154,7 @@ paths:
         - `count`: 0~999 (안전용 상한)
         - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 무효다.
         - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0(건너뛰기)이면 0. 방 인원이 1명이면 0 (RICE-01)
-        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함)
+        - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함), 또는 지목된 사람이 방을 나감
         - `TAP_003`: 이미 톡톡함. 저장된 횟수는 그대로다.
         - `TAP_004`: 톡톡 시간 지남. 투표 마감 후 5시간이 지남
       parameters:
@@ -2293,7 +2293,7 @@ paths:
       - '[TAP] 톡톡'
       operationId: markReceivedTapsPlayed
       summary: 받은 톡톡 재생 완료
-      description: 받은 톡톡 재생 완료를 저장한다. 앱 진입 이벤트에서 한 번 띄운 뒤 다시 띄우지 않으려고 쓴다. 이미 재생한 톡톡이면 바꾸지 않고 성공한다 (재시도해도 안전).
+      description: 받은 톡톡 재생 완료를 저장한다. 앱 진입 이벤트에서 한 번 띄운 뒤 다시 띄우지 않으려고 쓴다. 이미 재생한 톡톡이면 바꾸지 않고 성공한다 (재시도해도 안전). 전달 전이거나 방어된 회차면 아무것도 바꾸지 않고 성공한다.
       parameters:
       - *id004
       responses:
@@ -2448,14 +2448,13 @@ paths:
       operationId: useDefense
       summary: 방어권 사용
       description: |-
-        지목된 사람이 결과를 처음 본 때부터 2분 안에 그 회차에 방어권을 쓴다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀐다. 차순위로 넘기지 않는다.
+        지목된 사람이 결과 발표 직후 2분 안에 그 회차에 방어권을 쓴다. 그 회차에 인증하지 않았으면 쓸 수 없다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀐다. 차순위로 넘기지 않는다.
 
         - 결과 화면(`GET /api/rounds/{roundId}/result`)의 `defenseUsableUntil`, `canUseDefense`로 버튼과 남은 시간을 표시한다.
-        - 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 조회 시각으로 기록한다.
         - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않는다.
         - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공한다 (재시도해도 안전).
         - 사용 횟수 제한이 없다. 방어하면 그 회차 번뇌 완료 보상(10석)은 받지 않는다.
-        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002`
+        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_011` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002`
         - `DEFENSE_010`: 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았으면 방어할 수 없다.
       parameters:
       - *id004
@@ -2476,7 +2475,7 @@ paths:
                 COMMON_008:
                   $ref: '#/components/examples/COMMON_008'
         '403':
-          description: ROOM_002 / DEFENSE_008
+          description: ROOM_002 / DEFENSE_008 / DEFENSE_011
           content:
             application/json:
               schema:
@@ -2486,6 +2485,8 @@ paths:
                   $ref: '#/components/examples/ROOM_002'
                 DEFENSE_008:
                   $ref: '#/components/examples/DEFENSE_008'
+                DEFENSE_011:
+                  $ref: '#/components/examples/DEFENSE_011'
         '404':
           description: ROUND_001
           content:
@@ -2973,6 +2974,7 @@ components:
       - nickname
       - color
       - equippedItemCodes
+      - badCount
       - certification
       properties:
         memberId:
@@ -2991,6 +2993,10 @@ components:
           description: 착용 아이템 코드, 상점 노출 순서. 없으면 빈 배열
           example:
           - SANTA_HAT
+        badCount:
+          type: integer
+          example: 2
+          description: 투표 시작 시점에 그 인증이 받은 배드(아쉬워요) 수. 투표 중에는 바뀌지 않고 동점 판정에 쓴다 (Q-79). 화면에 표시할지는 디자인을 따른다
         certification:
           allOf:
           - $ref: '#/components/schemas/VoteCandidateCertification'
@@ -3202,8 +3208,8 @@ components:
           example: false
         defenseUsableUntil:
           type: string
-          description: 내가 지목된 `PICKED` 결과일 때만, 처음 조회 시각 + 2분. 나머지는 `null`
-          example: '2026-11-04T08:02:00'
+          description: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null`
+          example: '2026-11-04T15:02:00'
           format: date-time
           nullable: true
         defenseTicketCount:
@@ -4339,6 +4345,12 @@ components:
         success: false
         code: DEFENSE_008
         message: 지목된 보살만 방어권을 쓸 수 있습니다.
+    DEFENSE_011:
+      summary: DEFENSE_011 (403)
+      value:
+        success: false
+        code: DEFENSE_011
+        message: 인증하지 않은 방에서는 방어권을 쓸 수 없어요.
     DEFENSE_009:
       summary: DEFENSE_009 (409)
       value:

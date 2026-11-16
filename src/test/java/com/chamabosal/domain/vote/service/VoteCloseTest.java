@@ -1,5 +1,10 @@
 package com.chamabosal.domain.vote.service;
 
+import java.util.Map;
+import java.util.List;
+import com.chamabosal.domain.reaction.repository.ReactionRepository;
+import com.chamabosal.domain.reaction.entity.ReactionType;
+import com.chamabosal.domain.reaction.entity.Reaction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -60,6 +65,8 @@ class VoteCloseTest {
 
     @Autowired
     RiceHistoryRepository riceHistoryRepository;
+    @Autowired
+    ReactionRepository reactionRepository;
 
     @Autowired
     MockMvc mockMvc;
@@ -136,6 +143,7 @@ class VoteCloseTest {
 
     @AfterEach
     void tearDown() {
+        reactionRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
@@ -333,8 +341,19 @@ class VoteCloseTest {
     }
 
     @Test
-    void RESULT_01_5_득표_동점이면_모두_무사() {
-        Round round = votingRound();
+    void RESULT_01_5_득표_동점이면_투표_시작_시점_배드_수가_많은_사람을_지목한다() {
+        // 투표 시작 전에 A의 인증은 배드 2개, B의 인증은 배드 1개를 받았다.
+        Round round = roundRepository.save(Round.create(room, NOV_5));
+        Map<RoomMember, Certification> certs = new java.util.HashMap<>();
+        for (RoomMember member : List.of(memberA, memberB, memberC, memberD)) {
+            certs.put(member, certificationRepository.save(Certification.create(
+                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, CERTIFIED_AT)));
+        }
+        reactionRepository.save(Reaction.create(certs.get(memberA), memberB, ReactionType.BAD));
+        reactionRepository.save(Reaction.create(certs.get(memberA), memberC, ReactionType.BAD));
+        reactionRepository.save(Reaction.create(certs.get(memberB), memberD, ReactionType.BAD));
+        reactionRepository.save(Reaction.create(certs.get(memberB), memberC, ReactionType.GOOD));
+        voteStartService.startAtDeadline(room.getId(), round.getId(), NOV_5.plusDays(1).atTime(3, 0));
         vote(round, memberA, memberB);
         vote(round, memberB, memberA);
         vote(round, memberC, memberA);
@@ -343,12 +362,12 @@ class VoteCloseTest {
         voteCloseService.closeAtDeadline(room.getId(), round.getId(), DEADLINE);
 
         Round closed = reload(round);
-        assertThat(closed.getResultType()).isEqualTo(RoundResultType.ALL_SAFE);
-        assertThat(closed.getPickedMember()).isNull();
+        assertThat(closed.getResultType()).isEqualTo(RoundResultType.PICKED);
+        assertThat(closed.getPickedMember().getId()).isEqualTo(memberA.getId());
     }
 
     @Test
-    void RESULT_01_6_세_명_동점() {
+    void RESULT_01_6_득표와_배드_수가_모두_같으면_모두_무사() {
         Round round = votingRound();
         vote(round, memberA, memberB);
         vote(round, memberB, memberC);

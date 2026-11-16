@@ -1,6 +1,8 @@
 package com.chamabosal.domain.vote.service;
 
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.reaction.entity.ReactionType;
+import com.chamabosal.domain.reaction.repository.ReactionRepository;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
@@ -14,12 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 투표 시작 (VOTE-01, CERT-05). 마지막 인증, 03:00 배치, 나가기 세 경로가 모두 방 행 락 안에서 이 클래스를 부른다.
@@ -36,6 +39,7 @@ public class VoteStartService {
     private final RoundRepository roundRepository;
     private final RoundParticipantRepository roundParticipantRepository;
     private final CertificationRepository certificationRepository;
+    private final ReactionRepository reactionRepository;
 
     /** 방 행 락을 잡은 트랜잭션 안에서 부른다. 현재 멤버 전원이 인증했으면 시작하고, 투표가 열렸으면 true. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -97,8 +101,11 @@ public class VoteStartService {
             return false;
         }
         LocalDate roundDate = round.getRoundDate();
+        Map<Long, Long> badCounts = reactionRepository.countByRoundAndType(round.getId(), ReactionType.BAD).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
         List<RoundParticipant> participants = members.stream()
-                .map(member -> snapshot(round, member, certified.contains(member.getId()), roundDate))
+                .map(member -> snapshot(round, member, certified.contains(member.getId()), roundDate,
+                        badCounts.getOrDefault(member.getId(), 0L).intValue()))
                 .toList();
         roundParticipantRepository.saveAll(participants);
         round.startVote(now);
@@ -109,9 +116,10 @@ public class VoteStartService {
      * 그날 들어와서 인증하지 않은 멤버는 후보가 아니다. 인증하지 않은 기존 멤버는 `인증 안 함` 후보다 (CERT-05).
      * 배치가 늦게 돌면 회차 날짜 다음 날 들어온 멤버도 명단에 들어올 수 있어서, 회차 날짜 이후에 들어왔으면 "그날 들어옴"으로 본다.
      */
-    private RoundParticipant snapshot(Round round, RoomMember member, boolean hasCertified, LocalDate roundDate) {
+    private RoundParticipant snapshot(Round round, RoomMember member, boolean hasCertified, LocalDate roundDate,
+                                      int badCount) {
         boolean joinedThisRoundOrLater = !Round.dateOf(member.getJoinedAt()).isBefore(roundDate);
         boolean isCandidate = hasCertified || !joinedThisRoundOrLater;
-        return RoundParticipant.create(round, member, isCandidate, hasCertified);
+        return RoundParticipant.create(round, member, isCandidate, hasCertified, badCount);
     }
 }

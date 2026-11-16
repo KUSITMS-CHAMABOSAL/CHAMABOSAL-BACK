@@ -235,19 +235,15 @@ class ResultTapTest {
         defenseTicketRepository.save(DefenseTicket.purchase(userA, NOV_2.atStartOfDay()));
         defenseTicketRepository.save(DefenseTicket.purchase(userA, NOV_2.atStartOfDay()));
 
-        clock.set(NOV_3.atTime(8, 0));
+        clock.set(NOV_3.atTime(15, 1));
         result(userA, round)
-                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T08:02:00"))
+                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T15:02:00"))
                 .andExpect(jsonPath("$.data.defenseTicketCount").value(2))
                 .andExpect(jsonPath("$.data.canUseDefense").value(true));
         result(userB, round)
                 .andExpect(jsonPath("$.data.defenseUsableUntil").doesNotExist())
                 .andExpect(jsonPath("$.data.defenseTicketCount").doesNotExist())
                 .andExpect(jsonPath("$.data.canUseDefense").value(false));
-
-        // 다시 열어도 처음 조회 시각은 그대로다.
-        clock.set(NOV_3.atTime(9, 0));
-        result(userA, round).andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T08:02:00"));
     }
 
     @Test
@@ -367,6 +363,44 @@ class ResultTapTest {
         received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1))
                 .andExpect(jsonPath("$.data.totalCount").value(5));
         assertThat(tapOf(round, memberB).getPlayedAt()).isEqualTo(DELIVERED);
+    }
+
+    @Test
+    void RESULT_03_18_전달_전에_재생_완료를_보내면_아무것도_바뀌지_않는다() throws Exception {
+        Round round = pickedA();
+        tap(userB, round, 5).andExpect(status().isCreated());
+
+        clock.set(DELIVERED.minusMinutes(1));
+        played(userA, round).andExpect(status().isOk());
+
+        assertThat(tapOf(round, memberB).getPlayedAt()).isNull();
+        clock.set(DELIVERED);
+        played(userA, round).andExpect(status().isOk());
+        assertThat(tapOf(round, memberB).getPlayedAt()).isEqualTo(DELIVERED);
+    }
+
+    @Test
+    void RESULT_01_11_투표_중에_나간_멤버도_지목되고_떠난_보살로_나온다() throws Exception {
+        Round round = startVoting(NOV_4);
+        clock.set(NOV_5.atTime(10, 0));
+        roomService.leave(userA.getId(), room.getId());
+        votes(round, picks(memberB, memberA, memberC, memberA, memberD, memberA));
+        voteCloseService.closeAtDeadline(room.getId(), round.getId(), NOV_5.atTime(15, 0));
+        clock.set(AFTER_CLOSE);
+
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
+        result(userB, round).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.picked.memberId").value(memberA.getId()))
+                .andExpect(jsonPath("$.data.picked.isLeft").value(true))
+                .andExpect(jsonPath("$.data.canTap").value(false));
+    }
+
+    @Test
+    void RESULT_03_19_지목된_사람이_방을_나갔으면_톡톡을_보낼_수_없다() throws Exception {
+        Round round = pickedA();
+        roomService.leave(userA.getId(), room.getId());
+
+        tap(userB, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_001"));
     }
 
     @Test
@@ -575,7 +609,7 @@ class ResultTapTest {
     /** 그 날짜 회차를 인증 → 다음 날 03:00 투표 시작 → 표 → 다음 날 15:00 마감까지 진행한다. A는 못 참았어요(23,000원)로 인증한다. */
     private Round announced(LocalDate date, Map<RoomMember, RoomMember> votes) {
         Round round = startVoting(date);
-        votes.forEach((voter, target) -> voteRepository.save(Vote.create(reload(round), voter, target)));
+        votes(round, votes);
         voteCloseService.closeAtDeadline(room.getId(), round.getId(), date.plusDays(1).atTime(15, 0));
         Round closed = reload(round);
         assertThat(closed.getStatus()).isEqualTo(RoundStatus.ANNOUNCED);
@@ -592,6 +626,10 @@ class ResultTapTest {
         }
         voteStartService.startAtDeadline(room.getId(), round.getId(), date.plusDays(1).atTime(3, 0));
         return reload(round);
+    }
+
+    private void votes(Round round, Map<RoomMember, RoomMember> votes) {
+        votes.forEach((voter, target) -> voteRepository.save(Vote.create(reload(round), voter, target)));
     }
 
     private void defend(Round round) {

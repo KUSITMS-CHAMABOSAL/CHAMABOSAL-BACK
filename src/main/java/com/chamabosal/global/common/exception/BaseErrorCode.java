@@ -98,6 +98,7 @@ public enum BaseErrorCode implements ErrorCode {
     NOT_PICKED_FOR_DEFENSE(HttpStatus.FORBIDDEN, "DEFENSE_008", "지목된 사람만 방어권을 쓸 수 있어요."),
     DEFENSE_EXPIRED(HttpStatus.CONFLICT, "DEFENSE_009", "방어 시간이 지났어요."),
     DEFENSE_AFTER_MOKTAK(HttpStatus.CONFLICT, "DEFENSE_010", "목탁 수행을 마친 결과는 방어할 수 없어요."),
+    DEFENSE_NOT_CERTIFIED(HttpStatus.FORBIDDEN, "DEFENSE_011", "인증하지 않은 방에서는 방어권을 쓸 수 없어요."),
 
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
