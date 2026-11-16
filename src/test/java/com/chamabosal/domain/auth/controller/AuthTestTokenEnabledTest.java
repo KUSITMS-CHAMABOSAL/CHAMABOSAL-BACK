@@ -73,7 +73,7 @@ class AuthTestTokenEnabledTest {
         mockMvc.perform(request("TOO-LONG-NAME").header("X-Test-Token-Key", TEST_KEY))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_002"))
-                .andExpect(jsonPath("$.message").value("테스트 사용자 이름은 영문 소문자와 숫자 1~8자입니다."));
+                .andExpect(jsonPath("$.message").value("테스트 사용자 이름은 영문 소문자와 숫자 1~8자예요."));
     }
 
     private MockHttpServletRequestBuilder request(String testUser) {

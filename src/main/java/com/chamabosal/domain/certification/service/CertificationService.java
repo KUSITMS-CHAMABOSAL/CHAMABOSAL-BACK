@@ -42,7 +42,7 @@ public class CertificationService {
 
     private static final int MEMO_MAX_LENGTH = 40;
     private static final int SPENT_AMOUNT_MAX = 999_999;
-    private static final String MEMO_MESSAGE = "한 줄 기록은 1~40자입니다.";
+    private static final String MEMO_MESSAGE = "한 줄 기록은 1~40자예요.";
     private static final String SPENT_AMOUNT_MESSAGE = "못 참았으면 쓴 금액을 1~999,999원으로 입력해 주세요.";
 
     private final RoomRepository roomRepository;
@@ -150,7 +150,7 @@ public class CertificationService {
     private static void validatePhotoChoice(CertificationUpdateRequest request) {
         if (request.imageKey() != null && request.isImageKept()) {
             throw BaseException.withField(BaseErrorCode.INVALID_REQUEST,
-                    "새 사진을 보내면 기존 사진을 유지할 수 없습니다.", "isImageKept");
+                    "새 사진을 보내면 기존 사진을 유지할 수 없어요.", "isImageKept");
         }
     }
 

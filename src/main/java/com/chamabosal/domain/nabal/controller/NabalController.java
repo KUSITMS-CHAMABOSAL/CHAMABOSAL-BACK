@@ -74,6 +74,6 @@ public class NabalController {
             @RequestBody @Valid NabalReplantRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("나발을 심었습니다.", nabalService.replant(userId, request)));
+                .body(Response.created("나발을 심었어요.", nabalService.replant(userId, request)));
     }
 }

@@ -78,6 +78,6 @@ public class PokeController {
             @RequestBody @Valid PokeSendRequest request
     ) {
         pokeService.send(userId, roomId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("찔렀습니다.", null));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("찔렀어요.", null));
     }
 }

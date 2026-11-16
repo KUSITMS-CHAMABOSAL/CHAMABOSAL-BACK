@@ -67,7 +67,7 @@ public class StoreController {
             @PathVariable Long itemId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Response.created("아이템을 샀습니다.", storeService.purchase(userId, itemId)));
+                .body(Response.created("아이템을 샀어요.", storeService.purchase(userId, itemId)));
     }
 
     @PutMapping("/users/me/equipped-items")

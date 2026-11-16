@@ -13,5 +13,5 @@ public record RoomNicknameUpdateRequest(
 
     /** 한글은 완성형만 허용한다. 자모 단독, 띄어쓰기, 특수문자, 이모지는 쓸 수 없다. */
     public static final String NICKNAME_PATTERN = "[가-힣a-zA-Z0-9]{1,8}";
-    public static final String NICKNAME_MESSAGE = "닉네임은 한글, 영문, 숫자 1~8자입니다.";
+    public static final String NICKNAME_MESSAGE = "닉네임은 한글, 영문, 숫자 1~8자예요.";
 }

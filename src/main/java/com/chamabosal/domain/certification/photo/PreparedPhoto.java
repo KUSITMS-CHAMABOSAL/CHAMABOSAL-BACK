@@ -12,7 +12,7 @@ public record PreparedPhoto(String key, boolean isInvalid) {
     public static final PreparedPhoto NONE = new PreparedPhoto(null, false);
     public static final PreparedPhoto INVALID = new PreparedPhoto(null, true);
 
-    private static final String INVALID_MESSAGE = "없거나 만료된 사진입니다.";
+    private static final String INVALID_MESSAGE = "없거나 만료된 사진이에요.";
 
     public static PreparedPhoto of(String key) {
         return new PreparedPhoto(key, false);

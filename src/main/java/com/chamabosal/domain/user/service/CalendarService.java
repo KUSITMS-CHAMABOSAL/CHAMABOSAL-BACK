@@ -27,7 +27,7 @@ public class CalendarService {
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("uuuu-MM");
     /** uuuu는 `+10000-11`처럼 부호 붙은 다섯 자리 연도도 읽어서, 파싱 전에 yyyy-MM 모양부터 확인한다 (코드리뷰 반영). */
     private static final Pattern MONTH_PATTERN = Pattern.compile("[0-9]{4}-[0-9]{2}");
-    private static final String MONTH_MESSAGE = "월은 yyyy-MM 형식입니다.";
+    private static final String MONTH_MESSAGE = "월은 yyyy-MM 형식이에요.";
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
