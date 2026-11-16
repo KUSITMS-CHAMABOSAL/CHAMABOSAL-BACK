@@ -192,6 +192,17 @@ class ReactionTest {
         assertThat(potAmount()).isEqualTo(potAfterFirst);
     }
 
+    @Test
+    void RICE_01_9_리액션_보상은_처음_한_번만_개인_공양미에_들어간다() throws Exception {
+        react(userA, certificationB, "GOOD").andExpect(status().isOk());
+        react(userA, certificationB, "BAD").andExpect(status().isOk());
+        cancel(userA, certificationB).andExpect(status().isOk());
+        react(userA, certificationB, "GOOD").andExpect(status().isOk());
+
+        assertThat(reactionRewards(userA)).hasSize(1);
+        assertThat(riceHistoryRepository.sumDeltaByUserId(userA.getId())).isEqualTo(1);
+    }
+
     private ResultActions react(User user, Long certificationId, String type) throws Exception {
         return mockMvc.perform(put("/api/certifications/{certificationId}/reactions/me", certificationId)
                 .header("Authorization", bearer(user))
