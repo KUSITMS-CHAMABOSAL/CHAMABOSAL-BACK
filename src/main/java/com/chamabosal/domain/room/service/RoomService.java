@@ -176,7 +176,7 @@ public class RoomService {
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void kick(Long userId, Long roomId, Long targetMemberId) {
-        roomMemberRepository.findKickTargetUserId(roomId, userId, targetMemberId).ifPresent(userRepository::findWithLockById);
+        roomMemberRepository.findKickTargetUserId(roomId, targetMemberId).ifPresent(userRepository::findWithLockById);
         Room room = roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
