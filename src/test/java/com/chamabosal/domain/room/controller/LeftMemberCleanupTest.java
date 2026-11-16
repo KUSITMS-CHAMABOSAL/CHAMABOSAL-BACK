@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.certification.photo.MemoryPhotoStorage;
+import com.chamabosal.domain.certification.photo.PhotoStorage;
 import com.chamabosal.domain.certification.service.LeftMemberCleanupScheduler;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
@@ -12,17 +14,26 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import java.time.LocalDateTime;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/** 떠난 보살 기록 정리 (CLEAN-01). 사진 삭제는 CERT-04 구현 뒤에 시나리오에 더한다. */
+/** 떠난 보살 기록 정리 (CLEAN-01). 사진은 테스트용 메모리 저장소에서 지워졌는지 본다. */
 class LeftMemberCleanupTest extends RoomTestSupport {
 
     @Autowired
     LeftMemberCleanupScheduler leftMemberCleanupScheduler;
 
+    @Autowired
+    PhotoStorage photoStorage;
+
+    @AfterEach
+    void clearPhotos() {
+        storage().clear();
+    }
+
     @Test
-    void CLEAN_01_1_나간_지_6개월이_지난_멤버의_한_줄과_금액을_비운다() {
+    void CLEAN_01_1_나간_지_6개월이_지난_멤버의_사진을_지우고_한_줄과_금액을_비운다() {
         Room room = createRoom(4);
         RoomMember a = addMember(room, newUser(), "민지");
         Certification certification = certifyFailed(room, a);
@@ -111,12 +122,49 @@ class LeftMemberCleanupTest extends RoomTestSupport {
         assertCleared(certification);
     }
 
-    /** 나가기 전, 7개월 전 회차에 `못 참았어요`를 한 줄·금액과 함께 남긴다. */
+    @Test
+    void 사진만_남은_멤버도_사진을_지운다() {
+        Room room = createRoom(4);
+        RoomMember a = addMember(room, newUser(), "민지");
+        Certification certification = withPhoto(certify(room, a, CertificationResult.ENDURED, null, null), a);
+        leave(a.getId(), NOW.minusMonths(6).minusMinutes(1), LeaveType.LEFT);
+
+        leftMemberCleanupScheduler.clearExpiredRecords();
+
+        assertPhotoDeleted(certification);
+    }
+
+    /** 나가기 전, 7개월 전 회차에 `못 참았어요`를 사진·한 줄·금액과 함께 남긴다. */
     private Certification certifyFailed(Room room, RoomMember member) {
+        return withPhoto(certify(room, member, CertificationResult.FAILED, "치킨 시켰어요", 23000), member);
+    }
+
+    private Certification certify(Room room, RoomMember member, CertificationResult result, String memo,
+                                  Integer spentAmount) {
         LocalDateTime certifiedAt = NOW.minusMonths(7);
         Round round = saveRound(room, certifiedAt.toLocalDate(), RoundStatus.ANNOUNCED);
-        return certificationRepository.save(Certification.create(round, member, CertificationResult.FAILED,
-                "치킨 시켰어요", 23000, certifiedAt));
+        return certificationRepository.save(Certification.create(round, member, result, memo, spentAmount, certifiedAt));
+    }
+
+    private Certification withPhoto(Certification certification, RoomMember member) {
+        String key = photoKey(member);
+        storage().upload(key);
+        certification.replaceImage(key);
+        return certificationRepository.save(certification);
+    }
+
+    private void assertPhotoDeleted(Certification certification) {
+        Certification reloaded = certificationRepository.findById(certification.getId()).orElseThrow();
+        assertThat(reloaded.hasImage()).isFalse();
+        assertThat(storage().contains(photoKey(certification.getMember()))).isFalse();
+    }
+
+    private static String photoKey(RoomMember member) {
+        return "certifications/left-" + member.getId();
+    }
+
+    private MemoryPhotoStorage storage() {
+        return (MemoryPhotoStorage) photoStorage;
     }
 
     private void assertCleared(Certification certification) {
@@ -124,11 +172,14 @@ class LeftMemberCleanupTest extends RoomTestSupport {
         assertThat(reloaded.getMemo()).isNull();
         assertThat(reloaded.getSpentAmount()).isNull();
         assertThat(reloaded.getResult()).isEqualTo(CertificationResult.FAILED);
+        assertPhotoDeleted(certification);
     }
 
     private void assertKept(Certification certification) {
         Certification reloaded = certificationRepository.findById(certification.getId()).orElseThrow();
         assertThat(reloaded.getMemo()).isEqualTo("치킨 시켰어요");
         assertThat(reloaded.getSpentAmount()).isEqualTo(23000);
+        assertThat(reloaded.hasImage()).isTrue();
+        assertThat(storage().contains(photoKey(certification.getMember()))).isTrue();
     }
 }
