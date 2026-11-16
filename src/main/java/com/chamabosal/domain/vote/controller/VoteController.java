@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-@Tag(name = "[VOTE] 투표 API", description = "후보 조회·투표 제출·투표 탭 상태")
+@Tag(name = "[VOTE] 투표 API", description = "투표 제출·투표 탭 상태")
 public class VoteController {
 
     private final VoteSubmitService voteSubmitService;

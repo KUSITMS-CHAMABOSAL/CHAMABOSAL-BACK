@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@Tag(name = "[ROOM] 방 API", description = "방 만들기, 오늘 탭, 닉네임 수정, 한 솥 확인, 나가기, 내보내기")
+@Tag(name = "[ROOM] 방 API", description = "방 만들기, 오늘 탭, 닉네임 수정, 결과 확인, 한 솥 확인, 나가기 미리보기, 나가기, 내보내기")
 public class RoomController {
 
     private final RoomService roomService;
@@ -68,7 +68,7 @@ public class RoomController {
 
     @PostMapping
     @Operation(summary = "방 만들기 (ROOM-01)",
-            description = "방과 방장 멤버를 한 번에 만듭니다. 보살 색은 서버가 랜덤으로 정합니다. 방 이름 앞뒤 띄어쓰기는 지우고 저장합니다. 공양미 목표는 300~700석 중 50석 단위예요.")
+            description = "방과 방장 멤버를 한 번에 만듭니다. 보살 색은 서버가 랜덤으로 정합니다. 방 이름 앞뒤 띄어쓰기는 지우고 저장합니다. 공양미 목표는 300~700석 중 50석 단위입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "생성 성공"),
             @ApiResponse(
