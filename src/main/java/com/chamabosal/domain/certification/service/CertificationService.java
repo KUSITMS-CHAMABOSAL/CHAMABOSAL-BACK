@@ -188,8 +188,10 @@ public class CertificationService {
      * 이전 회차 투표가 끝났거나 이전 회차가 없으면 열린다 (CERT-01 8번).
      * 그 회차가 이미 투표를 시작했으면 투표 시작 뒤 들어온 멤버라 다음 회차를 기다린다.
      * 투표가 열리지 않은 회차는 그 회차에서 인증을 삭제한 멤버만 다시 인증할 수 있다 (CERT-01 10번).
+     * 오늘 탭(ROOM-02 14번)의 인증 열림 여부도 이 기준을 그대로 쓴다.
      */
-    private boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round, Long memberId) {
+    @Transactional(readOnly = true)
+    public boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round, Long memberId) {
         if (round.isPresent() && round.get().getStatus() == RoundStatus.NO_VOTE) {
             return certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNotNull(round.get().getId(), memberId);
         }

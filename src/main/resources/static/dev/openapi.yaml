@@ -3694,6 +3694,7 @@ components:
       - status
       - certifiedCount
       - isAllCertified
+      - isCertificationOpen
       properties:
         roundId:
           type: integer
@@ -3712,6 +3713,10 @@ components:
           type: boolean
           description: 현재 멤버 전원이 인증함
           example: false
+        isCertificationOpen:
+          type: boolean
+          description: 지금 인증할 수 있음. 이전 회차 투표가 끝나야 열림 (Q-17·Q-82). false면 인증 버튼을 막음
+          example: true
     TodayCertification:
       type: object
       description: 인증 전이면 `null`
@@ -3772,6 +3777,7 @@ components:
       - nickname
       - color
       - equippedItemCodes
+      - fallenNabalNumbers
       - isMe
       - monthlyEnduredCount
       - monthlyPickedCount
@@ -3787,6 +3793,12 @@ components:
         color:
           $ref: '#/components/schemas/BosalColor'
         equippedItemCodes: *id005
+        fallenNabalNumbers:
+          type: array
+          items:
+            type: integer
+          description: 그 멤버 보살의 빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음 (Q-101)
+          example: [3, 7]
         isMe:
           type: boolean
           example: true
@@ -3813,7 +3825,7 @@ components:
       properties:
         isLastCertifier:
           type: boolean
-          description: 내가 인증하면 전원 인증이 됨. 등록 전 확인 시트에 씀
+          description: 내가 등록하면 바로 투표가 시작됨. 등록 전 확인 시트(WF 55)를 띄울 때 씀. 인증이 열려 있고, 나만 인증 전이고, 현재 멤버 3명 이상이고, 회차가 인증 중일 때만 true. 3명 미만 방은 false
           example: false
         receivedPokeCount:
           type: integer
@@ -3830,7 +3842,7 @@ components:
       properties:
         unplayedTapRoundId:
           type: integer
-          description: 재생하지 않은 받은 톡톡이 있는 회차
+          description: 투표 마감 5시간 뒤 전달됐지만 재생하지 않은 받은 톡톡이 있는 회차. 전달 전이면 `null`
           nullable: true
           format: int64
         unseenResultRoundId:

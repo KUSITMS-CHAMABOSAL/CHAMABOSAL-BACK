@@ -29,7 +29,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class VoteStartService {
 
-    private static final int MIN_VOTERS = 3;
+    public static final int MIN_VOTERS = 3;
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
