@@ -200,8 +200,7 @@ class DefenseMoktakTest {
 
         Round defended = reload(round);
         assertThat(defended.getResultType()).isEqualTo(RoundResultType.DEFENDED);
-        assertThat(defended.getPickedMember()).isNotNull();
-        assertThat(defended.getPickedMember().getId()).isNotEqualTo(party.b().getId());
+        assertThat(defended.getPickedMember().getId()).isEqualTo(party.a().getId());
     }
 
     @Test
