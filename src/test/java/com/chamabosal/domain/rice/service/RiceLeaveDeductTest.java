@@ -2,6 +2,7 @@ package com.chamabosal.domain.rice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,6 +18,11 @@ import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.store.entity.Item;
+import com.chamabosal.domain.store.entity.ItemSlot;
+import com.chamabosal.domain.store.entity.UserItem;
+import com.chamabosal.domain.store.repository.ItemRepository;
+import com.chamabosal.domain.store.repository.UserItemRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.security.jwt.JwtProvider;
@@ -82,12 +88,19 @@ class RiceLeaveDeductTest {
     @Autowired
     RoomPotRepository roomPotRepository;
 
+    @Autowired
+    ItemRepository itemRepository;
+
+    @Autowired
+    UserItemRepository userItemRepository;
+
     private int userSequence;
     private long refSequence = 1;
     private Room room1;
     private Room room2;
     private User userA;
     private RoomMember memberA;
+    private User ownerB;
 
     @BeforeEach
     void setUp() {
@@ -96,13 +109,18 @@ class RiceLeaveDeductTest {
         room2 = newRoom();
         userA = newUser();
         memberA = addMember(room1, userA, "민지");
-        addMember(room1, newUser(), "지수");
+        ownerB = newUser();
+        RoomMember memberB = addMember(room1, ownerB, "지수");
+        room1.assignOwner(memberB.getId());
+        room1 = roomRepository.save(room1);
         addMember(room2, userA, "민지");
         addMember(room2, newUser(), "하린");
     }
 
     @AfterEach
     void tearDown() {
+        userItemRepository.deleteAll();
+        itemRepository.findByCode("LEAVE_HAT").ifPresent(itemRepository::delete);
         riceHistoryRepository.deleteAll();
         potContributionRepository.deleteAll();
         roomPotRepository.deleteAll();
@@ -256,6 +274,108 @@ class RiceLeaveDeductTest {
 
         assertThat(leaveDeltas().stream().mapToInt(Integer::intValue).sum()).isEqualTo(-120);
         assertThat(balance()).isZero();
+    }
+
+    @Test
+    void RICE_03_5_차감돼도_산_아이템은_계속_보유한다() throws Exception {
+        Item hat = itemRepository.save(Item.create("LEAVE_HAT", "모자", 100, ItemSlot.HAT, 99));
+        userItemRepository.save(UserItem.acquire(userA, hat));
+        earn(room1, 200);
+        purchase(100);
+
+        leave(room1).andExpect(status().isOk());
+
+        assertThat(leaveDeltas()).containsExactly(-100);
+        assertThat(userItemRepository.existsByUser_IdAndItem_Id(userA.getId(), hat.getId())).isTrue();
+    }
+
+    @Test
+    void RICE_03_11_내보내지면_그_방에서_모은_공양미를_차감한다() throws Exception {
+        earn(room1, 200);
+        earn(room2, 150);
+
+        kick(room1, memberA).andExpect(status().isOk());
+
+        assertThat(leaveDeltas()).containsExactly(-200);
+        assertThat(balance()).isEqualTo(150);
+    }
+
+    @Test
+    void RICE_03_12_미리보기와_실제_차감이_같다() throws Exception {
+        earn(room1, 200);
+        purchase(80);
+
+        preview(room1).andExpect(status().isOk()).andExpect(jsonPath("$.data.riceToLose").value(120));
+        leave(room1).andExpect(status().isOk());
+
+        assertThat(leaveDeltas()).containsExactly(-120);
+    }
+
+    @Test
+    void RICE_03_13_목표를_채운_방의_미리보기는_0석이다() throws Exception {
+        earn(room1, 200);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                roomRepository.findById(room1.getId()).orElseThrow().completePot());
+
+        preview(room1).andExpect(jsonPath("$.data.riceToLose").value(0));
+    }
+
+    /** 내보내기는 방장이 요청하지만 차감은 A의 잔액이라, A의 사용자 행 락으로 A의 다른 방 나가기와 하나씩 처리한다. */
+    @Test
+    void RICE_03_14_내보내기와_다른_방_나가기가_동시에_와도_잔액은_0석_아래로_내려가지_않는다() {
+        earn(room1, 100);
+        earn(room2, 100);
+        purchase(80);
+
+        CountDownLatch ready = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            CompletableFuture<Integer> kicked = CompletableFuture.supplyAsync(() -> {
+                await(ready);
+                return statusOfKick(room1, memberA);
+            }, executor);
+            CompletableFuture<Integer> left = CompletableFuture.supplyAsync(() -> {
+                await(ready);
+                return statusOf(room2);
+            }, executor);
+            ready.countDown();
+            assertThat(kicked.join()).isEqualTo(200);
+            assertThat(left.join()).isEqualTo(200);
+        } finally {
+            executor.shutdown();
+        }
+
+        assertThat(leaveDeltas().stream().mapToInt(Integer::intValue).sum()).isEqualTo(-120);
+        assertThat(balance()).isZero();
+    }
+
+    @Test
+    void 미리보기는_멤버가_아니면_ROOM_002_삭제된_방이면_ROOM_005다() throws Exception {
+        Room other = newRoom();
+        addMember(other, newUser(), "도윤");
+        preview(other).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ROOM_002"));
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                roomRepository.findById(other.getId()).orElseThrow().delete(LocalDateTime.now(clock)));
+        preview(other).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("ROOM_005"));
+    }
+
+    private ResultActions preview(Room room) throws Exception {
+        return mockMvc.perform(get("/api/rooms/{roomId}/members/me/leave-preview", room.getId())
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(userA.getId())));
+    }
+
+    private ResultActions kick(Room room, RoomMember target) throws Exception {
+        return mockMvc.perform(delete("/api/rooms/{roomId}/members/{memberId}", room.getId(), target.getId())
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(ownerB.getId())));
+    }
+
+    private int statusOfKick(Room room, RoomMember target) {
+        try {
+            return kick(room, target).andReturn().getResponse().getStatus();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private ResultActions leave(Room room) throws Exception {
