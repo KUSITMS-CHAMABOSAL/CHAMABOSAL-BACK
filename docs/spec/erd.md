@@ -174,7 +174,6 @@ erDiagram
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
-| picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 조회한 시각. 방어 마감(+2분) 기준 (SHIELD-02) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
 - `UNIQUE (room_id, round_date)`
@@ -197,6 +196,7 @@ erDiagram
 | member_id | BIGINT | FK room_members, NOT NULL | |
 | is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함이면 false) |
 | can_vote | BOOLEAN | NOT NULL | 투표권. 투표 시작 시점까지 인증했으면 true (11/8 회의) |
+| bad_count | INT | NOT NULL | 투표 시작 시점에 그 멤버의 인증이 받은 배드(아쉬워요) 수. 후보 카드와 동점 판정용 (VOTE-01 5번, RESULT-01 3번) |
 
 - `UNIQUE (round_id, member_id)`
 - 명단 3명 미만이면 행을 만들지 않고 `rounds.status = NO_VOTE`
