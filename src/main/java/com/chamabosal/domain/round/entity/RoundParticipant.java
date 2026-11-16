@@ -45,12 +45,18 @@ public class RoundParticipant extends BaseEntity {
     @Column(nullable = false)
     private boolean canVote;
 
-    public static RoundParticipant create(Round round, RoomMember member, boolean isCandidate, boolean canVote) {
+    /** 투표 시작 시점에 그 멤버의 인증이 받은 배드(아쉬워요) 수. 후보 카드와 동점 판정에 쓴다 (VOTE-01 5번, RESULT-01 3번). */
+    @Column(nullable = false)
+    private int badCount;
+
+    public static RoundParticipant create(Round round, RoomMember member, boolean isCandidate, boolean canVote,
+                                          int badCount) {
         RoundParticipant participant = new RoundParticipant();
         participant.round = round;
         participant.member = member;
         participant.isCandidate = isCandidate;
         participant.canVote = canVote;
+        participant.badCount = badCount;
         return participant;
     }
 }

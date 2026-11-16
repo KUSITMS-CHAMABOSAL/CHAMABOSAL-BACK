@@ -89,7 +89,9 @@ public class VoteCloseService {
     }
 
     private void close(Round round, List<Vote> votes, LocalDateTime now) {
-        Judgement judgement = judge(votes);
+        Map<Long, Integer> badCounts = roundParticipantRepository.findByRound_Id(round.getId()).stream()
+                .collect(Collectors.toMap(participant -> participant.getMember().getId(), RoundParticipant::getBadCount));
+        Judgement judgement = judge(votes, badCounts);
         round.announce(now, judgement.resultType(), judgement.pickedMember());
     }
 
@@ -112,10 +114,10 @@ public class VoteCloseService {
 
     /**
      * RESULT-01: 실제 투표자의 절반을 초과해 "오늘은 모두 보살"이면 ALL_BOSAL이다.
-     * 아니면 "오늘은 모두 보살"이 아닌 표만 모아 최다 득표가 단독이면 PICKED, 비었거나 동점이면 ALL_SAFE다
-     * (0표·동점·전원 보살 아님이 모두 이 분기 하나로 처리된다). 방어권(SHIELD-02)으로 DEFENDED가 되는 것은 제외 범위다.
+     * 아니면 "오늘은 모두 보살"이 아닌 표만 모아 최다 득표가 단독이면 PICKED다. 동점이면 투표 시작 시점 배드 수가 가장 많은
+     * 후보를 지목하고, 그것도 같거나 표가 없으면 ALL_SAFE다 (RESULT-01 3·4번). 방어권(SHIELD-02)으로 DEFENDED가 되는 것은 제외 범위다.
      */
-    private Judgement judge(List<Vote> votes) {
+    private Judgement judge(List<Vote> votes, Map<Long, Integer> badCounts) {
         int totalVoters = votes.size();
         long allBosalCount = votes.stream().filter(vote -> vote.getTargetMember() == null).count();
         if (totalVoters > 0 && allBosalCount * 2 > totalVoters) {
@@ -130,10 +132,17 @@ public class VoteCloseService {
                 .filter(entry -> entry.getValue() == max)
                 .map(Map.Entry::getKey)
                 .toList();
-        if (max == 0 || winners.size() != 1) {
+        if (max == 0) {
             return new Judgement(RoundResultType.ALL_SAFE, null);
         }
-        return new Judgement(RoundResultType.PICKED, winners.get(0));
+        int maxBad = winners.stream().mapToInt(member -> badCounts.getOrDefault(member.getId(), 0)).max().orElse(0);
+        List<RoomMember> picked = winners.stream()
+                .filter(member -> badCounts.getOrDefault(member.getId(), 0) == maxBad)
+                .toList();
+        if (picked.size() != 1) {
+            return new Judgement(RoundResultType.ALL_SAFE, null);
+        }
+        return new Judgement(RoundResultType.PICKED, picked.get(0));
     }
 
     private record Judgement(RoundResultType resultType, RoomMember pickedMember) {

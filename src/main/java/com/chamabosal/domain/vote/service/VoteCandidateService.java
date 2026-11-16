@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * 투표 후보 계산 (VOTE-02). 그날 들어와서 인증하지 않은 멤버는 후보가 아니라 목록에서 뺀다.
- * 투표 중 나간 명단 멤버를 후보에서 뺄지는 아직 정하지 않아 (Q-27) 이번에는 빼지 않는다.
+ * 투표 중 나간 명단 멤버도 후보로 남는다 (VOTE-02 9번, Q-27).
  */
 @Service
 @RequiredArgsConstructor

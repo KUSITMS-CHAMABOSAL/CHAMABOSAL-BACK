@@ -15,6 +15,7 @@ public record VoteCandidateResponse(
         String nickname,
         BosalColor color,
         @Schema(description = "착용 아이템 코드, 상점 노출 순서") List<String> equippedItemCodes,
+        @Schema(description = "투표 시작 시점에 받은 배드(아쉬워요) 수. 투표 중에는 바뀌지 않는다") int badCount,
         CertificationSummary certification
 ) {
 
@@ -22,7 +23,7 @@ public record VoteCandidateResponse(
                                              List<String> equippedItemCodes) {
         RoomMember member = participant.getMember();
         return new VoteCandidateResponse(
-                member.getId(), member.getNickname(), member.getColor(), equippedItemCodes,
+                member.getId(), member.getNickname(), member.getColor(), equippedItemCodes, participant.getBadCount(),
                 CertificationSummary.from(certification, imageUrl));
     }
 
