@@ -61,6 +61,10 @@ public class TapService {
         if (round.getStatus() != RoundStatus.ANNOUNCED || round.getResultType() != RoundResultType.PICKED) {
             throw new BaseException(BaseErrorCode.TAP_NOT_AVAILABLE);
         }
+        // 지목된 사람이 방을 나갔으면 이마 톡톡이 없다 (RESULT-03 예외, Q-27).
+        if (!round.getPickedMember().isCurrent()) {
+            throw new BaseException(BaseErrorCode.TAP_NOT_AVAILABLE);
+        }
         if (round.getPickedMember().getId().equals(me.getId())) {
             throw new BaseException(BaseErrorCode.TAP_SELF);
         }
@@ -91,11 +95,18 @@ public class TapService {
         return ReceivedTapsResponse.of(isDelivered, round.getTapClosesAt(), isMoktakDone, taps);
     }
 
-    /** 그때까지 받은 톡톡을 모두 재생됨으로 바꾼다. 재시도해도 성공이다. */
+    /**
+     * 그때까지 받은 톡톡을 모두 재생됨으로 바꾼다. 재시도해도 성공이다.
+     * 전달 전이거나 방어된 회차는 바꾸지 않고 성공한다. 미리 바꾸면 전달 뒤 재생할 톡톡이 사라진다 (RESULT-03 6번).
+     */
     @Transactional
     public void markPlayed(Long userId, Long roundId) {
-        findMinePicked(userId, roundId);
-        tapRepository.markPlayed(roundId, LocalDateTime.now(clock));
+        Round round = findMinePicked(userId, roundId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (round.getResultType() != RoundResultType.PICKED || round.isTapOpen(now)) {
+            return;
+        }
+        tapRepository.markPlayed(roundId, now);
     }
 
     /** 받은 톡톡은 그 회차에 지목된 본인만 볼 수 있다 (TAP_005). */
