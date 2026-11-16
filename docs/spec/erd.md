@@ -61,10 +61,13 @@ erDiagram
 | id | BIGINT | PK | |
 | toss_anon_key | VARCHAR(255) | UK, NULL | 앱인토스 익명 사용자 식별키 (API 필드 `anonKey`). 정리된 사용자는 NULL. 나중에 토스 로그인을 붙이면 `toss_user_key`를 옆에 추가 |
 | is_poke_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 콕 알림 |
-| is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증·투표 알림 |
+| is_result_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 투표 결과 알림 |
+| is_vote_opened_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 새 투표 알림 |
+| is_cert_reminder_push_enabled | BOOLEAN | NOT NULL, 기본 true | 설정 > 인증 마감 알림 |
+| is_activity_push_enabled | BOOLEAN | NOT NULL, 기본 true | 더 쓰지 않음 (예전 인증·투표 알림 토글). 출시 전 컬럼 삭제 |
 | deleted_at | DATETIME | NULL | 내 데이터 삭제 시각. 삭제하면 `toss_anon_key`를 바로 NULL로 비우고 행은 다른 기록의 참조용으로 남김. 같은 키로 오면 새 사용자 (Q-102) |
 
-- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (콕은 콕 알림, 나머지는 인증·투표 알림) (Q-98)
+- 알림 토글(`is_*_push_enabled`)은 토스 알림 동의와 별개인 앱 안 설정. 실제 발송 조건: 그 종류의 `push_agreements` 동의(Q-14) **그리고** 앱 안 토글 `true` (알림 종류마다 토글 하나) (Q-98)
   - 사용자가 토스 앱 설정(서비스별 알림)에서 끄면 서버는 알 수 없음 → 발송 응답의 `fail`로만 확인
 
 ### push_agreements

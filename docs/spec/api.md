@@ -79,7 +79,7 @@
 | 인증 | POST | `/api/auth/login` | AUTH-01 | ✅ |
 | 인증 | POST | `/api/auth/test-token` | AUTH-03 | ✅ |
 | 사용자 | GET | `/api/users/me` | USER-01 | ✅ |
-| 사용자 | GET | `/api/rooms/{roomId}/members/me/calendar` | USER-02 | ✅ |
+| 사용자 | GET | `/api/users/me/calendar` | USER-02 | ✅ |
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 나발 | PUT | `/api/users/me/seen-nabal-loss` | NABAL-02 | ✅ |
 | 나발 | POST | `/api/users/me/nabal-replants` | NABAL-03 | ✅ |
@@ -159,7 +159,9 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 ```json
 {
   "isPokePushEnabled": true,
-  "isActivityPushEnabled": true,
+  "isResultPushEnabled": true,
+  "isVoteOpenedPushEnabled": true,
+  "isCertReminderPushEnabled": true,
   "isPokeAgreed": false,
   "isResultAgreed": false,
   "isVoteOpenedAgreed": false,
@@ -211,17 +213,20 @@ NABAL-03. 화면에서 고른 빠진 나발을 개당 15석으로 다시 심습�
 - 확인 순서: `COMMON_002`(빈 목록, 0~37 밖, 중복) → `NABAL_001` → `STORE_001`
 - 에러: `COMMON_002` (400), `NABAL_001` (409, 빠지지 않은 나발), `STORE_001` (409, 공양미 부족)
 
-### GET /api/rooms/{roomId}/members/me/calendar
+### GET /api/users/me/calendar
 
-USER-02. 내 보살 탭의 방별 인증 캘린더입니다. `month`를 비우면 지금 회차 날짜의 달입니다.
+USER-02. 내 보살 탭의 이번 달 기록입니다. 참여한 방을 합쳐 나 기준으로 돌려줍니다. 지금은 나간 방의 기록도 들어갑니다.
 
 ```
-GET /api/rooms/1/members/me/calendar?month=2026-11
+GET /api/users/me/calendar?month=2026-11
 ```
 
 ```json
 {
   "month": "2026-11",
+  "enduredCount": 12,
+  "pickedCount": 2,
+  "streakDays": 5,
   "calendar": [
     { "date": "2026-11-01", "result": "ENDURED" },
     { "date": "2026-11-02", "result": "FAILED" }
@@ -230,17 +235,21 @@ GET /api/rooms/1/members/me/calendar?month=2026-11
 ```
 
 - 회차 날짜 기준. 03:00 전 인증은 전날로 들어감. `month`를 비우면 지금 회차 날짜의 달
-- 인증이 없는 날과 삭제한 인증은 빠짐
-- 이 방의 이번 달 참은 횟수·지목 횟수는 오늘 탭 `members[]`에 있음
-- 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 월 형식)
+- `enduredCount`: 그 달 참았어요 인증 수 (방 합산)
+- `pickedCount`: 그 달 지목된 횟수 (방 합산, 방어 성공 제외)
+- `streakDays`: 하나라도 인증한 날이 이어진 일수. `month`와 상관없이 지금 기준이고, 오늘 아직 인증 전이면 어제까지
+- `calendar`: 그날 인증 중 하나라도 못 참았으면 `FAILED`. 인증이 없는 날과 삭제한 인증은 빠짐
+- 에러: `COMMON_002` (400, 월 형식)
 
 ### PATCH /api/users/me/settings
 
 USER-03. 앱 안의 알림 설정을 바꿉니다. 보낸 값만 바꿉니다.
 
 ```json
-{ "isPokePushEnabled": false, "isActivityPushEnabled": true }
+{ "isPokePushEnabled": false, "isResultPushEnabled": true, "isVoteOpenedPushEnabled": true, "isCertReminderPushEnabled": false }
 ```
+
+- 알림 종류마다 토글 하나: 콕 찌르기·투표 결과·새 투표·인증 마감. 꺼진 토글을 켤 때 그 알림의 토스 동의 요청은 화면이 함
 
 - 에러: `COMMON_002` (400)
 
@@ -274,7 +283,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 { "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
 ```
 
-- `name`: 1~8자, `memberLimit`: 2~4, `nickname`: 1~8자 (형식은 `common.md`)
+- `name`: 1~12자, `memberLimit`: 2~4, `nickname`: 1~8자, 둘 다 앞뒤 띄어쓰기는 지움 (형식은 `common.md`)
 - `potGoalAmount`: 공양미 한 솥 목표 석. 300~700 중 50 단위 (Q-80)
 - 방과 방장 멤버를 한 번에 만듦 (Q-37)
 - 에러: `ROOM_001` (409), `COMMON_002` (400)
@@ -301,7 +310,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
       "certification": {
         "certificationId": 501, "result": "ENDURED", "memo": "집밥 해먹었어요", "spentAmount": null,
         "imageUrl": "https://...", "certifiedAt": "2026-11-05T19:24:00",
-        "myReaction": null,
+        "goodCount": 2, "badCount": 1, "myReaction": null,
         "editableUntil": "2026-11-05T19:34:00", "lockReason": null
       }
     }
@@ -330,7 +339,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `fallenNabalNumbers`: 그 멤버 보살의 빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음 (NABAL-02, Q-101)
 - `members[]`: 홈 카드, 방 정보, 멤버 프로필 시트에 같이 씀. 멤버 프로필 API는 따로 없음
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음
-- 리액션 받은 수는 보내지 않음 ([미정] Q-52)
+- `goodCount`, `badCount`: 그 인증이 받은 잘 참았어요·아쉬워요 수. 누가 눌렀는지는 보내지 않음 (Q-52)
 - `myReaction`: 내가 남긴 리액션(`GOOD`, `BAD`). 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
 - `imageUrl`: 응답할 때마다 만드는 만료 URL. 사진이 없거나 지웠으면 `null` (CERT-04)
 - `me.isLastCertifier`: 인증이 열려 있고 내가 인증하면 전원 인증이 되어 투표가 시작됨. 등록 전 확인 시트("등록하면 바로 투표가 시작되고, 인증내역 수정은 불가능해요")에 씀. 3명 미만 방은 투표가 열리지 않아 `false`
@@ -350,8 +359,8 @@ ROOM-04. 이 방에서 쓰는 내 닉네임을 바꿉니다.
 { "nickname": "지수2" }
 ```
 
-- 1~8자, 한글(완성형)·영문·숫자
-- 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 쓸 수 없음. 영문 대소문자는 구분하지 않음
+- 1~8자, 한글(완성형)·영문·숫자. 앞뒤 띄어쓰기는 지움
+- 현재 멤버의 닉네임은 쓸 수 없음 (나간 멤버의 닉네임은 가능). 영문 대소문자는 구분하지 않음
 - 지금 닉네임과 같으면 저장하지 않고 성공
 - 에러: `ROOM_002` (403), `ROOM_004` (409, `field: nickname`), `ROOM_005` (404), `COMMON_002` (400)
 
@@ -442,7 +451,7 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
 
 - `room`: `UNAVAILABLE`이면 `null`
 - `inviterNickname`: 초대한 사람이 나갔으면 `null`
-- `previousNickname`: 나간 지 6개월 안 된 방이면 예전 닉네임
+- `previousNickname`: 나간 지 6개월 안 된 방이면 예전 닉네임. 그 닉네임을 지금 다른 멤버가 쓰고 있으면 `null` (닉네임을 다시 받음)
 
 ### POST /api/invites/{token}/join
 
@@ -456,7 +465,8 @@ INVITE-03. 방에 들어옵니다. 나간 지 6개월 안이면 예전 멤버 �
 { "roomId": 1, "memberId": 12, "nickname": "지수", "color": "MINT" }
 ```
 
-- 닉네임 규칙은 닉네임 수정과 같음 (1~8자, 6개월 안에 나간 멤버의 닉네임도 불가, 대소문자 구분 없음)
+- 닉네임 규칙은 닉네임 수정과 같음 (1~8자, 앞뒤 띄어쓰기 지움, 현재 멤버의 닉네임만 불가, 대소문자 구분 없음)
+- 다시 들어올 때 예전 닉네임을 지금 다른 멤버가 쓰고 있으면 `ROOM_004` → 닉네임 재설정 화면
 - 다시 들어오는 사람은 자기 예전 닉네임을 쓸 수 있음 (중복 검사에서 내 예전 행은 제외)
 - 나간 지 6개월 안이면 예전 기록이 이어지고, 예전 색을 다른 멤버가 쓰면 남은 색 중 랜덤
 - 이미 멤버면 새로 만들지 않고 기존 정보를 돌려줌
@@ -604,7 +614,7 @@ CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥
 ## 8. 리액션
 
 > 담당자 확인
-> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
+> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지. 받은 수는 오늘 탭 `goodCount`·`badCount`로 보여줌 (Q-52 결정)
 
 ### PUT /api/certifications/{certificationId}/reactions/me
 

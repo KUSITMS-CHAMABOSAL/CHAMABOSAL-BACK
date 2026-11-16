@@ -15,7 +15,7 @@ public record InvitePreviewResponse(
         @Schema(description = "초대한 사람 닉네임. 초대한 사람이 나갔으면 null", example = "민지")
         String inviterNickname,
 
-        @Schema(description = "나간 지 6개월이 안 된 방이면 내 예전 닉네임", example = "지수")
+        @Schema(description = "나간 지 6개월이 안 된 방이면 내 예전 닉네임. 지금 다른 멤버가 쓰고 있으면 null", example = "지수")
         String previousNickname
 ) {
 

@@ -12,6 +12,7 @@ import com.chamabosal.domain.poke.repository.PokeRepository;
 import com.chamabosal.domain.reaction.entity.Reaction;
 import com.chamabosal.domain.reaction.entity.ReactionType;
 import com.chamabosal.domain.reaction.repository.ReactionRepository;
+import com.chamabosal.domain.room.dto.response.RoomTodayResponse.ReactionCounts;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.CertificationInfo;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.Entry;
@@ -38,6 +39,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -119,10 +121,11 @@ public class RoomTodayService {
                 room.getId(), CertificationResult.ENDURED, month.atDay(1), month.atEndOfMonth()));
         Map<Long, Long> picked = toCounts(roundRepository.countPickedByMemberInPeriod(
                 room.getId(), RoundResultType.PICKED, month.atDay(1), month.atEndOfMonth()));
-        Map<Long, ReactionType> myReactions = certifications.isEmpty() ? Map.of()
-                : reactionRepository.findByMember_IdAndCertification_IdIn(me.getId(), certifications.values().stream()
-                        .map(Certification::getId).toList()).stream()
+        List<Long> certificationIds = certifications.values().stream().map(Certification::getId).toList();
+        Map<Long, ReactionType> myReactions = certificationIds.isEmpty() ? Map.of()
+                : reactionRepository.findByMember_IdAndCertification_IdIn(me.getId(), certificationIds).stream()
                 .collect(Collectors.toMap(reaction -> reaction.getCertification().getId(), Reaction::getType));
+        Map<Long, ReactionCounts> reactionCounts = reactionCounts(certificationIds);
         Map<Long, List<String>> equipped = storeService.getEquippedItemCodesByMember(members);
         Map<Long, List<Integer>> nabals = nabalLossRepository.findByUser_IdInAndReplantedAtIsNull(
                         members.stream().map(member -> member.getUser().getId()).toList()).stream()
@@ -134,14 +137,34 @@ public class RoomTodayService {
                         member.getId().equals(me.getId()),
                         endured.getOrDefault(member.getId(), 0L).intValue(),
                         picked.getOrDefault(member.getId(), 0L).intValue(),
-                        certificationInfo(certifications.get(member.getId()), myReactions, now)))
+                        certificationInfo(certifications.get(member.getId()), reactionCounts, myReactions, now)))
                 .toList();
     }
 
-    private CertificationInfo certificationInfo(Certification certification, Map<Long, ReactionType> myReactions,
-                                                LocalDateTime now) {
+    private CertificationInfo certificationInfo(Certification certification, Map<Long, ReactionCounts> reactionCounts,
+                                                Map<Long, ReactionType> myReactions, LocalDateTime now) {
+        if (certification == null) {
+            return null;
+        }
         return CertificationInfo.from(certification, certificationPhotoService.viewUrl(certification),
-                certification == null ? null : myReactions.get(certification.getId()), now);
+                reactionCounts.getOrDefault(certification.getId(), ReactionCounts.NONE),
+                myReactions.get(certification.getId()), now);
+    }
+
+    /** 인증마다 받은 잘 참았어요·아쉬워요 수 (7번, Q-52). 인증마다 따로 세지 않고 한 번에 모은다. */
+    private Map<Long, ReactionCounts> reactionCounts(List<Long> certificationIds) {
+        if (certificationIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, ReactionCounts> counts = new HashMap<>();
+        for (Object[] row : reactionRepository.countByCertification(certificationIds)) {
+            Long certificationId = (Long) row[0];
+            int count = ((Long) row[2]).intValue();
+            ReactionCounts current = counts.getOrDefault(certificationId, ReactionCounts.NONE);
+            counts.put(certificationId, row[1] == ReactionType.GOOD
+                    ? new ReactionCounts(count, current.bad()) : new ReactionCounts(current.good(), count));
+        }
+        return counts;
     }
 
     /** 지금 쌓고 있는 솥. 첫 적립 전에는 솥 행이 없어 0석과 방 목표 석으로 돌려준다 (POT-01). */

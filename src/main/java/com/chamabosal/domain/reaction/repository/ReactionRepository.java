@@ -22,4 +22,12 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
             group by c.member.id
             """)
     List<Object[]> countByRoundAndType(Long roundId, ReactionType type);
+
+    /** 오늘 탭(ROOM-02 7번): 인증마다 받은 리액션 수. 결과는 [인증 ID, 종류, 수]. 누가 눌렀는지는 읽지 않는다. */
+    @Query("""
+            select r.certification.id, r.type, count(r) from Reaction r
+            where r.certification.id in :certificationIds
+            group by r.certification.id, r.type
+            """)
+    List<Object[]> countByCertification(Collection<Long> certificationIds);
 }

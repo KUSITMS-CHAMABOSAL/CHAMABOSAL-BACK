@@ -75,8 +75,13 @@ public class InviteService {
 
         int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(room.getId());
         String inviterNickname = inviter.isCurrent() ? inviter.getNickname() : null;
+        // 예전 닉네임을 지금 다른 멤버가 쓰고 있으면 비워서, 화면이 닉네임을 다시 받게 한다 (정책서, INVITE-02 7번).
         String previousNickname = status == InviteStatus.ALREADY_MEMBER ? null
-                : findRejoinableMember(room.getId(), userId).map(RoomMember::getNickname).orElse(null);
+                : findRejoinableMember(room.getId(), userId)
+                        .filter(previous -> !roomMemberRepository.existsCurrentSameNickname(
+                                room.getId(), previous.getNickname(), previous.getId()))
+                        .map(RoomMember::getNickname)
+                        .orElse(null);
         return new InvitePreviewResponse(status, RoomSummary.from(room, memberCount), inviterNickname, previousNickname);
     }
 
