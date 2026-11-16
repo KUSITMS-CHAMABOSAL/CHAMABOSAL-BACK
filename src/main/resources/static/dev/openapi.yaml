@@ -3537,7 +3537,9 @@ components:
       type: object
       required:
       - isPokePushEnabled
-      - isActivityPushEnabled
+      - isResultPushEnabled
+      - isVoteOpenedPushEnabled
+      - isCertReminderPushEnabled
       - isPokeAgreed
       - isResultAgreed
       - isVoteOpenedAgreed
@@ -3551,9 +3553,17 @@ components:
           type: boolean
           description: 설정 화면 콕 알림 토글 (POKE 알림). 토스 동의와 별개
           example: true
-        isActivityPushEnabled:
+        isResultPushEnabled:
           type: boolean
-          description: 설정 화면 인증·투표 알림 토글 (RESULT·VOTE_OPENED·CERT_REMINDER 알림). 토스 동의와 별개
+          description: 설정 화면 투표 결과 알림 토글 (RESULT). 토스 동의와 별개. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
+          example: true
+        isVoteOpenedPushEnabled:
+          type: boolean
+          description: 설정 화면 새 투표 알림 토글 (VOTE_OPENED). 토스 동의와 별개. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
+          example: true
+        isCertReminderPushEnabled:
+          type: boolean
+          description: 설정 화면 인증 마감 알림 토글 (CERT_REMINDER). 토스 동의와 별개. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
           example: true
         isPokeAgreed:
           type: boolean
@@ -3621,10 +3631,18 @@ components:
           type: boolean
           description: 콕 알림 토글 (POKE 알림에 적용). 보내지 않으면 그대로
           example: false
-        isActivityPushEnabled:
+        isResultPushEnabled:
           type: boolean
-          description: 인증·투표 알림 토글 (RESULT·VOTE_OPENED·CERT_REMINDER 알림에 적용). 보내지 않으면 그대로
+          description: 투표 결과 알림 토글 (RESULT). 보내지 않으면 그대로. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
           example: true
+        isVoteOpenedPushEnabled:
+          type: boolean
+          description: 새 투표 알림 토글 (VOTE_OPENED). 보내지 않으면 그대로. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
+          example: true
+        isCertReminderPushEnabled:
+          type: boolean
+          description: 인증 마감 알림 토글 (CERT_REMINDER). 보내지 않으면 그대로. (2026-11-17 변경) 예전 isActivityPushEnabled 하나를 투표 결과·새 투표·인증 마감 3개로 나눔. 최신 기준은 구현된 API
+          example: false
     PushAgreementRequest:
       type: object
       required:
