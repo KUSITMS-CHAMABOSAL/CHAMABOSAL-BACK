@@ -298,19 +298,38 @@ class CertificationPhotoTest {
     }
 
     @Test
-    void ROOM_07_10_나가도_사진은_남고_회차_종료_7일_뒤_삭제된다() throws Exception {
+    void ROOM_07_10_나가면_사진이_바로_삭제된다() throws Exception {
         Long id = certifyWithPhoto(userA);
         String saved = imageKeyOf(id);
+        Long others = certifyWithPhoto(userB);
         updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
         clock.set(VOTE_CLOSED.plusDays(1));
 
         mockMvc.perform(delete("/api/rooms/{roomId}/members/me", room.getId()).header("Authorization", bearer(userA)))
                 .andExpect(status().isOk());
-        expiryScheduler.deleteExpired();
-        assertThat(storage().contains(saved)).isTrue();
 
-        clock.set(VOTE_CLOSED.plusDays(7));
-        expiryScheduler.deleteExpired();
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+        assertThat(storage().contains(saved)).isFalse();
+        assertThat(certificationRepository.findById(others).orElseThrow().hasImage()).isTrue();
+    }
+
+    @Test
+    void ROOM_08_11_내보내면_사진이_바로_삭제된다() throws Exception {
+        Long id = certifyWithPhoto(userB);
+        String saved = imageKeyOf(id);
+        updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
+        clock.set(VOTE_CLOSED.plusDays(1));
+        RoomMember owner = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userA.getId()).orElseThrow();
+        RoomMember target = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userB.getId()).orElseThrow();
+        Room loaded = roomRepository.findById(room.getId()).orElseThrow();
+        loaded.assignOwner(owner.getId());
+        roomRepository.save(loaded);
+
+        mockMvc.perform(delete("/api/rooms/{roomId}/members/{memberId}", room.getId(), target.getId())
+                        .header("Authorization", bearer(userA)))
+                .andExpect(status().isOk());
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
         assertThat(storage().contains(saved)).isFalse();
     }
 

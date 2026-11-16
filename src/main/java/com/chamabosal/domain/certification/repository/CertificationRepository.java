@@ -103,6 +103,9 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             """)
     List<String> findExpiredImageKeys(LocalDateTime cutoff);
 
+    /** 나가기·내보내기 (ROOM-07 3번, ROOM-08 9번): 그 멤버 행의 아직 지우지 않은 사진. 엔티티로 읽어 지운 것으로 표시한다. */
+    List<Certification> findByMember_IdAndImageKeyIsNotNullAndImageDeletedAtIsNull(Long memberId);
+
     /** 내 데이터 삭제 (USER-05 4번): 예전에 나간 멤버 행까지 포함한 내 인증의 남은 사진 키. 멤버 행 연결을 끊기 전에 읽는다. */
     @Query("""
             select c.imageKey from Certification c

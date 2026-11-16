@@ -1,5 +1,7 @@
 package com.chamabosal.domain.room.service;
 
+import com.chamabosal.domain.certification.photo.CertificationPhotoService;
+import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.room.dto.response.LeavePreviewResponse;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.round.entity.RoundStatus;
@@ -52,6 +54,8 @@ public class RoomService {
     private final VoteCloseService voteCloseService;
     private final RiceService riceService;
     private final RoundRepository roundRepository;
+    private final CertificationRepository certificationRepository;
+    private final CertificationPhotoService certificationPhotoService;
     private final Clock clock;
 
     @Transactional
@@ -206,6 +210,12 @@ public class RoomService {
         if (leaveType == LeaveType.LEFT || leaveType == LeaveType.KICKED) {
             riceService.deductOnLeave(room, member);
         }
+        // 나가면 나간 유형과 상관없이 이 방의 사진을 바로 지운다 (ROOM-07 3번, ROOM-08 9번, Q-48). 일괄 update는 영속성 컨텍스트를
+        // 비워 방장 위임·방 삭제 변경을 잃으므로 엔티티로 표시하고, 저장소에서는 커밋 뒤에 지운다. 내 데이터 삭제(USER-05)는 이어서
+        // 예전에 나간 방의 남은 사진만 지운다.
+        certificationRepository.findByMember_IdAndImageKeyIsNotNullAndImageDeletedAtIsNull(member.getId()).stream()
+                .map(certification -> certification.removeImage(now))
+                .forEach(certificationPhotoService::deleteAfterCommit);
         // 나가기를 저장하기 전에 찾아야 flush 시점과 상관없이 나가는 사람이 빠진다.
         Optional<RoomMember> successor = roomMemberRepository
                 .findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(room.getId(), member.getId());
