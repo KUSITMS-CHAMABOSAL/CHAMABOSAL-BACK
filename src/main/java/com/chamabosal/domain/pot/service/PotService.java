@@ -13,6 +13,7 @@ import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
@@ -39,6 +40,7 @@ public class PotService {
     private final RoomPotRepository roomPotRepository;
     private final PotContributionRepository potContributionRepository;
     private final RiceService riceService;
+    private final StoreService storeService;
     private final Clock clock;
 
     /**
@@ -102,13 +104,15 @@ public class PotService {
                 .sorted(Comparator.comparing(amounts::get, Comparator.reverseOrder()))
                 .toList();
 
+        Map<Long, List<String>> equipped = storeService.getEquippedItemCodesByMember(
+                ranked.stream().map(members::get).toList());
         List<PotCelebrationResponse.Contribution> contributions = new ArrayList<>();
         for (int i = 0; i < ranked.size(); i++) {
             RoomMember member = members.get(ranked.get(i));
             int amount = amounts.get(member.getId());
             int rank = i > 0 && amounts.get(ranked.get(i - 1)) == amount ? contributions.get(i - 1).rank() : i + 1;
             contributions.add(new PotCelebrationResponse.Contribution(
-                    rank, member.getId(), member.getNickname(), member.getColor(), List.of(), amount));
+                    rank, member.getId(), member.getNickname(), member.getColor(), equipped.get(member.getId()), amount));
         }
         return new PotCelebrationResponse(pot.getSeq(), pot.getGoalAmount(), pot.getRewardAmount(), contributions);
     }

@@ -16,7 +16,7 @@ public record PotCelebrationResponse(
             Long memberId,
             String nickname,
             BosalColor color,
-            @Schema(description = "착용 아이템 코드. 곳간 착용 연결 전이라 빈 목록") List<String> equippedItemCodes,
+            @Schema(description = "착용 아이템 코드, 상점 노출 순서") List<String> equippedItemCodes,
             @Schema(description = "그 솥에 넣은 석. 인증 삭제로 회수한 석은 뺌") int amount
     ) {
     }
