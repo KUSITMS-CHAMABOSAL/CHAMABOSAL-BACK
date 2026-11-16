@@ -8,6 +8,7 @@ import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.CertificationInfo;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse.Entry;
@@ -56,6 +57,7 @@ public class RoomTodayService {
     private final CertificationService certificationService;
     private final CertificationPhotoService certificationPhotoService;
     private final TapRepository tapRepository;
+    private final RoomPotRepository roomPotRepository;
     private final NabalLossRepository nabalLossRepository;
     private final Clock clock;
 
@@ -89,7 +91,7 @@ public class RoomTodayService {
         boolean startsVote = members.size() >= VoteStartService.MIN_VOTERS && round.map(Round::isCertifying).orElse(true);
         Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
                 && certifiedCount == members.size() - 1, 0);
-        return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), new Pot(0, room.getPotGoalAmount()),
+        return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), pot(room),
                 roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me, now));
     }
 
@@ -134,6 +136,13 @@ public class RoomTodayService {
                 certification.getSpentAmount(), certificationPhotoService.viewUrl(certification),
                 certification.getCertifiedAt(), null,
                 certification.getEditableUntil(), lockReason);
+    }
+
+    /** 지금 쌓고 있는 솥. 첫 적립 전에는 솥 행이 없어 0석과 방 목표 석으로 돌려준다 (POT-01). */
+    private Pot pot(Room room) {
+        return roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(room.getId())
+                .map(pot -> new Pot(pot.getAmount(), pot.getGoalAmount()))
+                .orElseGet(() -> new Pot(0, room.getPotGoalAmount()));
     }
 
     /** 톡톡 → 결과 → 한 솥 축하 순서로 클라이언트가 재생한다 (13번). */

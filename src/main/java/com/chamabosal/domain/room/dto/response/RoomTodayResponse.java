@@ -22,7 +22,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
     }
 
     public record Pot(
-            @Schema(description = "현재 진행도. 한 솥(POT-01) 전에는 0") int amount,
+            @Schema(description = "지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. 목표를 채운 뒤 연장 전까지는 목표보다 클 수 있음") int amount,
             @Schema(description = "목표 석") int goalAmount
     ) {
     }

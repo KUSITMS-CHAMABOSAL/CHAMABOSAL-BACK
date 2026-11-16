@@ -48,7 +48,7 @@ public class RoomController {
                     round.isCertificationOpen이 false면 이전 회차 투표가 아직 끝나지 않아 인증할 수 없습니다(03:00~15:00 어제 투표 중 등).
                     entry는 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면입니다. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서로 재생해 주세요.
                     entry.unplayedTapRoundId는 투표 마감 5시간 뒤 톡톡이 전달된 뒤에만 채워집니다. 그 전에는 결과만 먼저 보여 주세요.
-                    아직 없는 기능의 값은 임시 값입니다: pot.amount·me.receivedPokeCount는 0, myReaction은 null, equippedItemCodes는 빈 배열.
+                    아직 없는 기능의 값은 임시 값입니다: me.receivedPokeCount는 0, myReaction은 null, equippedItemCodes는 빈 배열.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

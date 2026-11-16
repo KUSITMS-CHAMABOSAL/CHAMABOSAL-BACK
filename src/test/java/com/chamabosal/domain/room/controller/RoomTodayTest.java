@@ -8,6 +8,7 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
+import com.chamabosal.domain.pot.entity.RoomPot;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
@@ -311,6 +312,17 @@ class RoomTodayTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.data.members[0].certification.imageUrl")
                         .value("memory://view/certifications/photo-a"))
                 .andExpect(jsonPath("$.data.members[1].certification.imageUrl").doesNotExist());
+    }
+
+    @Test
+    void 지금_쌓고_있는_솥의_진행도와_목표를_돌려준다() throws Exception {
+        RoomPot pot = RoomPot.first(room);
+        pot.add(186);
+        roomPotRepository.save(pot);
+
+        today(userA)
+                .andExpect(jsonPath("$.data.pot.amount").value(186))
+                .andExpect(jsonPath("$.data.pot.goalAmount").value(300));
     }
 
     private RoomMember join(User user, String nickname, LocalDateTime joinedAt) {
