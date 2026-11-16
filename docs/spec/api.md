@@ -442,7 +442,7 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
 
 - `room`: `UNAVAILABLE`이면 `null`
 - `inviterNickname`: 초대한 사람이 나갔으면 `null`
-- `previousNickname`: 나간 지 6개월 안 된 방이면 예전 닉네임
+- `previousNickname`: 나간 지 6개월 안 된 방이면 예전 닉네임. 그 닉네임을 지금 다른 멤버가 쓰고 있으면 `null` (닉네임을 다시 받음)
 
 ### POST /api/invites/{token}/join
 
