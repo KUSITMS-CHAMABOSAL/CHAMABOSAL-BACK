@@ -1,7 +1,6 @@
 package com.chamabosal.domain.room.service;
 
 import com.chamabosal.domain.certification.entity.Certification;
-import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.photo.CertificationPhotoService;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
@@ -96,7 +95,9 @@ public class RoomTodayService {
     }
 
     private RoomTodayResponse.Room roomInfo(Room room, RoomMember me, int memberCount, LocalDate roundDate) {
-        boolean hasVotingRound = roundRepository.existsByRoom_IdAndStatus(room.getId(), RoundStatus.VOTING);
+        // 03:00이 지났는데 배치가 아직 투표를 열지 않은 어제 회차도 내보내기(ROOM-08)와 같이 투표 중으로 본다 (18번).
+        boolean hasVotingRound = roundRepository.existsVotingTime(room.getId(), roundDate,
+                RoundStatus.VOTING, RoundStatus.CERTIFYING);
         int daysTogether = (int) ChronoUnit.DAYS.between(Round.dateOf(room.getCreatedAt()), roundDate);
         return new RoomTodayResponse.Room(room.getId(), room.getName(), room.getGoal(), memberCount, room.getMemberLimit(),
                 me.getId().equals(room.getOwnerMemberId()), room.getPotCompletedCount(), hasVotingRound, daysTogether);
@@ -124,18 +125,7 @@ public class RoomTodayService {
     }
 
     private CertificationInfo certificationInfo(Certification certification, LocalDateTime now) {
-        if (certification == null) {
-            return null;
-        }
-        CertificationLock lock = certification.lockAt(now);
-        String lockReason = lock == null ? null : switch (lock) {
-            case EDIT_TIME_OVER -> "TIME_OVER";
-            case VOTE_STARTED -> "VOTE_STARTED";
-        };
-        return new CertificationInfo(certification.getId(), certification.getResult(), certification.getMemo(),
-                certification.getSpentAmount(), certificationPhotoService.viewUrl(certification),
-                certification.getCertifiedAt(), null,
-                certification.getEditableUntil(), lockReason);
+        return CertificationInfo.from(certification, certificationPhotoService.viewUrl(certification), now);
     }
 
     /** 지금 쌓고 있는 솥. 첫 적립 전에는 솥 행이 없어 0석과 방 목표 석으로 돌려준다 (POT-01). */

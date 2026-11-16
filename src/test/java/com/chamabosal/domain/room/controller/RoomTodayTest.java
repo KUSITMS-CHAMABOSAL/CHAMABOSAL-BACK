@@ -228,6 +228,13 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
+    void 배치가_투표를_열기_전인_어제_회차도_투표_중인_회차로_본다() throws Exception {
+        saveRound(room, TODAY.minusDays(1), RoundStatus.CERTIFYING);
+
+        today(userA).andExpect(jsonPath("$.data.room.hasVotingRound").value(true));
+    }
+
+    @Test
     void ROOM_02_15_같이_참은_일수는_만든_날_0일부터_센다() throws Exception {
         clock.set(CREATED_AT.plusHours(5));
         today(userA).andExpect(jsonPath("$.data.room.daysTogether").value(0));

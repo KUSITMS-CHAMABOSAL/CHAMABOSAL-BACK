@@ -190,6 +190,7 @@ public class CertificationService {
      * 투표가 열리지 않은 회차는 그 회차에서 인증을 삭제한 멤버만 다시 인증할 수 있다 (CERT-01 10번).
      * 오늘 탭(ROOM-02 14번)의 인증 열림 여부도 이 기준을 그대로 쓴다.
      */
+    @Transactional(readOnly = true)
     public boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round, Long memberId) {
         if (round.isPresent() && round.get().getStatus() == RoundStatus.NO_VOTE) {
             return certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNotNull(round.get().getId(), memberId);
