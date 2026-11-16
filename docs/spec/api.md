@@ -301,7 +301,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
       "certification": {
         "certificationId": 501, "result": "ENDURED", "memo": "집밥 해먹었어요", "spentAmount": null,
         "imageUrl": "https://...", "certifiedAt": "2026-11-05T19:24:00",
-        "myReaction": null,
+        "goodCount": 2, "badCount": 1, "myReaction": null,
         "editableUntil": "2026-11-05T19:34:00", "lockReason": null
       }
     }
@@ -330,7 +330,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `fallenNabalNumbers`: 그 멤버 보살의 빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음 (NABAL-02, Q-101)
 - `members[]`: 홈 카드, 방 정보, 멤버 프로필 시트에 같이 씀. 멤버 프로필 API는 따로 없음
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음
-- 리액션 받은 수는 보내지 않음 ([미정] Q-52)
+- `goodCount`, `badCount`: 그 인증이 받은 잘 참았어요·아쉬워요 수. 누가 눌렀는지는 보내지 않음 (Q-52)
 - `myReaction`: 내가 남긴 리액션(`GOOD`, `BAD`). 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
 - `imageUrl`: 응답할 때마다 만드는 만료 URL. 사진이 없거나 지웠으면 `null` (CERT-04)
 - `me.isLastCertifier`: 인증이 열려 있고 내가 인증하면 전원 인증이 되어 투표가 시작됨. 등록 전 확인 시트("등록하면 바로 투표가 시작되고, 인증내역 수정은 불가능해요")에 씀. 3명 미만 방은 투표가 열리지 않아 `false`
@@ -605,7 +605,7 @@ CERT-02. 등록 후 10분 안에 삭제합니다. 지급한 공양미와 한 솥
 ## 8. 리액션
 
 > 담당자 확인
-> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지, 받은 수를 보여주는지 ([미정] Q-52, 오늘 탭에서는 뺌)
+> - 리액션 이름이 "잘 참았어요/아쉬워요"로 바뀌었는지. 받은 수는 오늘 탭 `goodCount`·`badCount`로 보여줌 (Q-52 결정)
 
 ### PUT /api/certifications/{certificationId}/reactions/me
 
