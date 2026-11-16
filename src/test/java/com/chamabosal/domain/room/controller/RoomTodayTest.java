@@ -373,12 +373,32 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
-    void 다른_멤버가_남긴_리액션은_내_리액션으로_보이지_않는다() throws Exception {
+    void REACT_01_6_다른_멤버가_남긴_리액션은_수만_보이고_누른_사람은_보이지_않는다() throws Exception {
         Round round = todayRound(RoundStatus.CERTIFYING);
         Certification certificationB = certify(round, memberB, NOW.minusMinutes(5));
         reactionRepository.save(Reaction.create(certificationB, memberA, ReactionType.BAD));
 
-        today(userC).andExpect(jsonPath("$.data.members[1].certification.myReaction").doesNotExist());
+        today(userC)
+                .andExpect(jsonPath("$.data.members[1].certification.badCount").value(1))
+                .andExpect(jsonPath("$.data.members[1].certification.goodCount").value(0))
+                .andExpect(jsonPath("$.data.members[1].certification.myReaction").doesNotExist())
+                .andExpect(jsonPath("$.data.members[1].certification.reactions").doesNotExist());
+    }
+
+    @Test
+    void 인증마다_받은_리액션_수를_돌려준다() throws Exception {
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        Certification certificationA = certify(round, memberA, NOW.minusMinutes(10));
+        Certification certificationB = certify(round, memberB, NOW.minusMinutes(5));
+        reactionRepository.save(Reaction.create(certificationB, memberA, ReactionType.GOOD));
+        reactionRepository.save(Reaction.create(certificationB, memberC, ReactionType.GOOD));
+        reactionRepository.save(Reaction.create(certificationA, memberB, ReactionType.BAD));
+
+        today(userC)
+                .andExpect(jsonPath("$.data.members[1].certification.goodCount").value(2))
+                .andExpect(jsonPath("$.data.members[1].certification.badCount").value(0))
+                .andExpect(jsonPath("$.data.members[0].certification.goodCount").value(0))
+                .andExpect(jsonPath("$.data.members[0].certification.badCount").value(1));
     }
 
     @Test
