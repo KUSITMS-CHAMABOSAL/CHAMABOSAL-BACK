@@ -43,21 +43,39 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             """)
     List<Certification> findCalendar(Long memberId, LocalDate from, LocalDate to);
 
-    /**
-     * 떠난 보살 정리 후보 (CLEAN-01). 이미 비운 인증만 남은 멤버는 빠져서 정리가 끝난 멤버를 다시 읽지 않는다.
-     * CERT-04로 사진 삭제를 더할 때 남은 사진도 후보 조건에 넣어야 사진만 남은 멤버가 빠지지 않는다.
-     */
+    /** 떠난 보살 정리 후보 (CLEAN-01). 한 줄·금액·사진이 모두 비워진 멤버는 빠져서 정리가 끝난 멤버를 다시 읽지 않는다. */
     @Query("""
             select distinct m from Certification c join c.member m
-            where (c.memo is not null or c.spentAmount is not null) and m.leftAt < :leftBefore
+            where (c.memo is not null or c.spentAmount is not null or (c.imageKey is not null and c.imageDeletedAt is null))
+              and m.leftAt < :leftBefore
             """)
     List<RoomMember> findMembersWithRecordsLeftBefore(LocalDateTime leftBefore);
 
-    /** 일괄 update는 JPA 감사를 거치지 않아 updatedAt을 직접 쓴다. */
+    /** 일괄 update는 JPA 감사를 거치지 않아 updatedAt을 직접 쓴다. 후보를 고른 뒤 다시 들어온 멤버는 건드리지 않도록 나간 상태를 다시 본다. */
     @Modifying(clearAutomatically = true)
     @Query("""
             update Certification c set c.memo = null, c.spentAmount = null, c.updatedAt = :now
-            where c.member.id in :memberIds and (c.memo is not null or c.spentAmount is not null)
+            where c.member.id in :memberIds and c.member.leftAt is not null
+              and (c.memo is not null or c.spentAmount is not null)
             """)
     int clearRecordsOfMembers(Collection<Long> memberIds, LocalDateTime now);
+
+    /** 떠난 보살 정리 (CLEAN-01): 아직 지우지 않은 사진 키. */
+    @Query("""
+            select c.imageKey from Certification c
+            where c.member.id in :memberIds and c.member.leftAt is not null
+              and c.imageKey is not null and c.imageDeletedAt is null
+            """)
+    List<String> findImageKeysOfMembers(Collection<Long> memberIds);
+
+    /**
+     * 떠난 보살 정리 (CLEAN-01): 읽어 둔 사진 키만 지운 것으로 남겨, 저장소에서 지울 키와 표시한 행이 어긋나지 않게 한다.
+     * 저장소 삭제는 호출한 쪽이 커밋 뒤에 한다.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Certification c set c.imageDeletedAt = :now, c.updatedAt = :now
+            where c.imageKey in :imageKeys and c.imageDeletedAt is null
+            """)
+    int markImagesDeleted(Collection<String> imageKeys, LocalDateTime now);
 }
