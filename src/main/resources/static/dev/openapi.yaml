@@ -1130,6 +1130,7 @@ paths:
 
         - `equippedItemIds`: 구매 뒤 착용 중인 아이템 전체. 산 아이템과 같은 슬롯에 있던 아이템은 빠진다.
         - 곳간 안의 API(구매, 착용)는 `itemId`를 쓰고, 보살 캐릭터를 그리는 응답은 `equippedItemCodes`를 쓴다.
+        - 확인 순서: `STORE_002` → `STORE_003` → `STORE_001`
       parameters:
       - name: itemId
         in: path
@@ -1193,6 +1194,7 @@ paths:
         - `itemIds`: 슬롯마다 하나씩, 0~3개. 같은 슬롯이 겹치면 `COMMON_002`
         - 곳간에서 끼워 보고 벗어 보는 동안에는 보내지 않고, 마지막 착용 목록을 한 번에 보낸다.
         - 빈 배열이면 모두 벗는다.
+        - 확인 순서: `COMMON_002`(목록 없음·3개 초과·같은 ID 중복) → `STORE_004`(없거나 보유하지 않은 아이템) → `COMMON_002`(같은 슬롯 중복)
       requestBody:
         required: true
         content:
