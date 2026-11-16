@@ -127,24 +127,21 @@ class RoomNicknameUpdateTest {
     }
 
     @Test
-    void ROOM_04_3_나간_지_6개월이_안_된_멤버의_닉네임은_쓸_수_없다() throws Exception {
+    void ROOM_04_3_나간_멤버의_닉네임은_쓸_수_있다() throws Exception {
         addLeftMember("하린", NOW.minusMonths(5));
-
-        update(userA, "하린")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ROOM_004"));
-
-        assertThat(nicknameOf(userA)).isEqualTo("민지");
-    }
-
-    @Test
-    void ROOM_04_4_나간_지_6개월이_지난_멤버의_닉네임은_쓸_수_있다() throws Exception {
-        addLeftMember("하린", NOW.minusMonths(7));
 
         update(userA, "하린")
                 .andExpect(status().isOk());
 
         assertThat(nicknameOf(userA)).isEqualTo("하린");
+    }
+
+    @Test
+    void ROOM_04_4_앞뒤_띄어쓰기는_지우고_바꾼다() throws Exception {
+        update(userA, " 지수 ")
+                .andExpect(status().isOk());
+
+        assertThat(nicknameOf(userA)).isEqualTo("지수");
     }
 
     @Test

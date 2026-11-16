@@ -151,6 +151,24 @@ class RoomCreateTest {
     }
 
     @Test
+    void ROOM_01_10_방_이름은_12자까지_만들_수_있다() throws Exception {
+        create("배달끊기방배달끊기방12", 4, "민지").andExpect(status().isCreated());
+        create("배달끊기방배달끊기방123", 4, "지수")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_002"))
+                .andExpect(jsonPath("$.field").value("name"));
+
+        assertThat(roomRepository.findAll()).extracting(Room::getName).containsExactly("배달끊기방배달끊기방12");
+    }
+
+    @Test
+    void ROOM_01_11_닉네임_앞뒤_띄어쓰기는_지우고_저장한다() throws Exception {
+        create("배달 끊기", 4, " 민지 ").andExpect(status().isCreated());
+
+        assertThat(roomMemberRepository.findAll()).extracting(RoomMember::getNickname).containsExactly("민지");
+    }
+
+    @Test
     void ROOM_01_4_띄어쓰기만_입력하면_입력값_오류다() throws Exception {
         create("   ", 4, "민지")
                 .andExpect(status().isBadRequest())
