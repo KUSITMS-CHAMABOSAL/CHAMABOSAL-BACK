@@ -90,6 +90,7 @@
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 | ✅ |
+| 방 | GET | `/api/rooms/{roomId}/members/me/leave-preview` | RICE-03 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 | ✅ |
 | 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
@@ -376,6 +377,18 @@ ROOM-06. 한 솥 축하를 몇 번째 솥까지 봤는지 저장합니다.
 - 저장값보다 작거나 같으면 바꾸지 않음
 - 에러: `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, 현재 완성 횟수보다 큼·음수)
 
+### GET /api/rooms/{roomId}/members/me/leave-preview
+
+RICE-03 6번. 나가기 확인 화면(8-3)에 보여줄, 지금 나가면 사라질 공양미입니다.
+
+```json
+{ "riceToLose": 120 }
+```
+
+- 실제 차감과 같은 계산. 목표를 채운 방이거나 잔액이 0석 이하면 0
+- 조회만 하고 잠그지 않아서, 화면을 본 뒤 공양미가 바뀌면 실제 차감은 나갈 때의 값
+- 에러: `ROOM_005` (404) → `ROOM_002` (403)
+
 ### DELETE /api/rooms/{roomId}/members/me
 
 ROOM-07. 방을 나갑니다. 방장이면 위임하고, 마지막 멤버면 방을 삭제합니다.
@@ -389,6 +402,7 @@ ROOM-08. 방장이 멤버를 내보냅니다. 내보낸 사람은 같은 방에 
 
 - 투표 중인 회차가 있으면 `ROOM_008`. 어제 회차가 투표 중이어도 같음 (오늘 탭 `room.hasVotingRound`)
 - 확인 순서: `ROOM_005` → `ROOM_002` → `ROOM_007` → `ROOM_010` → `ROOM_009` → `ROOM_008`
+- 내보내진 사람이 목표를 채우기 전의 방에서 모은 공양미는 나가기처럼 차감 (RICE-03, Q-94)
 - 에러: `ROOM_002` (403), `ROOM_005` (404), `ROOM_007` (403), `ROOM_008` (409), `ROOM_009` (404), `ROOM_010` (400)
 
 ## 5. 초대
