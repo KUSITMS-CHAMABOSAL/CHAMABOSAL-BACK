@@ -38,7 +38,6 @@ public class UserController {
             description = """
                     앱을 열 때 불러서 어느 화면으로 갈지 정합니다. rooms가 비어 있으면 첫 화면입니다.
                     방마다 hasUnseen은 안 본 결과나 한 솥 축하가 있는지입니다. is…Agreed는 알림 종류별 토스 동의라 동의 카드를 띄울지 정할 때 씁니다.
-                    equippedItemCodes는 곳간 기능 전이라 지금은 항상 빈 배열입니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

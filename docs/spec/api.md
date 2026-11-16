@@ -95,9 +95,9 @@
 | 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
 | 초대 | GET | `/api/invites/{token}` | INVITE-02 | ✅ |
 | 초대 | POST | `/api/invites/{token}/join` | INVITE-03 | ✅ |
-| 곳간 | GET | `/api/store` | STORE-01 |  |
-| 곳간 | POST | `/api/items/{itemId}/purchases` | STORE-02 |  |
-| 곳간 | PUT | `/api/users/me/equipped-items` | STORE-03 |  |
+| 곳간 | GET | `/api/store` | STORE-01 | ✅ |
+| 곳간 | POST | `/api/items/{itemId}/purchases` | STORE-02 | ✅ |
+| 곳간 | PUT | `/api/users/me/equipped-items` | STORE-03 | ✅ |
 | 인증 사진 | POST | `/api/certifications/upload-urls` | CERT-04 |  |
 | 인증 사진 | POST | `/api/rooms/{roomId}/certifications` | CERT-01 |  |
 | 인증 사진 | PATCH | `/api/certifications/{certificationId}` | CERT-02 |  |
@@ -173,7 +173,7 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 ```
 
 - `is…Agreed`: 알림 종류별 토스 알림 동의 (`POKE`, `RESULT`, `VOTE_OPENED`, `CERT_REMINDER`). 동의 카드를 띄울지 판단할 때 씀
-- `equippedItemCodes`: 내 보살 캐릭터에 씀. 착용은 사용자 단위라 모든 방에 같음. 곳간(STORE-03) 구현 전에는 빈 배열
+- `equippedItemCodes`: 내 보살 캐릭터에 씀. 상점 노출 순서. 착용은 사용자 단위라 모든 방에 같음
 - `rooms`: 현재 멤버인 방만, 들어온 순서. 비어 있으면 첫 화면. `nickname`, `color`는 그 방의 내 보살
 - `hasUnseen`: 안 본 결과나 한 솥 축하가 있음
 - `canCreateRoom`: 참여 중인 방이 2개면 `false`
@@ -479,7 +479,7 @@ STORE-02. 꾸미기 아이템을 사고 바로 착용합니다.
 
 - `equippedItemIds`: 구매 뒤 착용 중인 아이템 전체. 산 아이템과 같은 슬롯에 있던 아이템은 빠짐
 - 곳간 안의 API(구매, 착용)는 `itemId`를 쓰고, 보살 캐릭터를 그리는 응답(내 정보, 오늘 탭, 투표, 결과, 한 솥)은 `equippedItemCodes`를 씀. 곳간 조회의 `items[]`에 둘 다 있음
-- 에러: `STORE_001` (409), `STORE_002` (404), `STORE_003` (409)
+- 에러: `STORE_002` (404) → `STORE_003` (409) → `STORE_001` (409) 순서로 확인
 
 ### PUT /api/users/me/equipped-items
 
@@ -492,7 +492,7 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 - `itemIds`: 슬롯마다 하나씩, 0~3개. 슬롯은 `HAT`(모자), `FACE`(얼굴), `EXPRESSION`(표정)
 - 곳간에서 끼워 보고 벗어 보는 동안에는 보내지 않고, 마지막 착용 목록을 한 번에 보냄 (구현할 때 Swagger 설명에도 적음)
 - 빈 배열이면 모두 벗음
-- 에러: `STORE_004` (409, 보유하지 않은 아이템), `COMMON_002` (400, 같은 슬롯 중복)
+- 에러: `COMMON_002` (400, 목록 없음·3개 초과·같은 ID 중복) → `STORE_004` (409, 없거나 보유하지 않은 아이템) → `COMMON_002` (400, 같은 슬롯 중복) 순서로 확인
 
 ## 7. 인증 사진
 

@@ -76,6 +76,9 @@ public enum BaseErrorCode implements ErrorCode {
 
     // Store
     RICE_NOT_ENOUGH(HttpStatus.CONFLICT, "STORE_001", "공양미가 부족해요."),
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "STORE_002", "없는 아이템이에요."),
+    ITEM_ALREADY_OWNED(HttpStatus.CONFLICT, "STORE_003", "이미 가진 아이템이에요."),
+    ITEM_NOT_OWNED(HttpStatus.CONFLICT, "STORE_004", "가지고 있지 않은 아이템이에요."),
 
     // Reaction
     REACTION_ON_MINE(HttpStatus.FORBIDDEN, "REACT_001", "내 인증에는 리액션을 남길 수 없어요."),

@@ -15,6 +15,8 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.service.RoomService;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
+import com.chamabosal.domain.store.repository.UserItemRepository;
+import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.domain.user.dto.request.PushAgreementCreateRequest;
 import com.chamabosal.domain.user.dto.request.UserSettingsUpdateRequest;
 import com.chamabosal.domain.user.dto.response.UserMeResponse;
@@ -55,6 +57,8 @@ public class UserService {
     private final NabalService nabalService;
     private final CertificationRepository certificationRepository;
     private final CertificationPhotoService certificationPhotoService;
+    private final StoreService storeService;
+    private final UserItemRepository userItemRepository;
     private final Clock clock;
 
     /**
@@ -82,6 +86,7 @@ public class UserService {
         user.deleteData(now);
         riceHistoryRepository.deleteByUserId(userId);
         defenseTicketRepository.deleteByUserId(userId);
+        userItemRepository.deleteByUserId(userId);
         nabalLossRepository.deleteByUserId(userId);
         pushAgreementRepository.deleteByUserId(userId);
         List<String> photoKeys = certificationRepository.findImageKeysOfUser(userId);
@@ -110,7 +115,8 @@ public class UserService {
         // 방 만들기·입장의 2개 제한과 같은 집계로 판단해 버튼과 실제 제한이 어긋나지 않게 한다.
         boolean canCreateRoom = roomMemberRepository.countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(userId)
                 < RoomService.MAX_JOINED_ROOMS;
-        return UserMeResponse.of(user, agreed, nabalService.getStatus(userId), rooms, canCreateRoom);
+        List<String> equippedItemCodes = storeService.getEquippedItemCodes(List.of(userId)).getOrDefault(userId, List.of());
+        return UserMeResponse.of(user, agreed, equippedItemCodes, nabalService.getStatus(userId), rooms, canCreateRoom);
     }
 
     private boolean hasUnseen(RoomMember member) {
