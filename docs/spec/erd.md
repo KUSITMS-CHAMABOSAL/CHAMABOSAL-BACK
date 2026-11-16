@@ -212,7 +212,7 @@ erDiagram
 | memo | VARCHAR(40) | NULL | 한 줄 기록. 6개월 정리 때 NULL |
 | spent_amount | INT | NULL | 쓴 금액, `FAILED`일 때 필수 (1~999,999) |
 | image_key | VARCHAR(255) | NULL | 인증 사진 S3 객체 키. presigned PUT URL로 업로드 후 키만 저장, 조회는 응답할 때마다 presigned GET URL 생성 (URL은 만료되므로 저장 안 함) |
-| image_deleted_at | DATETIME | NULL | 사진 삭제 시각 (투표 끝나고 7일 뒤 · 내 데이터 삭제 즉시) |
+| image_deleted_at | DATETIME | NULL | 사진 삭제 시각 (투표 끝나고 7일 뒤 · 나가기·내보내기·내 데이터 삭제 즉시) |
 | certified_at | DATETIME | NOT NULL | 수정 가능 10분 기준 |
 | deleted_at | DATETIME | NULL | 소프트 삭제 (10분 안 본인 삭제) |
 
@@ -443,7 +443,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 | 대상 | 시점 | 처리 |
 |---|---|---|
 | 인증 사진 | 회차 투표 종료 + 7일 (`NO_VOTE` 회차는 확정 시각(`vote_started_at`) + 7일, 삭제된 방의 마감되지 않은 회차는 방 삭제 시각 + 7일) | 파일 삭제, `image_deleted_at` 기록 |
-| 나간·내보내진 멤버의 사진 | 일반 사진과 같음 (나가도 즉시 삭제 안 함) | 같은 방식 |
+| 나간·내보내진 멤버의 사진 | 즉시 (Q-48 변경) | 그 방의 내 인증 사진 삭제 |
 | 나간·내보내진 멤버의 사진·한 줄·금액 | `left_at` + 6개월 | 남은 사진 삭제, `memo`, `spent_amount` NULL. 투표 결과는 "떠난 보살"로 유지 |
 | 내 데이터 삭제 | 즉시 | 모든 방 나가기 (`leave_type = DATA_DELETED`), 사진 즉시 삭제, 기록은 바로 "떠난 보살"로 표시. 공양미 기록·아이템·방어권·알림 동의·나발 기록 삭제, `toss_anon_key` NULL, `room_members.user_id` NULL. `users` 행은 빈 행으로 남김. 복구 없음 (Q-102) |
 | 내보내기 차단 해시 | `expires_at` (삭제 + 6개월) | `kick_blocks` 행 삭제 (CLEAN-02) |
