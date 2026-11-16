@@ -3,6 +3,7 @@ package com.chamabosal.domain.room.service;
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationLock;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.certification.photo.CertificationPhotoService;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
@@ -53,6 +54,7 @@ public class RoomTodayService {
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
     private final CertificationService certificationService;
+    private final CertificationPhotoService certificationPhotoService;
     private final TapRepository tapRepository;
     private final NabalLossRepository nabalLossRepository;
     private final Clock clock;
@@ -88,7 +90,7 @@ public class RoomTodayService {
         Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
                 && certifiedCount == members.size() - 1, 0);
         return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), new Pot(0, room.getPotGoalAmount()),
-                roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me));
+                roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me, now));
     }
 
     private RoomTodayResponse.Room roomInfo(Room room, RoomMember me, int memberCount, LocalDate roundDate) {
@@ -129,13 +131,15 @@ public class RoomTodayService {
             case VOTE_STARTED -> "VOTE_STARTED";
         };
         return new CertificationInfo(certification.getId(), certification.getResult(), certification.getMemo(),
-                certification.getSpentAmount(), null, certification.getCertifiedAt(), null,
+                certification.getSpentAmount(), certificationPhotoService.viewUrl(certification),
+                certification.getCertifiedAt(), null,
                 certification.getEditableUntil(), lockReason);
     }
 
     /** 톡톡 → 결과 → 한 솥 축하 순서로 클라이언트가 재생한다 (13번). */
-    private Entry entry(Room room, RoomMember me) {
-        Long unplayedTapRoundId = tapRepository.findUnplayedRoundIds(room.getId(), me.getId(), RoundResultType.PICKED)
+    private Entry entry(Room room, RoomMember me, LocalDateTime now) {
+        Long unplayedTapRoundId = tapRepository.findDeliveredUnplayedRoundIds(room.getId(), me.getId(),
+                        RoundResultType.PICKED, Round.tapDeliveredVoteClosedBy(now))
                 .stream().findFirst().map(row -> (Long) row[0]).orElse(null);
         Long unseenResultRoundId = roundRepository
                 .findFirstByRoom_IdAndStatusOrderByRoundDateDesc(room.getId(), RoundStatus.ANNOUNCED)

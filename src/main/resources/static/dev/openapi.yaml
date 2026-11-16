@@ -3840,7 +3840,7 @@ components:
       properties:
         unplayedTapRoundId:
           type: integer
-          description: 재생하지 않은 받은 톡톡이 있는 회차
+          description: 투표 마감 5시간 뒤 전달됐지만 재생하지 않은 받은 톡톡이 있는 회차. 전달 전이면 `null`
           nullable: true
           format: int64
         unseenResultRoundId:

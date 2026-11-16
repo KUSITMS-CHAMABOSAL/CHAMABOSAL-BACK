@@ -50,7 +50,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
     public record CertificationInfo(
             Long certificationId, CertificationResult result, String memo,
             @Schema(description = "FAILED일 때만") Integer spentAmount,
-            @Schema(description = "사진(CERT-04) 전에는 null") String imageUrl,
+            @Schema(description = "사진이 없거나 지웠으면 null") String imageUrl,
             LocalDateTime certifiedAt,
             @Schema(description = "내 리액션. 리액션(REACT-01) 전에는 null") String myReaction,
             @Schema(description = "수정·삭제 마감 시각 (인증 후 10분)") LocalDateTime editableUntil,

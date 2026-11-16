@@ -30,14 +30,18 @@ public interface TapRepository extends JpaRepository<Tap, Long> {
             """)
     List<Tap> findReceivedWithSender(Long roundId);
 
-    /** 오늘 탭 진입 항목(ROOM-02 13번): 내가 지목된 PICKED 결과 중 아직 재생 안 한 받은 톡톡이 있는 회차, 최근 순. */
+    /**
+     * 오늘 탭 진입 항목(ROOM-02 13번): 내가 지목된 PICKED 결과 중 전달됐지만 아직 재생 안 한 받은 톡톡이 있는 회차, 최근 순.
+     * 투표 마감이 deliveredBefore(Round.tapDeliveredVoteClosedBy) 이전이면 전달된 것이다 (RESULT-03 5번).
+     */
     @Query("""
             select distinct t.round.id, t.round.roundDate from Tap t
             where t.round.room.id = :roomId and t.round.pickedMember.id = :memberId and t.round.resultType = :picked
-              and t.playedAt is null and t.count > 0
+              and t.round.voteClosedAt <= :deliveredBefore and t.playedAt is null and t.count > 0
             order by t.round.roundDate desc
             """)
-    List<Object[]> findUnplayedRoundIds(Long roomId, Long memberId, RoundResultType picked);
+    List<Object[]> findDeliveredUnplayedRoundIds(Long roomId, Long memberId, RoundResultType picked,
+                                                 LocalDateTime deliveredBefore);
 
     /** 그때까지 받은 미재생 톡톡을 모두 재생됨으로 바꾼다 (RESULT-03 6번). 재시도해도 바뀌는 게 없다. */
     @Modifying(clearAutomatically = true)

@@ -331,12 +331,12 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음
 - 리액션 받은 수는 보내지 않음 ([미정] Q-52)
 - `myReaction`: 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음. 리액션(REACT-01) 전에는 항상 `null`
-- `imageUrl`: 사진(CERT-04) 전에는 항상 `null`
+- `imageUrl`: 응답할 때마다 만드는 만료 URL. 사진이 없거나 지웠으면 `null` (CERT-04)
 - `me.isLastCertifier`: 인증이 열려 있고 내가 인증하면 전원 인증이 되어 투표가 시작됨. 등록 전 확인 시트("등록하면 바로 투표가 시작되고, 인증내역 수정은 불가능해요")에 씀. 3명 미만 방은 투표가 열리지 않아 `false`
 - `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아갈지는 [미정] Q-54. 콕(POKE-01) 전에는 항상 0
 - `pot.amount`: 한 솥(POT-01) 전에는 항상 0. `pot.goalAmount`는 방 목표 석
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서
-  - `unplayedTapRoundId`가 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
+  - `unplayedTapRoundId`: 투표 마감 5시간 뒤 전달된 톡톡만. 전달 전이면 `null` (RESULT-03 5번). 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
   - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
   - `hasUnseenPotCelebration`이 `true`면 `GET /api/rooms/{roomId}/pots/{room.potCompletedCount}` → 본 뒤 `PUT …/seen-pot`
 - 에러: `ROOM_002` (403), `ROOM_005` (404)
