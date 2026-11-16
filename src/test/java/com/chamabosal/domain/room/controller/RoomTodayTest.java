@@ -274,7 +274,7 @@ class RoomTodayTest extends RoomTestSupport {
     @Test
     void 진입_항목으로_재생할_톡톡과_안_본_결과와_축하를_돌려준다() throws Exception {
         Round round = saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
-        round.announce(NOW.minusHours(1), RoundResultType.PICKED, memberA);
+        round.announce(NOW.minusHours(Round.TAP_HOURS), RoundResultType.PICKED, memberA);
         roundRepository.save(round);
         tapRepository.save(Tap.create(round, memberB, 3));
         ReflectionTestUtils.setField(room, "potCompletedCount", 1);
@@ -285,6 +285,32 @@ class RoomTodayTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.data.entry.unseenResultRoundId").value(round.getId()))
                 .andExpect(jsonPath("$.data.entry.hasUnseenPotCelebration").value(true));
         today(userB).andExpect(jsonPath("$.data.entry.unplayedTapRoundId").doesNotExist());
+    }
+
+    @Test
+    void 투표_마감_5시간이_지나_전달되기_전의_톡톡은_재생할_항목이_아니다() throws Exception {
+        Round round = saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
+        round.announce(NOW.minusHours(Round.TAP_HOURS).plusMinutes(1), RoundResultType.PICKED, memberA);
+        roundRepository.save(round);
+        tapRepository.save(Tap.create(round, memberB, 3));
+
+        today(userA)
+                .andExpect(jsonPath("$.data.entry.unplayedTapRoundId").doesNotExist())
+                .andExpect(jsonPath("$.data.entry.unseenResultRoundId").value(round.getId()));
+    }
+
+    @Test
+    void 사진이_있는_인증은_사진_URL을_돌려주고_없으면_비운다() throws Exception {
+        Round round = todayRound(RoundStatus.CERTIFYING);
+        Certification withPhoto = certify(round, memberA, NOW.minusMinutes(5));
+        withPhoto.replaceImage("certifications/photo-a");
+        certificationRepository.save(withPhoto);
+        certify(round, memberB, NOW.minusMinutes(5));
+
+        today(userA)
+                .andExpect(jsonPath("$.data.members[0].certification.imageUrl")
+                        .value("memory://view/certifications/photo-a"))
+                .andExpect(jsonPath("$.data.members[1].certification.imageUrl").doesNotExist());
     }
 
     private RoomMember join(User user, String nickname, LocalDateTime joinedAt) {
