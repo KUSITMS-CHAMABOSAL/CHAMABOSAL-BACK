@@ -88,7 +88,7 @@
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 | ✅ |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
-| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
+| 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 | ✅ |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/members/me/leave-preview` | RICE-03 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 | ✅ |
