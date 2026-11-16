@@ -31,7 +31,7 @@ import java.time.LocalDateTime;
 @DynamicUpdate // 확인 횟수는 조건부 update로 따로 올려서, 다른 변경을 저장할 때 바뀐 컬럼만 써야 옛 값으로 덮어쓰지 않는다.
 public class RoomMember extends BaseEntity {
 
-    /** 나간 지 이 기간이 지나지 않으면 닉네임을 잡고 있고, 다시 들어올 때 이 행을 다시 쓴다. */
+    /** 나간 지 이 기간이 지나지 않으면 다시 들어올 때 이 행을 다시 쓰고, 지나면 한 줄·금액을 정리한다 (CLEAN-01). left_at + 6개월 시각까지 포함한다. */
     private static final int RETENTION_MONTHS = 6;
 
     @Id
@@ -97,11 +97,6 @@ public class RoomMember extends BaseEntity {
         return leaveType == LeaveType.KICKED;
     }
 
-    /** 현재 멤버이거나 나간 지 6개월이 지나지 않았으면 이 닉네임을 다른 사람이 쓸 수 없다. left_at + 6개월 시각까지 포함한다. */
-    public boolean holdsNickname(LocalDateTime now) {
-        return isCurrent() || isWithinRetention(now);
-    }
-
     /** 스스로 나가거나 내 데이터 삭제로 나간 지 6개월이 지나지 않았으면 이 행으로 다시 들어온다. */
     public boolean canRejoin(LocalDateTime now) {
         return !isCurrent() && !isKicked() && isWithinRetention(now);
@@ -139,7 +134,7 @@ public class RoomMember extends BaseEntity {
         }
     }
 
-    /** 나간 지 6개월이 지났는지 (CLEAN-01). 닉네임 보유·다시 들어오기와 같은 기준이다. */
+    /** 나간 지 6개월이 지났는지 (CLEAN-01). 다시 들어오기와 같은 기준이다. */
     public boolean isPastRetention(LocalDateTime now) {
         return !isCurrent() && !isWithinRetention(now);
     }

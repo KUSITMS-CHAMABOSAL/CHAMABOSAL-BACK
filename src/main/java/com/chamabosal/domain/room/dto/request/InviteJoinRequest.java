@@ -5,9 +5,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record InviteJoinRequest(
-        @Schema(description = "이 방에서 쓸 닉네임. 한글·영문·숫자 1~8자", example = "지수")
+        @Schema(description = "이 방에서 쓸 닉네임. 앞뒤 띄어쓰기를 지운 뒤 한글·영문·숫자 1~8자", example = "지수")
         @NotNull(message = "닉네임을 입력해 주세요.")
         @Pattern(regexp = RoomNicknameUpdateRequest.NICKNAME_PATTERN, message = RoomNicknameUpdateRequest.NICKNAME_MESSAGE)
         String nickname
 ) {
+
+    public InviteJoinRequest {
+        nickname = RoomNicknameUpdateRequest.normalizeNickname(nickname);
+    }
 }

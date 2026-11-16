@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 나간 지 6개월이 지난 멤버의 인증에서 사진을 지우고 한 줄과 쓴 금액을 비운다 (CLEAN-01). 나간 유형은 가리지 않고,
- * 투표 결과는 그대로 둔다. 6개월은 닉네임 보유·다시 들어오기와 같은 RoomMember 기준으로 판단한다.
+ * 투표 결과는 그대로 둔다. 6개월은 다시 들어오기와 같은 RoomMember 기준으로 판단한다.
  * 사진은 회차 종료 7일 뒤 삭제(CERT-04)와 별개로, 그때까지 남아 있는 사진을 지운다.
  */
 @Slf4j
