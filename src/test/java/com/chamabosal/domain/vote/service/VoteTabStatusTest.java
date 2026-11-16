@@ -2,6 +2,7 @@ package com.chamabosal.domain.vote.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -9,8 +10,10 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
+import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -34,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -48,6 +52,9 @@ class VoteTabStatusTest {
     private static final LocalDate NOV_5 = LocalDate.of(2026, 11, 5);
     private static final LocalDateTime CERTIFIED_AT = NOV_5.atTime(20, 0);
     private static final LocalDateTime VOTE_STARTED_AT = NOV_5.plusDays(1).atTime(3, 0);
+
+    @Autowired
+    private RiceHistoryRepository riceHistoryRepository;
 
     @Autowired
     MockMvc mockMvc;
@@ -118,6 +125,7 @@ class VoteTabStatusTest {
 
     @AfterEach
     void tearDown() {
+        riceHistoryRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
@@ -268,6 +276,27 @@ class VoteTabStatusTest {
 
         tab(room.getId(), userA)
                 .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberE.getId() + ")]").isEmpty());
+    }
+
+    @Test
+    void VOTE_02_8_후보가_한_명뿐이면_그_한_명과_모두_보살을_고를_수_있다() throws Exception {
+        // C·D는 오늘 들어와 인증하지 않아 후보에서 빠진다 (VOTE-02-6). 명단은 3명 이상이라 투표는 열린다.
+        RoomMember newC = roomMemberRepository.save(RoomMember.create(room, newUser(), "새온", BosalColor.MINT, CERTIFIED_AT));
+        roomMemberRepository.save(RoomMember.create(room, newUser(), "새봄", BosalColor.YELLOW, CERTIFIED_AT));
+        memberC.leave(CERTIFIED_AT, LeaveType.LEFT);
+        memberD.leave(CERTIFIED_AT, LeaveType.LEFT);
+        roomMemberRepository.saveAll(java.util.List.of(memberC, memberD));
+        Round round = startVotingRound(memberA, memberB);
+
+        tab(room.getId(), userA)
+                .andExpect(jsonPath("$.data.candidates.length()").value(1))
+                .andExpect(jsonPath("$.data.candidates[0].memberId").value(memberB.getId()))
+                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + newC.getId() + ")]").isEmpty());
+        mockMvc.perform(post("/api/rounds/{roundId}/votes", round.getId())
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(userA.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetType\": \"ALL_BOSAL\"}"))
+                .andExpect(status().isCreated());
     }
 
     private org.springframework.test.web.servlet.ResultActions tab(Long roomId, User user) throws Exception {

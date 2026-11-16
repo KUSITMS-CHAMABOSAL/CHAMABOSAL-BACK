@@ -265,9 +265,11 @@ class VoteSubmitTest {
     }
 
     @Test
-    void VOTE_03_본인_선택_거부() throws Exception {
+    void VOTE_02_2_본인에게_투표하는_요청은_서버가_거부한다() throws Exception {
         submit(userA, member(memberA)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VOTE_005"));
+
+        assertThat(voteRepository.findByRound_Id(round.getId())).isEmpty();
     }
 
     @Test
