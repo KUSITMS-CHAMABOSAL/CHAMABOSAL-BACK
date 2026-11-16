@@ -70,18 +70,31 @@ public class RiceService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public int deductOnLeave(Room room, RoomMember member) {
+        int amount = leaveDeduction(room, member);
+        if (amount <= 0) {
+            return 0;
+        }
+        riceHistoryRepository.save(RiceHistory.create(member.getUser(), room, -amount, RiceReason.LEAVE, null, null));
+        return amount;
+    }
+
+    /**
+     * 지금 나가면 뺄 석 (RICE-03 1~3번). 나가기 확인 화면의 미리보기(6번)와 실제 차감이 같은 계산을 써서 숫자가 어긋나지 않는다.
+     * 미리보기용 조회 진입점이라 락을 잡지 않는다. 실제 차감은 사용자 행 락 안에서 deductOnLeave가 같은 계산을 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public int calculateLeaveDeduction(Room room, RoomMember member) {
+        return leaveDeduction(room, member);
+    }
+
+    private int leaveDeduction(Room room, RoomMember member) {
         if (room.getPotCompletedCount() > 0) {
             return 0;
         }
         Long userId = member.getUser().getId();
         long collected = riceHistoryRepository.sumRoomDeltaSince(userId, room.getId(), member.getJoinedAt());
         long balance = riceHistoryRepository.sumDeltaByUserId(userId);
-        int amount = (int) Math.min(collected, Math.max(0, balance));
-        if (amount <= 0) {
-            return 0;
-        }
-        riceHistoryRepository.save(RiceHistory.create(member.getUser(), room, -amount, RiceReason.LEAVE, null, null));
-        return amount;
+        return (int) Math.max(0, Math.min(collected, balance));
     }
 
     /**

@@ -4,6 +4,7 @@ import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenResultUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
+import com.chamabosal.domain.room.dto.response.LeavePreviewResponse;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
 import com.chamabosal.domain.room.dto.response.RoomTodayResponse;
 import com.chamabosal.domain.room.service.RoomService;
@@ -236,11 +237,35 @@ public class RoomController {
         return ResponseEntity.ok(Response.ok(null));
     }
 
+    @GetMapping("/{roomId}/members/me/leave-preview")
+    @Operation(summary = "나가기 공양미 미리보기 (RICE-03)",
+            description = """
+                    나가기 확인 화면에 보여줄, 지금 나가면 사라질 공양미 석입니다. 실제 차감과 같은 계산입니다.
+                    목표를 채운 방이거나 잔액이 0석 이하면 0입니다. 화면을 본 뒤 공양미가 바뀌면 실제 차감은 나갈 때의 값입니다.
+                    확인 순서: ROOM_005 → ROOM_002
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<LeavePreviewResponse>> getLeavePreview(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId
+    ) {
+        return ResponseEntity.ok(Response.ok(roomService.getLeavePreview(userId, roomId)));
+    }
+
     @DeleteMapping("/{roomId}/members/me")
     @Operation(summary = "나가기 (ROOM-07)",
             description = """
                     방을 나갑니다. 방장이면 남은 멤버 중 가장 먼저 들어온 멤버에게 위임하고, 마지막 멤버면 방을 삭제합니다.
                     방이 남아 있으면 나간 뒤 6개월 안에 초대 링크로 다시 들어올 때 기록이 이어집니다.
+                    목표를 채우기 전이면 이 방에서 모은 공양미를 차감합니다(미리보기는 leave-preview).
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "나가기 성공"),
@@ -282,6 +307,7 @@ public class RoomController {
             description = """
                     방장이 멤버를 내보냅니다. 내보낸 사람은 같은 방에 다시 들어올 수 없고, 내보낸 사유는 어디에도 표시하지 않습니다.
                     방에 투표 중인 회차가 있으면 막습니다(어제 회차 포함, 오늘 탭 room.hasVotingRound). 인증 중에 내보내서 남은 멤버 전원이 인증한 상태가 되면 바로 투표를 시작합니다.
+                    내보내진 사람이 목표를 채우기 전의 이 방에서 모은 공양미는 나가기처럼 차감합니다(Q-94).
                     확인 순서: ROOM_005 → ROOM_002 → ROOM_007 → ROOM_010 → ROOM_009 → ROOM_008
                     """)
     @ApiResponses({

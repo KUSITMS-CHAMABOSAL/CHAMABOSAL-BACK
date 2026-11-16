@@ -102,4 +102,13 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
               and lower(m.nickname) = lower(:nickname)
             """)
     List<RoomMember> findSameNicknameMembers(Long roomId, String nickname, Long excludeMemberId);
+
+    /**
+     * 내보내기가 대상 사용자 행 락을 방 락보다 먼저 잡으려고, 엔티티 없이 대상의 사용자 ID만 구한다 (RICE-03 8번).
+     * 대상 멤버 행이 이 방 것인지만 본다. 요청자의 멤버·방장 여부나 대상의 현재 멤버 여부를 조건에 넣으면 이 조회와 방 락 사이에
+     * 그 상태가 바뀌어 락 없이 차감할 수 있어서다. 대상 행의 사용자는 바뀌지 않는다. 권한과 대상 확인은 방 락 뒤에 기존대로 한다.
+     * 권한 없는 요청도 거절될 때까지 대상 행을 잠깐 잠글 수 있지만, 금액이 틀어지는 것보다 가볍다고 보고 받아들인다 (코드리뷰 반영).
+     */
+    @Query("select t.user.id from RoomMember t where t.id = :targetMemberId and t.room.id = :roomId")
+    Optional<Long> findKickTargetUserId(Long roomId, Long targetMemberId);
 }
