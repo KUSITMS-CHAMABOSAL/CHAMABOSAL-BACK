@@ -4,7 +4,6 @@ import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
@@ -30,14 +29,6 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
     /** 엔티티를 읽지 않고 방 ID만 구한다. 방 행 락을 잡기 전에 읽은 회차가 영속성 컨텍스트에 남지 않게 한다. */
     @Query("select r.room.id from Round r where r.id = :roundId")
     Optional<Long> findRoomIdByRoundId(Long roundId);
-
-    /**
-     * 지목된 사람이 결과를 처음 조회한 시각을 비어 있을 때만 채운다 (RESULT-02 6번). 동시에 열어도 첫 시각 하나만 남고,
-     * 회차의 버전을 올리지 않아 다른 회차 갱신과 부딪히지 않는다.
-     */
-    @Modifying(clearAutomatically = true)
-    @Query("update Round r set r.pickedSeenAt = :now, r.updatedAt = :now where r.id = :roundId and r.pickedSeenAt is null")
-    int markPickedSeen(Long roundId, LocalDateTime now);
 
     /**
      * 내보내기(ROOM-08)가 막을 회차가 있는지. 투표 중인 회차와, 인증이 마감됐는데 03:00 배치가 아직 투표를 열지 않은 회차를 함께 본다.

@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -47,11 +46,7 @@ public class RoundResultService {
     private final StoreService storeService;
     private final Clock clock;
 
-    /**
-     * 지목된 사람이 동시에 처음 열면 뒤 요청의 조건부 UPDATE는 0건이 된다. REPEATABLE READ면 다시 읽어도 트랜잭션 첫 조회의
-     * 스냅샷(비어 있는 처음 조회 시각)을 보므로, 먼저 커밋된 시각을 읽도록 READ COMMITTED로 읽는다 (코드리뷰 반영).
-     */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional(readOnly = true)
     public RoundResultResponse getResult(Long userId, Long roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -66,21 +61,11 @@ public class RoundResultService {
         RoomMember picked = round.getPickedMember();
         boolean isMePicked = picked != null && picked.getId().equals(me.getId());
         boolean isPicked = resultType == RoundResultType.PICKED;
-        LocalDateTime pickedSeenAt = round.getPickedSeenAt();
-        if (isMePicked && isPicked && pickedSeenAt == null) {
-            LocalDateTime now = LocalDateTime.now(clock);
-            roundRepository.markPickedSeen(roundId, now);
-            // 동시에 연 다른 요청이 먼저 남겼으면 그 값을 쓴다. 조건부 UPDATE가 영속성 컨텍스트를 비워 DB에서 다시 읽는다.
-            round = roundRepository.findById(roundId).orElseThrow();
-            picked = round.getPickedMember();
-            pickedSeenAt = round.getPickedSeenAt();
-            // 그사이 방어가 커밋됐으면 DEFENDED로 바뀌어 있다 (코드리뷰 반영).
-            resultType = round.getResultType();
-            isPicked = resultType == RoundResultType.PICKED;
-        }
+        LocalDateTime now = LocalDateTime.now(clock);
 
-        boolean isTapExpired = isPicked && !round.isTapOpen(LocalDateTime.now(clock));
-        boolean canTap = isPicked && !isMePicked && !isTapExpired
+        boolean isTapExpired = isPicked && !round.isTapOpen(now);
+        // 지목된 사람이 방을 나갔으면 톡톡이 없다 (RESULT-02 4번, Q-27).
+        boolean canTap = isPicked && !isMePicked && !isTapExpired && picked.isCurrent()
                 && !tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId());
 
         Integer ticketCount = isMePicked && (isPicked || resultType == RoundResultType.DEFENDED)
@@ -95,10 +80,10 @@ public class RoundResultService {
                 voteCounts(votes),
                 (int) votes.stream().filter(vote -> vote.getTargetMember() == null).count(),
                 isMePicked,
-                isMePicked && isPicked ? pickedSeenAt.plusMinutes(DefenseService.DEFENSE_MINUTES) : null,
+                isMePicked && isPicked ? round.getDefenseClosesAt() : null,
                 ticketCount,
-                isMePicked && isPicked && ticketCount > 0 && !defenseService.isExpired(round, LocalDateTime.now(clock))
-                        && !defenseService.isMoktakDone(userId, roundId),
+                isMePicked && isPicked && ticketCount > 0 && !defenseService.isExpired(round, now)
+                        && defenseService.hasCertified(round) && !defenseService.isMoktakDone(userId, roundId),
                 canTap,
                 isTapExpired,
                 (int) tapRepository.countByRound_IdAndCountGreaterThanAndFromMember_IdNot(roundId, 0, me.getId()));
