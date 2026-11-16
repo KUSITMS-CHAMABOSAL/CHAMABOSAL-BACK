@@ -57,7 +57,7 @@ public class StoreService {
     public StoreResponse getStore(Long userId) {
         Map<Long, UserItem> owned = ownedByItemId(userId);
         List<StoreItem> items = itemRepository.findAllByOrderByDisplayOrderAscIdAsc().stream()
-                .map(item -> StoreItem.of(item, owned.get(item.getId())))
+                .map(item -> StoreItem.from(item, owned.get(item.getId())))
                 .toList();
         // 이번 주는 지금 회차 날짜가 속한 월요일~일요일이다 (api.md isUsedThisWeek).
         LocalDate monday = Round.dateOf(LocalDateTime.now(clock)).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));

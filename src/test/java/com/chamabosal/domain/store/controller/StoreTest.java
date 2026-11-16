@@ -390,6 +390,8 @@ class StoreTest {
     void 카탈로그는_없으면_넣고_있으면_고치고_뺀_아이템은_남긴다() {
         Item old = item("SANTA_HAT", ItemSlot.FACE, 30, 9);
         Item retired = item("RETIRED", ItemSlot.HAT, 100, 10);
+        own(userA, old, true);
+        own(userA, retired, true);
 
         itemCatalogInitializer.sync();
 
@@ -404,6 +406,9 @@ class StoreTest {
         assertThat(itemRepository.findByCode("SANTA_HAT").orElseThrow().getId()).isEqualTo(old.getId());
         assertThat(itemRepository.findById(retired.getId())).isPresent();
         assertThat(items).hasSize(ItemCatalog.ENTRIES.size() + 1);
+        // 슬롯이 FACE에서 HAT으로 바뀌어 벗기고, 이미 HAT에 착용한 아이템은 그대로다 (STORE-03 3번).
+        assertThat(userItem(userA, old).isEquipped()).isFalse();
+        assertThat(userItem(userA, retired).isEquipped()).isTrue();
     }
 
     // ---------- 준비 ----------

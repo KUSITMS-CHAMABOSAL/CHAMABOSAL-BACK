@@ -35,7 +35,7 @@ public record StoreResponse(
     ) {
 
         /** 보유하지 않았으면 owned가 null이다. */
-        public static StoreItem of(Item item, UserItem owned) {
+        public static StoreItem from(Item item, UserItem owned) {
             return new StoreItem(item.getId(), item.getCode(), item.getName(), item.getPrice(), item.getSlot(),
                     owned != null, owned != null && owned.isEquipped());
         }

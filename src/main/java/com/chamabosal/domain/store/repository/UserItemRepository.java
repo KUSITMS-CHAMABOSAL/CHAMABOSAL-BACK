@@ -23,6 +23,11 @@ public interface UserItemRepository extends JpaRepository<UserItem, Long> {
             """)
     List<Object[]> findEquippedCodes(Collection<Long> userIds);
 
+    /** 카탈로그에서 슬롯이 바뀐 아이템은 모두 벗긴다. 바뀐 슬롯에 이미 착용한 아이템과 겹치지 않게 한다 (STORE-03 3번). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update UserItem ui set ui.equipped = false where ui.item.id = :itemId and ui.equipped = true")
+    int unequipItem(Long itemId);
+
     /** 내 데이터 삭제 (USER-05 3번). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from UserItem ui where ui.user.id = :userId")

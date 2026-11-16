@@ -40,6 +40,11 @@ public class StoreController {
                     공양미 표시 잔액, 방어권 상태, 꾸미기 아이템 목록(노출 순서)을 돌려줍니다.
                     곳간 안의 구매·착용은 itemId를 쓰고, 보살 캐릭터를 그리는 다른 응답은 code(equippedItemCodes)를 씁니다.
                     """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public ResponseEntity<Response<StoreResponse>> getStore(@Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(Response.ok(storeService.getStore(userId)));
     }
