@@ -43,39 +43,42 @@ class UserSettingsUpdateTest {
     }
 
     @Test
-    void USER_03_1_보낸_값만_바꾼다() throws Exception {
-        update("{\"isPokePushEnabled\":false}")
+    void USER_03_1_인증_마감_알림만_끄면_그것만_꺼진다() throws Exception {
+        update("{\"isCertReminderPushEnabled\":false}")
                 .andExpect(status().isOk());
 
         User updated = userRepository.findById(user.getId()).orElseThrow();
-        assertThat(updated.isPokePushEnabled()).isFalse();
-        assertThat(updated.isActivityPushEnabled()).isTrue();
+        assertThat(updated.isCertReminderPushEnabled()).isFalse();
+        assertThat(updated.isPokePushEnabled()).isTrue();
+        assertThat(updated.isResultPushEnabled()).isTrue();
+        assertThat(updated.isVoteOpenedPushEnabled()).isTrue();
     }
 
     @Test
-    void 인증_투표_알림만_바꿀_수_있다() throws Exception {
-        user.updatePushSettings(false, null);
-        userRepository.save(user);
-
-        update("{\"isActivityPushEnabled\":false}")
-                .andExpect(status().isOk());
+    void 알림마다_따로_바꿀_수_있다() throws Exception {
+        update("{\"isPokePushEnabled\":false, \"isResultPushEnabled\":false}").andExpect(status().isOk());
+        update("{\"isVoteOpenedPushEnabled\":false}").andExpect(status().isOk());
+        update("{\"isResultPushEnabled\":true}").andExpect(status().isOk());
 
         User updated = userRepository.findById(user.getId()).orElseThrow();
-        assertThat(updated.isActivityPushEnabled()).isFalse();
         assertThat(updated.isPokePushEnabled()).isFalse();
+        assertThat(updated.isResultPushEnabled()).isTrue();
+        assertThat(updated.isVoteOpenedPushEnabled()).isFalse();
+        assertThat(updated.isCertReminderPushEnabled()).isTrue();
     }
 
     @Test
     void USER_03_2_값_없이_요청하면_설정이_바뀌지_않는다() throws Exception {
-        user.updatePushSettings(false, null);
-        userRepository.save(user);
+        update("{\"isPokePushEnabled\":false}").andExpect(status().isOk());
 
         update("{}")
                 .andExpect(status().isOk());
 
         User updated = userRepository.findById(user.getId()).orElseThrow();
         assertThat(updated.isPokePushEnabled()).isFalse();
-        assertThat(updated.isActivityPushEnabled()).isTrue();
+        assertThat(updated.isResultPushEnabled()).isTrue();
+        assertThat(updated.isVoteOpenedPushEnabled()).isTrue();
+        assertThat(updated.isCertReminderPushEnabled()).isTrue();
     }
 
     private ResultActions update(String body) throws Exception {
