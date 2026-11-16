@@ -105,14 +105,14 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     /**
      * 내보내기가 대상 사용자 행 락을 방 락보다 먼저 잡으려고, 엔티티 없이 대상의 사용자 ID만 구한다 (RICE-03 8번).
-     * 요청한 사람이 이 방의 현재 방장이고 대상이 이 방의 다른 현재 멤버일 때만 돌려줘서, 권한 없는 요청이 남의 행을 잠그지 못하게 한다.
-     * 락 뒤에는 기존 확인을 다시 해서 에러는 그대로 나간다 (코드리뷰 반영).
+     * 요청한 사람이 이 방의 현재 멤버이고 대상 멤버 행이 이 방 것일 때만 돌려줘서, 다른 방 사람이 남의 행을 잠그지 못하게 한다 (코드리뷰 반영).
+     * 방장 여부와 대상의 현재 멤버 여부는 보지 않는다. 이 조회와 방 락 사이에 방장이 바뀌거나 대상이 다시 들어와도 락을 놓치지 않게 하려는 것이고,
+     * 권한과 대상 확인은 방 락 뒤에 기존대로 한다.
      */
     @Query("""
-            select t.user.id from RoomMember t, RoomMember me, Room r
-            where t.id = :targetMemberId and t.room.id = :roomId and t.leftAt is null
-              and me.room.id = :roomId and me.user.id = :userId and me.leftAt is null and me.id <> t.id
-              and r.id = :roomId and r.deletedAt is null and r.ownerMemberId = me.id
+            select t.user.id from RoomMember t, RoomMember me
+            where t.id = :targetMemberId and t.room.id = :roomId
+              and me.room.id = :roomId and me.user.id = :userId and me.leftAt is null
             """)
     Optional<Long> findKickTargetUserId(Long roomId, Long userId, Long targetMemberId);
 }
