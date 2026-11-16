@@ -11,8 +11,10 @@ import java.util.Set;
 
 /** 내 정보 (USER-01). 사용자 ID는 내보내지 않는다. */
 public record UserMeResponse(
-        @Schema(description = "설정 화면 콕 알림 토글 (POKE 알림). 토스 동의와 별개") boolean isPokePushEnabled,
-        @Schema(description = "설정 화면 인증·투표 알림 토글 (RESULT·VOTE_OPENED·CERT_REMINDER 알림). 토스 동의와 별개") boolean isActivityPushEnabled,
+        @Schema(description = "설정 화면 콕 찌르기 알림 토글 (POKE). 토스 동의와 별개") boolean isPokePushEnabled,
+        @Schema(description = "설정 화면 투표 결과 알림 토글 (RESULT). 토스 동의와 별개") boolean isResultPushEnabled,
+        @Schema(description = "설정 화면 새 투표 알림 토글 (VOTE_OPENED). 토스 동의와 별개") boolean isVoteOpenedPushEnabled,
+        @Schema(description = "설정 화면 인증 마감 알림 토글 (CERT_REMINDER). 토스 동의와 별개") boolean isCertReminderPushEnabled,
         @Schema(description = "콕 찌르기 알림 토스 동의 (POKE). 동의 카드를 띄울지 판단") boolean isPokeAgreed,
         @Schema(description = "투표 결과 알림 토스 동의 (RESULT)") boolean isResultAgreed,
         @Schema(description = "새 투표 알림 토스 동의 (VOTE_OPENED)") boolean isVoteOpenedAgreed,
@@ -39,7 +41,8 @@ public record UserMeResponse(
 
     public static UserMeResponse of(User user, Set<PushAgreementType> agreed, List<String> equippedItemCodes,
                                     NabalStatusResponse nabal, List<MyRoom> rooms, boolean canCreateRoom) {
-        return new UserMeResponse(user.isPokePushEnabled(), user.isActivityPushEnabled(),
+        return new UserMeResponse(user.isPokePushEnabled(), user.isResultPushEnabled(), user.isVoteOpenedPushEnabled(),
+                user.isCertReminderPushEnabled(),
                 agreed.contains(PushAgreementType.POKE), agreed.contains(PushAgreementType.RESULT),
                 agreed.contains(PushAgreementType.VOTE_OPENED), agreed.contains(PushAgreementType.CERT_REMINDER),
                 equippedItemCodes, nabal, rooms, canCreateRoom);

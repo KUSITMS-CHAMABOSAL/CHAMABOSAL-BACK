@@ -68,8 +68,9 @@ public class UserController {
     @PatchMapping("/settings")
     @Operation(summary = "알림 설정 (USER-03)",
             description = """
-                    설정 화면의 알림 토글 2개를 바꿉니다. 보낸 값만 바꾸고 빠진 값은 그대로 둡니다. 사용자 단위라 모든 방에 같이 적용됩니다.
-                    콕 알림은 콕 찌르기 알림(POKE), 인증·투표 알림은 투표 결과(RESULT)·새 투표(VOTE_OPENED)·인증 마감(CERT_REMINDER) 알림에 적용됩니다.
+                    설정 화면의 알림 토글 4개(콕 찌르기 POKE, 투표 결과 RESULT, 새 투표 VOTE_OPENED, 인증 마감 CERT_REMINDER)를 바꿉니다.
+                    보낸 값만 바꾸고 빠진 값은 그대로 둡니다. 사용자 단위라 모든 방에 같이 적용됩니다.
+                    꺼진 토글을 켤 때 그 알림의 토스 동의 요청은 화면에서 해 주세요.
                     토스 알림 동의(push-agreements)와는 별개입니다. 알림은 그 종류의 토스 동의와 이 토글이 모두 켜져 있어야 보냅니다.
                     """)
     @ApiResponses({

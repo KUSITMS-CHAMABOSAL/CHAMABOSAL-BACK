@@ -159,7 +159,9 @@ USER-01. 앱을 열 때 호출합니다. 어느 화면으로 갈지 판단합니
 ```json
 {
   "isPokePushEnabled": true,
-  "isActivityPushEnabled": true,
+  "isResultPushEnabled": true,
+  "isVoteOpenedPushEnabled": true,
+  "isCertReminderPushEnabled": true,
   "isPokeAgreed": false,
   "isResultAgreed": false,
   "isVoteOpenedAgreed": false,
@@ -239,8 +241,10 @@ GET /api/rooms/1/members/me/calendar?month=2026-11
 USER-03. 앱 안의 알림 설정을 바꿉니다. 보낸 값만 바꿉니다.
 
 ```json
-{ "isPokePushEnabled": false, "isActivityPushEnabled": true }
+{ "isPokePushEnabled": false, "isResultPushEnabled": true, "isVoteOpenedPushEnabled": true, "isCertReminderPushEnabled": false }
 ```
+
+- 알림 종류마다 토글 하나: 콕 찌르기·투표 결과·새 투표·인증 마감. 꺼진 토글을 켤 때 그 알림의 토스 동의 요청은 화면이 함
 
 - 에러: `COMMON_002` (400)
 

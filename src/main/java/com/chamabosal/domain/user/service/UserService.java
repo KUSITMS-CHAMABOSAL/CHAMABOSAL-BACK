@@ -132,7 +132,8 @@ public class UserService {
         User user = userRepository.findWithLockById(userId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.UNAUTHENTICATED));
-        user.updatePushSettings(request.isPokePushEnabled(), request.isActivityPushEnabled());
+        user.updatePushSettings(request.isPokePushEnabled(), request.isResultPushEnabled(), request.isVoteOpenedPushEnabled(),
+                request.isCertReminderPushEnabled());
     }
 
     /** 같은 요청이 동시에 와도 1건만 저장되도록 사용자 행 락 안에서 확인하고 저장한다. */

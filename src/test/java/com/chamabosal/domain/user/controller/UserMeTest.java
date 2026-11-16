@@ -97,7 +97,10 @@ class UserMeTest {
                 .andExpect(jsonPath("$.data.rooms.length()").value(0))
                 .andExpect(jsonPath("$.data.canCreateRoom").value(true))
                 .andExpect(jsonPath("$.data.isPokePushEnabled").value(true))
-                .andExpect(jsonPath("$.data.isActivityPushEnabled").value(true))
+                .andExpect(jsonPath("$.data.isResultPushEnabled").value(true))
+                .andExpect(jsonPath("$.data.isVoteOpenedPushEnabled").value(true))
+                .andExpect(jsonPath("$.data.isCertReminderPushEnabled").value(true))
+                .andExpect(jsonPath("$.data.isActivityPushEnabled").doesNotExist())
                 .andExpect(jsonPath("$.data.equippedItemCodes.length()").value(0))
                 .andExpect(jsonPath("$.data.userId").doesNotExist());
     }
