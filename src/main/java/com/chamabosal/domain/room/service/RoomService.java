@@ -1,5 +1,6 @@
 package com.chamabosal.domain.room.service;
 
+import com.chamabosal.domain.room.dto.response.LeavePreviewResponse;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.entity.Round;
@@ -22,6 +23,7 @@ import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -121,6 +123,17 @@ public class RoomService {
         roomMemberRepository.raiseSeenPotCount(me.getId(), request.seenPotCount(), LocalDateTime.now(clock));
     }
 
+    /** 나가기 확인 화면의 사라질 공양미 (RICE-03 6번). 실제 차감과 같은 계산이고, 조회라 잠그지 않는다. */
+    @Transactional(readOnly = true)
+    public LeavePreviewResponse getLeavePreview(Long userId, Long roomId) {
+        Room room = roomRepository.findById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        return new LeavePreviewResponse(riceService.calculateLeaveDeduction(room, me));
+    }
+
     @Transactional
     public void leave(Long userId, Long roomId) {
         // 나가기 차감이 사용자 전체 잔액을 읽고 빼서, 같은 사람이 두 방을 동시에 나가지 않게 사용자 행을 먼저 잠근다.
@@ -154,10 +167,12 @@ public class RoomService {
     /**
      * 방장이 멤버를 내보낸다 (ROOM-08). 마지막 인증·03:00 배치의 투표 시작과 같은 방 행 락 안에서 투표 중인지 확인해서,
      * 투표가 먼저 시작됐으면 막고 내보내기가 먼저면 대상은 명단에 들어가지 않는다 (8번). 방장은 남아 있어 위임·삭제는 없다.
-     * 공양미 차감은 Q-94가 정해질 때까지 하지 않는다 (removeMember의 LEFT 조건).
+     * 내보내진 사람의 공양미도 차감해서 (RICE-03 8번, Q-94), 그 사람의 다른 방 나가기와 겹치지 않게 대상 사용자 행 → 방 순서로 잠근다.
+     * 대상 사용자 ID는 락 전에 엔티티 없이 읽고, 그 조회가 스냅샷을 고정하지 않도록 READ COMMITTED로 읽는다. 대상이 현재 멤버인지는 방 락 뒤에 다시 본다.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void kick(Long userId, Long roomId, Long targetMemberId) {
+        roomMemberRepository.findKickTargetUserId(roomId, userId, targetMemberId).ifPresent(userRepository::findWithLockById);
         Room room = roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
@@ -187,8 +202,8 @@ public class RoomService {
      */
     void removeMember(Room room, RoomMember member, LeaveType leaveType) {
         LocalDateTime now = LocalDateTime.now(clock);
-        // 스스로 나갈 때만 뺀다. 내보내기는 Q-94가 정해지면, 내 데이터 삭제는 공양미 기록을 모두 지워서 빼지 않는다 (RICE-03, USER-05 2번).
-        if (leaveType == LeaveType.LEFT) {
+        // 스스로 나가거나 내보내지면 뺀다 (RICE-03, Q-94). 내 데이터 삭제는 공양미 기록을 모두 지워서 빼지 않는다 (USER-05 2번).
+        if (leaveType == LeaveType.LEFT || leaveType == LeaveType.KICKED) {
             riceService.deductOnLeave(room, member);
         }
         // 나가기를 저장하기 전에 찾아야 flush 시점과 상관없이 나가는 사람이 빠진다.

@@ -762,6 +762,70 @@ paths:
               examples:
                 ROOM_005:
                   $ref: '#/components/examples/ROOM_005'
+  /api/rooms/{roomId}/members/me/leave-preview:
+    get:
+      tags:
+      - '[ROOM] 방'
+      operationId: getLeavePreview
+      summary: 나가기 공양미 미리보기
+      description: |-
+        나가기 확인 화면(8-3)에 보여줄, 지금 나가면 사라질 공양미 석이다 (RICE-03 6번).
+
+        - 실제 차감과 같은 계산. 목표를 채운 방이거나 잔액이 0석 이하면 0
+        - 조회만 하고 잠그지 않아서, 화면을 본 뒤 공양미가 바뀌면 실제 차감은 나갈 때의 값
+        - 확인 순서: `ROOM_005` → `ROOM_002`
+      parameters:
+      - *id001
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: '200'
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    required:
+                    - riceToLose
+                    properties:
+                      riceToLose:
+                        type: integer
+                        format: int32
+                        description: 지금 나가면 사라질 공양미 석
+                        example: 120
+        '401':
+          description: COMMON_008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                COMMON_008:
+                  $ref: '#/components/examples/COMMON_008'
+        '403':
+          description: ROOM_002
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_002:
+                  $ref: '#/components/examples/ROOM_002'
+        '404':
+          description: ROOM_005
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_005:
+                  $ref: '#/components/examples/ROOM_005'
   /api/rooms/{roomId}/members/me:
     delete:
       tags:
@@ -772,6 +836,7 @@ paths:
         방을 나간다. 방장이면 위임하고, 마지막 멤버면 방을 삭제한다.
 
         - 사진은 바로 지우지 않고 회차 종료 7일 뒤 삭제한다.
+        - 목표를 채우기 전이면 이 방에서 모은 공양미를 차감한다. 미리보기는 `leave-preview`
       parameters:
       - *id001
       responses:
@@ -818,6 +883,7 @@ paths:
         방장이 멤버를 내보낸다. 내보낸 사람은 같은 방에 다시 들어올 수 없다.
 
         - 투표 중인 회차가 있으면 `ROOM_008`. 어제 회차가 투표 중이어도 같다 (오늘 탭 `room.hasVotingRound`).
+        - 내보내진 사람이 목표를 채우기 전의 이 방에서 모은 공양미는 나가기처럼 차감한다 (Q-94).
       parameters:
       - *id001
       - name: memberId
