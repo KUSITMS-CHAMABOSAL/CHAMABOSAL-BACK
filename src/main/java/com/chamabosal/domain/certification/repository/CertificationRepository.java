@@ -78,4 +78,25 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             where c.imageKey in :imageKeys and c.imageDeletedAt is null
             """)
     int markImagesDeleted(Collection<String> imageKeys, LocalDateTime now);
+
+    /**
+     * 7일 뒤 삭제 대상 사진 키 (CERT-04 5번). 기준 시각은 투표 마감 시각, `NO_VOTE` 확정 시각(vote_started_at, Q-18),
+     * 마감되지 않은 회차는 방 삭제 시각(ROOM-07 11번)이다. cutoff는 지금 - 7일이고, 정각에도 지운다.
+     */
+    @Query("""
+            select c.imageKey from Certification c join c.round r join r.room room
+            where c.imageKey is not null and c.imageDeletedAt is null
+              and (r.voteClosedAt <= :cutoff
+                or (r.status = com.chamabosal.domain.round.entity.RoundStatus.NO_VOTE and r.voteStartedAt <= :cutoff)
+                or (r.voteClosedAt is null and r.status <> com.chamabosal.domain.round.entity.RoundStatus.NO_VOTE
+                    and room.deletedAt <= :cutoff))
+            """)
+    List<String> findExpiredImageKeys(LocalDateTime cutoff);
+
+    /** 내 데이터 삭제 (USER-05 4번): 예전에 나간 멤버 행까지 포함한 내 인증의 남은 사진 키. 멤버 행 연결을 끊기 전에 읽는다. */
+    @Query("""
+            select c.imageKey from Certification c
+            where c.member.user.id = :userId and c.imageKey is not null and c.imageDeletedAt is null
+            """)
+    List<String> findImageKeysOfUser(Long userId);
 }

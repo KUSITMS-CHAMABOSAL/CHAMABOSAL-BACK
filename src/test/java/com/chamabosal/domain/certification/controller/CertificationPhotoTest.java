@@ -3,6 +3,7 @@ package com.chamabosal.domain.certification.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +14,7 @@ import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.photo.MemoryPhotoStorage;
 import com.chamabosal.domain.certification.photo.PhotoStorage;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.certification.service.CertificationPhotoExpiryScheduler;
 import com.chamabosal.domain.pot.repository.PotContributionRepository;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
@@ -22,6 +24,8 @@ import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
@@ -30,6 +34,7 @@ import com.chamabosal.support.MutableClock;
 import com.jayway.jsonpath.JsonPath;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +58,7 @@ class CertificationPhotoTest {
 
     private static final LocalDate DEC_1 = LocalDate.of(2026, 12, 1);
     private static final LocalDateTime T0 = DEC_1.atTime(20, 0);
+    private static final LocalDateTime VOTE_CLOSED = LocalDate.of(2026, 12, 2).atTime(15, 0);
 
     @Autowired MockMvc mockMvc;
     @Autowired MutableClock clock;
@@ -66,6 +72,7 @@ class CertificationPhotoTest {
     @Autowired RoomMemberRepository roomMemberRepository;
     @Autowired RoomRepository roomRepository;
     @Autowired UserRepository userRepository;
+    @Autowired CertificationPhotoExpiryScheduler expiryScheduler;
 
     private int userSequence;
     private Room room;
@@ -206,6 +213,135 @@ class CertificationPhotoTest {
         assertThat(saved.getMemo()).isEqualTo("집밥 해먹었어요");
         assertThat(saved.getImageKey()).isEqualTo(before);
         assertThat(storage().contains(before)).isTrue();
+    }
+
+    @Test
+    void CERT_04_2_투표가_끝나고_7일이_지나면_사진을_삭제한다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        String saved = imageKeyOf(id);
+        updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
+
+        clock.set(VOTE_CLOSED.plusDays(7));
+        expiryScheduler.deleteExpired();
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+        assertThat(storage().contains(saved)).isFalse();
+    }
+
+    @Test
+    void CERT_04_3_7일이_되기_전에는_사진이_남아_있다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        String saved = imageKeyOf(id);
+        updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
+
+        clock.set(VOTE_CLOSED.plusDays(7).minusMinutes(1));
+        expiryScheduler.deleteExpired();
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isTrue();
+        assertThat(storage().contains(saved)).isTrue();
+    }
+
+    @Test
+    void CERT_04_5_저장소에서_이미_지운_사진이어도_삭제_작업은_오류_없이_끝난다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        String saved = imageKeyOf(id);
+        updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
+        photoStorage.delete(saved);
+
+        clock.set(VOTE_CLOSED.plusDays(7));
+        expiryScheduler.deleteExpired();
+        expiryScheduler.deleteExpired();
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+    }
+
+    @Test
+    void CERT_04_5번_투표_없음으로_끝난_회차는_확정_시각부터_7일_뒤_삭제한다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        LocalDateTime decided = LocalDate.of(2026, 12, 2).atTime(3, 0);
+        updateRound(round -> round.markNoVote(decided));
+
+        clock.set(decided.plusDays(7).minusMinutes(1));
+        expiryScheduler.deleteExpired();
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isTrue();
+
+        clock.set(decided.plusDays(7));
+        expiryScheduler.deleteExpired();
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+    }
+
+    @Test
+    void CERT_04_5번_방이_삭제돼_마감되지_않은_회차는_방_삭제_시각부터_7일_뒤_삭제한다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        LocalDateTime deletedAt = T0.plusHours(1);
+        Room saved = roomRepository.findById(room.getId()).orElseThrow();
+        saved.delete(deletedAt);
+        roomRepository.save(saved);
+
+        clock.set(deletedAt.plusDays(7).minusMinutes(1));
+        expiryScheduler.deleteExpired();
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isTrue();
+
+        clock.set(deletedAt.plusDays(7));
+        expiryScheduler.deleteExpired();
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+    }
+
+    @Test
+    void CERT_04_5번_마감되지_않은_살아_있는_방의_사진은_지우지_않는다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+
+        clock.set(T0.plusDays(30));
+        expiryScheduler.deleteExpired();
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isTrue();
+    }
+
+    @Test
+    void ROOM_07_10_나가도_사진은_남고_회차_종료_7일_뒤_삭제된다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        String saved = imageKeyOf(id);
+        updateRound(round -> round.announce(VOTE_CLOSED, RoundResultType.ALL_SAFE, null));
+        clock.set(VOTE_CLOSED.plusDays(1));
+
+        mockMvc.perform(delete("/api/rooms/{roomId}/members/me", room.getId()).header("Authorization", bearer(userA)))
+                .andExpect(status().isOk());
+        expiryScheduler.deleteExpired();
+        assertThat(storage().contains(saved)).isTrue();
+
+        clock.set(VOTE_CLOSED.plusDays(7));
+        expiryScheduler.deleteExpired();
+        assertThat(storage().contains(saved)).isFalse();
+    }
+
+    @Test
+    void USER_05_6_내_데이터를_삭제하면_사진도_바로_삭제한다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        String saved = imageKeyOf(id);
+
+        mockMvc.perform(delete("/api/users/me").header("Authorization", bearer(userA)))
+                .andExpect(status().isOk());
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+        assertThat(storage().contains(saved)).isFalse();
+    }
+
+    @Test
+    void USER_05_4번_저장소_삭제가_실패해도_내_데이터_삭제는_끝난다() throws Exception {
+        Long id = certifyWithPhoto(userA);
+        doThrow(new RuntimeException("S3 down")).when(photoStorage).delete(anyString());
+
+        mockMvc.perform(delete("/api/users/me").header("Authorization", bearer(userA)))
+                .andExpect(status().isOk());
+
+        assertThat(certificationRepository.findById(id).orElseThrow().hasImage()).isFalse();
+        assertThat(userRepository.findById(userA.getId()).orElseThrow().isDeleted()).isTrue();
+    }
+
+    private void updateRound(Consumer<Round> change) {
+        Round round = roundRepository.findByRoom_IdAndRoundDate(room.getId(), DEC_1).orElseThrow();
+        change.accept(round);
+        roundRepository.save(round);
     }
 
     private Long certifyWithPhoto(User user) throws Exception {
