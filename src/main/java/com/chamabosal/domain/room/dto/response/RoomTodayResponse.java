@@ -55,14 +55,16 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
             @Schema(description = "FAILED일 때만") Integer spentAmount,
             @Schema(description = "사진이 없거나 지웠으면 null") String imageUrl,
             LocalDateTime certifiedAt,
-            @Schema(description = "내가 남긴 리액션. 없으면 null. 누가 눌렀는지는 돌려주지 않음") ReactionType myReaction,
+            @Schema(description = "받은 잘 참았어요 수. 누가 눌렀는지는 돌려주지 않음") int goodCount,
+            @Schema(description = "받은 아쉬워요 수. 누가 눌렀는지는 돌려주지 않음") int badCount,
+            @Schema(description = "내가 남긴 리액션. 없으면 null") ReactionType myReaction,
             @Schema(description = "수정·삭제 마감 시각 (인증 후 10분)") LocalDateTime editableUntil,
             @Schema(description = "수정·삭제할 수 있으면 null, 아니면 TIME_OVER 또는 VOTE_STARTED") String lockReason
     ) {
 
         /** 인증 전이면 null. 잠금 사유는 CERT-03 잠금을 화면 값으로 바꾼다 (6번). */
-        public static CertificationInfo from(Certification certification, String imageUrl, ReactionType myReaction,
-                                             LocalDateTime now) {
+        public static CertificationInfo from(Certification certification, String imageUrl, ReactionCounts counts,
+                                             ReactionType myReaction, LocalDateTime now) {
             if (certification == null) {
                 return null;
             }
@@ -72,9 +74,15 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
                 case VOTE_STARTED -> "VOTE_STARTED";
             };
             return new CertificationInfo(certification.getId(), certification.getResult(), certification.getMemo(),
-                    certification.getSpentAmount(), imageUrl, certification.getCertifiedAt(), myReaction,
+                    certification.getSpentAmount(), imageUrl, certification.getCertifiedAt(), counts.good(), counts.bad(), myReaction,
                     certification.getEditableUntil(), lockReason);
         }
+    }
+
+    /** 인증 하나가 받은 리액션 수 (ROOM-02 7번). */
+    public record ReactionCounts(int good, int bad) {
+
+        public static final ReactionCounts NONE = new ReactionCounts(0, 0);
     }
 
     public record Me(
