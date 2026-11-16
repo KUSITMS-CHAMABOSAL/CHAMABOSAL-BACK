@@ -2,10 +2,14 @@ package com.chamabosal.domain.certification.repository;
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
+import com.chamabosal.domain.room.entity.RoomMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,4 +52,22 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             order by r.roundDate
             """)
     List<Certification> findCalendar(Long memberId, LocalDate from, LocalDate to);
+
+    /**
+     * 떠난 보살 정리 후보 (CLEAN-01). 이미 비운 인증만 남은 멤버는 빠져서 정리가 끝난 멤버를 다시 읽지 않는다.
+     * CERT-04로 사진 삭제를 더할 때 남은 사진도 후보 조건에 넣어야 사진만 남은 멤버가 빠지지 않는다.
+     */
+    @Query("""
+            select distinct m from Certification c join c.member m
+            where (c.memo is not null or c.spentAmount is not null) and m.leftAt < :leftBefore
+            """)
+    List<RoomMember> findMembersWithRecordsLeftBefore(LocalDateTime leftBefore);
+
+    /** 일괄 update는 JPA 감사를 거치지 않아 updatedAt을 직접 쓴다. */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Certification c set c.memo = null, c.spentAmount = null, c.updatedAt = :now
+            where c.member.id in :memberIds and (c.memo is not null or c.spentAmount is not null)
+            """)
+    int clearRecordsOfMembers(Collection<Long> memberIds, LocalDateTime now);
 }
