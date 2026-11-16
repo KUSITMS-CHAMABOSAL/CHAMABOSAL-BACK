@@ -187,6 +187,56 @@ class DefenseMoktakTest {
     }
 
     @Test
+    void RESULT_01_8_단독_지목된_사람이_1분_안에_방어하면_DEFENDED이고_다른_사람은_지목되지_않는다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        result(userA, round)
+                .andExpect(jsonPath("$.data.voteCounts[0].memberId").value(party.a().getId()))
+                .andExpect(jsonPath("$.data.voteCounts[0].count").value(3))
+                .andExpect(jsonPath("$.data.voteCounts[1].count").value(1));
+
+        clock.set(AFTER_CLOSE.plusMinutes(1));
+        defend(userA, round).andExpect(status().isCreated());
+
+        Round defended = reload(round);
+        assertThat(defended.getResultType()).isEqualTo(RoundResultType.DEFENDED);
+        assertThat(defended.getPickedMember()).isNotNull();
+        assertThat(defended.getPickedMember().getId()).isNotEqualTo(party.b().getId());
+    }
+
+    @Test
+    void RESULT_01_9_동점으로_모두_무사면_방어할_사람이_없어_DEFENSE_008이다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = startVoting(party, NOV_4, true);
+        voteRepository.save(Vote.create(reload(round), party.b(), party.a()));
+        voteRepository.save(Vote.create(reload(round), party.c(), party.a()));
+        voteRepository.save(Vote.create(reload(round), party.d(), party.b()));
+        voteRepository.save(Vote.create(reload(round), party.a(), party.b()));
+        voteCloseService.closeAtDeadline(party.room().getId(), round.getId(), NOV_5.atTime(15, 0));
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.ALL_SAFE);
+        result(userA, round);
+
+        defend(userA, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("DEFENSE_008"));
+
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.ALL_SAFE);
+        assertThat(ticketCount(userA)).isEqualTo(1);
+    }
+
+    @Test
+    void RESULT_01_10_결과_응답에는_누가_누구를_골랐는지_없다() throws Exception {
+        Round round = pickedA(party);
+
+        String body = result(userB, round).andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("voter").doesNotContain("\"votes\"");
+        for (RoomMember member : List.of(party.a(), party.b(), party.c(), party.d())) {
+            result(member.getUser(), round)
+                    .andExpect(jsonPath("$.data.myVote").doesNotExist())
+                    .andExpect(jsonPath("$.data.voteCounts[*].voterMemberId").isEmpty());
+        }
+    }
+
+    @Test
     void SHIELD_02_2_방어_시간_지남() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
