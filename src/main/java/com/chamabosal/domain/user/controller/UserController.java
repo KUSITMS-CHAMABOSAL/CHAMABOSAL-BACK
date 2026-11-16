@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/users/me")
-@Tag(name = "[USER] 사용자 API", description = "알림 설정, 토스 알림 동의, 인증 캘린더")
+@Tag(name = "[USER] 사용자 API", description = "내 정보, 내 보살 기록, 알림 설정, 토스 알림 동의, 내 데이터 삭제")
 public class UserController {
 
     private final UserService userService;
