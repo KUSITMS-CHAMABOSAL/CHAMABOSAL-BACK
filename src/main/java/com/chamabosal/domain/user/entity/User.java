@@ -30,6 +30,21 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean isPokePushEnabled = true;
 
+    /** 새 컬럼은 이미 있는 사용자도 켜진 상태로 생기도록 DB 기본값을 둔다 (USER-03 2번). */
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean isResultPushEnabled = true;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean isVoteOpenedPushEnabled = true;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean isCertReminderPushEnabled = true;
+
+    /**
+     * 더 쓰지 않는 예전 인증·투표 알림 토글 (토글 4종으로 나눔, Q-98). 서버 DB에 NOT NULL·기본값 없는 컬럼으로 남아 있어
+     * 매핑을 지우면 새 사용자 저장이 실패한다. 출시 전 컬럼을 지울 때 함께 지운다.
+     */
+    @Getter(AccessLevel.NONE)
     @Column(nullable = false)
     private boolean isActivityPushEnabled = true;
 
@@ -51,12 +66,20 @@ public class User extends BaseEntity {
         this.tossAnonKey = null;
     }
 
-    public void updatePushSettings(Boolean isPokePushEnabled, Boolean isActivityPushEnabled) {
+    /** 보낸 값만 바꾼다 (USER-03 1번). */
+    public void updatePushSettings(Boolean isPokePushEnabled, Boolean isResultPushEnabled, Boolean isVoteOpenedPushEnabled,
+                                   Boolean isCertReminderPushEnabled) {
         if (isPokePushEnabled != null) {
             this.isPokePushEnabled = isPokePushEnabled;
         }
-        if (isActivityPushEnabled != null) {
-            this.isActivityPushEnabled = isActivityPushEnabled;
+        if (isResultPushEnabled != null) {
+            this.isResultPushEnabled = isResultPushEnabled;
+        }
+        if (isVoteOpenedPushEnabled != null) {
+            this.isVoteOpenedPushEnabled = isVoteOpenedPushEnabled;
+        }
+        if (isCertReminderPushEnabled != null) {
+            this.isCertReminderPushEnabled = isCertReminderPushEnabled;
         }
     }
 
