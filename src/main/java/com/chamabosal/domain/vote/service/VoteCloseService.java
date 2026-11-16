@@ -16,11 +16,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,7 @@ public class VoteCloseService {
     private final RoundRepository roundRepository;
     private final RoundParticipantRepository roundParticipantRepository;
     private final VoteRepository voteRepository;
+    private final Clock clock;
 
     /** 방 행 락을 잡은 트랜잭션 안에서 부른다. 필수 투표자 전원이 표를 냈으면 마감하고, 마감했으면 true. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -74,9 +77,23 @@ public class VoteCloseService {
     public record DueRound(Long roomId, Long roundId) {
     }
 
-    /** 15:00 배치에서 회차마다 따로 부른다. 필수 투표자가 다 안 찼어도 마감 시각이 지났으면 그대로 마감한다. */
+    /**
+     * 15:00 배치에서 회차마다 따로 부른다. 필수 투표자가 다 안 찼어도 마감 시각이 지났으면 그대로 마감한다.
+     * 마감 시각은 방 행 락을 잡은 뒤에 읽는다. 방어권은 마감 + 2분까지라(SHIELD-02 3번) 배치 시작 시각을 쓰면
+     * 앞 회차 처리나 락 대기만큼 방어 시간이 줄어든다 (코드리뷰 반영).
+     */
+    @Transactional
+    public void closeAtDeadline(Long roomId, Long roundId) {
+        closeLocked(roomId, roundId, () -> LocalDateTime.now(clock));
+    }
+
+    /** 마감 시각을 정해서 마감한다. 테스트에서 시각을 직접 넘길 때 쓴다. */
     @Transactional
     public void closeAtDeadline(Long roomId, Long roundId, LocalDateTime now) {
+        closeLocked(roomId, roundId, () -> now);
+    }
+
+    private void closeLocked(Long roomId, Long roundId, Supplier<LocalDateTime> closedAt) {
         Room room = roomRepository.findWithLockById(roomId).orElse(null);
         if (room == null || room.isDeleted()) {
             return;
@@ -85,7 +102,7 @@ public class VoteCloseService {
         if (!round.isVoting()) {
             return;
         }
-        close(round, voteRepository.findByRound_Id(round.getId()), now);
+        close(round, voteRepository.findByRound_Id(round.getId()), closedAt.get());
     }
 
     private void close(Round round, List<Vote> votes, LocalDateTime now) {

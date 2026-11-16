@@ -3208,8 +3208,8 @@ components:
           example: false
         defenseUsableUntil:
           type: string
-          description: 내가 지목된 `PICKED` 결과일 때만, 처음 조회 시각 + 2분. 나머지는 `null`
-          example: '2026-11-04T08:02:00'
+          description: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null`
+          example: '2026-11-04T15:02:00'
           format: date-time
           nullable: true
         defenseTicketCount:
