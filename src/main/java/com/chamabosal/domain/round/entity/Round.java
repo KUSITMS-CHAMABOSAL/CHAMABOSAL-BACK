@@ -34,6 +34,7 @@ public class Round extends BaseEntity {
 
     private static final LocalTime ROUND_START = LocalTime.of(3, 0);
     private static final LocalTime VOTE_DEADLINE = LocalTime.of(15, 0);
+    public static final int TAP_HOURS = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -116,6 +117,16 @@ public class Round extends BaseEntity {
     /** 투표는 늦어도 회차 날짜 다음 날 15:00에 닫힌다. */
     public LocalDateTime getVoteClosesAt() {
         return roundDate.plusDays(1).atTime(VOTE_DEADLINE);
+    }
+
+    /** 톡톡은 투표 마감 후 5시간 동안 보내고, 그 시각에 지목된 사람에게 한 번에 전달된다 (RESULT-03 4·5번, Q-92). */
+    public LocalDateTime getTapClosesAt() {
+        return voteClosedAt.plusHours(TAP_HOURS);
+    }
+
+    /** 톡톡 마감 시각 전까지만 보낼 수 있다. 그 시각부터는 전달된 것으로 보아 둘이 겹치지 않는다. */
+    public boolean isTapOpen(LocalDateTime now) {
+        return now.isBefore(getTapClosesAt());
     }
 
     /** 결과 판정(RESULT-01)과 마감을 같이 기록한다. pickedMember가 없으면(ALL_BOSAL·ALL_SAFE) 지목 사용자도 비운다. */

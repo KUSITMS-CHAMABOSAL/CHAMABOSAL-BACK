@@ -77,8 +77,7 @@ public class RoundResultService {
             isPicked = resultType == RoundResultType.PICKED;
         }
 
-        boolean isTapExpired = isPicked && roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(
-                roomId, round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED));
+        boolean isTapExpired = isPicked && !round.isTapOpen(LocalDateTime.now(clock));
         boolean canTap = isPicked && !isMePicked && !isTapExpired
                 && !tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId());
 

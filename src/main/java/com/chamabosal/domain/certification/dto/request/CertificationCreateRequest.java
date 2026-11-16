@@ -4,7 +4,7 @@ import com.chamabosal.domain.certification.entity.CertificationResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
-/** 글자 수와 금액은 결과에 따라 달라서 서비스에서 확인한다. 사진(imageKey)은 CERT-04에서 추가한다. */
+/** 글자 수와 금액은 결과에 따라 달라서 서비스에서 확인한다. */
 public record CertificationCreateRequest(
         @Schema(description = "참았어요(ENDURED) / 못 참았어요(FAILED)")
         @NotNull(message = "결과를 골라 주세요.")
@@ -15,6 +15,9 @@ public record CertificationCreateRequest(
         String memo,
 
         @Schema(description = "쓴 금액. FAILED면 필수 1~999,999, ENDURED면 저장하지 않음", example = "23000")
-        Integer spentAmount
+        Integer spentAmount,
+
+        @Schema(description = "선택. 업로드 URL로 받은 사진 키", example = "tmp/12/2f1c8a7e-...")
+        String imageKey
 ) {
 }

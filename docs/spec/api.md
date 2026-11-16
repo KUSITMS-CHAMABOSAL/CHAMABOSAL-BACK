@@ -83,7 +83,7 @@
 | 사용자 | PATCH | `/api/users/me/settings` | USER-03 | ✅ |
 | 나발 | PUT | `/api/users/me/seen-nabal-loss` | NABAL-02 | ✅ |
 | 나발 | POST | `/api/users/me/nabal-replants` | NABAL-03 | ✅ |
-| 사용자 | DELETE | `/api/users/me` | USER-05 |  |
+| 사용자 | DELETE | `/api/users/me` | USER-05 | ✅ |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 | ✅ |
@@ -245,7 +245,7 @@ USER-03. 앱 안의 알림 설정을 바꿉니다. 보낸 값만 바꿉니다.
 
 ### DELETE /api/users/me
 
-USER-05. 내 데이터를 삭제합니다. 모든 방에서 나가고 사진은 바로 삭제합니다. 6개월 안에 돌아오면 복구됩니다.
+USER-05. 내 데이터를 바로 삭제합니다. 모든 방에서 나가고 공양미·아이템·방어권·알림 동의·나발·사진을 지웁니다. 투표 결과와 지난 회차 한 줄·금액은 "떠난 보살"로 남습니다. 복구는 없고, 같은 토스 계정으로 다시 로그인하면 새 사용자입니다 (Q-102).
 
 ### POST /api/users/me/push-agreements
 
@@ -513,9 +513,10 @@ CERT-04. 사진을 올릴 presigned URL과 `imageKey`를 발급합니다. 프론
 
 - 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보냄. `Content-Type` 헤더는 요청의 `contentType`과 같아야 함 (다르면 저장소가 403)
 - `expiresIn`: `uploadUrl` 유효 시간(초). 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있음
-- 허용 파일 형식·크기는 [미정] Q-30
+- `contentType`: `image/jpeg`, `image/png`, `image/heic`, `image/webp` 중 하나. 크기 상한 10MB는 화면에서 지킴 (Q-30 임시 결정)
+- `imageKey`: `tmp/{사용자 ID}/{임의 ID}`. 내가 받은 키만 인증 등록·수정에 쓸 수 있음
 - 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있음
-- 에러: `COMMON_002` (400, 허용하지 않는 형식)
+- 에러: `COMMON_002` (400, 허용하지 않는 형식), `COMMON_008` (401)
 
 ### POST /api/rooms/{roomId}/certifications
 
@@ -634,13 +635,14 @@ POKE-01. 같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태�
 - `count`: 요청 한 번에 1~30. 앱 안 누적 횟수에는 제한이 없음
 - 받은 콕 수는 받는 사람의 오늘 탭 `me.receivedPokeCount`로 보임. 누가 찔렀는지는 보내지 않음. 찌른 사람에게도 보일지는 [미정] Q-55
 - 보낸 사람별 처음 콕만 푸시를 보내고, 받는 사람은 하루 최대 3건만 받음. 21:00~08:00에는 보내지 않음 (POKE-02). 이미 보낸 푸시의 숫자는 바꿀 수 없어서 늘어나는 횟수는 앱 안에서만 보임
+- 확인 순서: `COMMON_002` → `ROOM_005` → `ROOM_002` → `POKE_001` → `ROOM_009`
 - 에러: `POKE_001` (400, 본인), `ROOM_009` (404, 받는 사람이 이 방 현재 멤버 아님), `ROOM_002` (403), `ROOM_005` (404), `COMMON_002` (400, `count` 범위)
 
 ## 10. 투표 · 결과 · 톡톡
 
 > 담당자 확인 (최신 디자인과 다른 부분)
 > - "오늘은 모두 보살" 선택지가 디자인에 없음 (VOTE-02)
-> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡만큼 직접 두드리는 목탁 수행(끝까지 하면 번뇌 완료 +10석)은 `POST /api/rounds/{roundId}/moktak` (Q-92 임시 결정, 기획 확인 중)
+> - 받은 톡톡이 "0/3번", "해린 보살의 톡톡!"으로 보낸 사람 단위 표시 (p110~117). 받은 톡톡만큼 직접 두드리는 목탁 수행(끝까지 하면 번뇌 완료 +10석)은 `POST /api/rounds/{roundId}/moktak` (Q-92)
 > - `roundDate`를 화면에서 쓰는지
 > - 투표 탭 status별로 채우는 필드가 화면에 필요한 값과 맞는지
 
@@ -748,7 +750,7 @@ RESULT-02. 결과 화면입니다.
 
 - 누가 누구에게 투표했는지는 보내지 않음
 - `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같음
-- `isTapExpired`: `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내
+- `isTapExpired`: `PICKED` 결과인데 투표 마감 후 5시간이 지나 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내
 - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
 - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
 - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록함 (SHIELD-02)
@@ -773,14 +775,18 @@ RESULT-03. 톡톡을 끝낼 때 한 번 보냅니다. 0번(건너뛰기)도 보�
 - `count`: 0~999 (안전용 상한)
 - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0이면 0. 방 인원이 1명이면 0 (RICE-01)
 - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있음. 방어되면 보낸 톡톡은 무효
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아님, 방어된 결과 포함), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: `PICKED` 결과인데 그 뒤 다음 투표가 열림), `COMMON_002` (400, `count` 범위)
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_001` (409, 처음부터 톡톡이 없는 회차: `PICKED`가 아님, 방어된 결과 포함), `TAP_002` (403, 지목된 본인), `TAP_003` (409, 이미 톡톡함), `TAP_004` (409, 톡톡 시간 지남: 투표 마감 후 5시간이 지남), `COMMON_002` (400, `count` 범위)
 
 ### GET /api/rounds/{roundId}/taps/received
 
-RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다.
+RESULT-03. 지목된 사람이 받은 톡톡입니다. 투표 마감 후 5시간(톡톡 마감 시각)이 지나면 한 번에 전달됩니다.
 
 ```json
 {
+  "isDelivered": true,
+  "deliveredAt": "2026-11-05T20:00:00",
+  "totalCount": 14,
+  "isMoktakDone": false,
   "taps": [
     { "nickname": "민지", "color": "PINK", "count": 10 },
     { "nickname": "도윤", "color": "YELLOW", "count": 4 }
@@ -789,13 +795,16 @@ RESULT-03. 지목된 사람이 아직 재생하지 않은 받은 톡톡입니다
 ```
 
 - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
-- 방어된 회차(`DEFENDED`)는 빈 목록
-- 재생 완료를 저장한 뒤에는 빈 목록. 그 뒤에 도착한 톡톡만 다시 나옴
+- `isDelivered`, `deliveredAt`: 전달 여부와 전달 시각(투표 마감 + 5시간). 전달 전에는 `taps`가 빈 목록이고 `totalCount`는 0
+- `totalCount`: 받은 톡톡 합계. 목탁 수행에서 두드려야 하는 횟수
+- `isMoktakDone`: 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았는지
+- 방어된 회차(`DEFENDED`)는 빈 목록, `totalCount` 0
+- 전달 뒤에는 재생 완료를 저장해도 받은 톡톡 전체가 그대로 나옴. 목탁 수행은 다음 투표 전까지 다시 들어올 수 있음
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
 
 ### PUT /api/rounds/{roundId}/taps/received/played
 
-RESULT-03. 받은 톡톡 재생 완료를 저장합니다.
+RESULT-03. 받은 톡톡 재생 완료를 저장합니다. 앱 진입 이벤트(ROOM-02 `entry`)에서 한 번 띄운 뒤 다시 띄우지 않으려고 씁니다.
 
 - 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
@@ -812,12 +821,12 @@ RESULT-03 9번, RICE-01 6번. 지목된 사람이 받은 톡톡만큼 목탁을 
 { "riceEarned": 10 }
 ```
 
-- `count`: 두드린 횟수 (0 이상). 그 회차에 받은 톡톡 합계보다 적으면 `MOKTAK_004`. 수행 중에 톡톡이 더 와서 거부되면 받은 톡톡을 다시 불러와 이어서 두드림
+- `count`: 두드린 횟수 (0 이상). 그 회차에 받은 톡톡 합계(받은 톡톡 조회의 `totalCount`)보다 적으면 `MOKTAK_004`
 - 이미 완료한 회차면 보상 없이 `riceEarned: 0`으로 성공 (재시도해도 안전)
 - 방 인원이 1명이면 `riceEarned` 0 (RICE-01)
-- 확인 순서: `ROUND_001` → `ROOM_002` → `TAP_005` → `MOKTAK_001` → 이미 완료(성공) → `MOKTAK_002` → `MOKTAK_003` → `MOKTAK_004`
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람 아님), `MOKTAK_001` (409, 번뇌 보상이 없는 결과: `PICKED` 아님, 방어됨 포함), `MOKTAK_002` (409, 받은 톡톡 없음), `MOKTAK_003` (409, 다음 투표가 열려 기한 지남), `MOKTAK_004` (409, 받은 톡톡보다 적게 두드림), `COMMON_002` (400, `count` 없음·음수)
-- Q-92 임시 결정 (기획 확인 중)
+- 확인 순서: `ROUND_001` → `ROOM_002` → `TAP_005` → `MOKTAK_001` → 이미 완료(성공) → `MOKTAK_005` → `MOKTAK_002` → `MOKTAK_003` → `MOKTAK_004`
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람 아님), `MOKTAK_001` (409, 번뇌 보상이 없는 결과: `PICKED` 아님, 방어됨 포함), `MOKTAK_002` (409, 받은 톡톡 없음), `MOKTAK_003` (409, 다음 투표가 열려 기한 지남), `MOKTAK_004` (409, 받은 톡톡보다 적게 두드림), `MOKTAK_005` (409, 톡톡이 아직 전달되지 않음), `COMMON_002` (400, `count` 없음·음수)
+- 톡톡이 전달된 뒤부터 다음 투표가 열리기 전까지 보낼 수 있음 (Q-92)
 
 ## 11. 한 솥
 
@@ -835,8 +844,8 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
   "goalAmount": 300,
   "rewardAmount": 30,
   "contributions": [
-    { "rank": 1, "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": [], "amount": 84, "isLeft": false },
-    { "rank": 2, "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "amount": 77, "isLeft": false }
+    { "rank": 1, "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": [], "amount": 84 },
+    { "rank": 2, "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "amount": 77 }
   ]
 }
 ```
@@ -845,7 +854,7 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 그대로, 350석이면 35석. Q-81)
 - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺌
 - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
-- 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
+- 그 솥에 넣은 기록이 있는 현재 멤버만 넣음. 나간 멤버와 넣은 기록이 없는 멤버는 뺌
 - 에러: `POT_001` (404, 없거나 아직 다 채우지 않은 솥), `ROOM_002` (403), `ROOM_005` (404)
 
 ## 12. 방어권

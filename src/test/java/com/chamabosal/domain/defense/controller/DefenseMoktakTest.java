@@ -3,6 +3,7 @@ package com.chamabosal.domain.defense.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,6 +12,10 @@ import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.defense.entity.DefenseTicket;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
+import com.chamabosal.domain.pot.entity.RoomPot;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
+import com.chamabosal.domain.reaction.repository.ReactionRepository;
 import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
@@ -66,6 +71,8 @@ class DefenseMoktakTest {
     private static final LocalDate NOV_4 = LocalDate.of(2026, 11, 4);
     private static final LocalDate NOV_5 = LocalDate.of(2026, 11, 5);
     private static final LocalDateTime AFTER_CLOSE = NOV_5.atTime(16, 0);
+    /** 11/4 회차는 11/5 15:00에 마감돼 5시간 뒤인 20:00에 톡톡이 전달되고 목탁 수행을 할 수 있다. */
+    private static final LocalDateTime DELIVERED = NOV_5.atTime(20, 0);
 
     @Autowired MockMvc mockMvc;
     @Autowired MutableClock clock;
@@ -75,6 +82,9 @@ class DefenseMoktakTest {
     @Autowired UserRepository userRepository;
     @Autowired RoomRepository roomRepository;
     @Autowired RoomMemberRepository roomMemberRepository;
+    @Autowired ReactionRepository reactionRepository;
+    @Autowired PotContributionRepository potContributionRepository;
+    @Autowired RoomPotRepository roomPotRepository;
     @Autowired RoundRepository roundRepository;
     @Autowired RoundParticipantRepository roundParticipantRepository;
     @Autowired CertificationRepository certificationRepository;
@@ -103,6 +113,7 @@ class DefenseMoktakTest {
 
     @AfterEach
     void tearDown() {
+        reactionRepository.deleteAll();
         defenseTicketRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         tapRepository.deleteAll();
@@ -110,6 +121,8 @@ class DefenseMoktakTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
@@ -301,9 +314,10 @@ class DefenseMoktakTest {
         giveTickets(userA, 1);
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
         moktak(userA, round, 5).andExpect(status().isCreated());
 
-        clock.set(AFTER_CLOSE.plusMinutes(1));
+        clock.set(DELIVERED.plusMinutes(1));
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_010"));
 
         assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
@@ -317,9 +331,10 @@ class DefenseMoktakTest {
         giveTickets(userA, 1);
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
-        result(userA, round).andExpect(jsonPath("$.data.canUseDefense").value(true));
-
+        clock.set(DELIVERED);
         moktak(userA, round, 5).andExpect(status().isCreated());
+
+        // 결과를 이제 처음 열어 방어 시간 안이지만, 목탁 수행을 마쳐 쓸 수 없다.
 
         result(userA, round)
                 .andExpect(jsonPath("$.data.resultType").value("PICKED"))
@@ -375,6 +390,7 @@ class DefenseMoktakTest {
     void RICE_01_10_번뇌_완료_보상() throws Exception {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
 
@@ -385,6 +401,40 @@ class DefenseMoktakTest {
         // 다시 보내도 보상은 한 번이다.
         moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(0));
         assertThat(beonnoe(userA)).hasSize(1);
+    }
+
+    @Test
+    void POT_01_9_톡톡_완료와_리액션도_한_솥에_쌓인다() throws Exception {
+        Round round = pickedA(party);
+        RoomPot pot = RoomPot.first(party.room());
+        pot.add(100);
+        roomPotRepository.save(pot);
+        Round today = roundRepository.save(Round.create(party.room(), NOV_5));
+        Certification certificationC = certificationRepository.save(Certification.create(
+                today, party.c(), CertificationResult.ENDURED, "기록", null, AFTER_CLOSE));
+
+        tap(userB, round, 1).andExpect(status().isCreated());
+        mockMvc.perform(put("/api/certifications/{certificationId}/reactions/me", certificationC.getId())
+                        .header("Authorization", bearer(party.d().getUser()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\": \"GOOD\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(party.room().getId()).orElseThrow().getAmount())
+                .isEqualTo(106);
+    }
+
+    @Test
+    void POT_01_10_번뇌_완료는_한_솥에_넣지_않는다() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        int before = roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(party.room().getId()).orElseThrow().getAmount();
+        clock.set(DELIVERED);
+
+        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+
+        assertThat(roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(party.room().getId()).orElseThrow().getAmount())
+                .isEqualTo(before);
     }
 
     @Test
@@ -403,6 +453,7 @@ class DefenseMoktakTest {
     void RICE_01_13_받은_톡톡이_0번이면_번뇌_보상_없음() throws Exception {
         Round round = pickedA(party);
         tap(userB, round, 0).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_002"));
 
@@ -414,6 +465,7 @@ class DefenseMoktakTest {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
         startVoting(party, NOV_5, true);
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_003"));
 
@@ -425,11 +477,37 @@ class DefenseMoktakTest {
         Round round = pickedA(party);
         tap(userB, round, 5).andExpect(status().isCreated());
         tap(userC(), round, 3).andExpect(status().isCreated());
+        clock.set(DELIVERED);
 
         moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_004"));
         assertThat(beonnoe(userA)).isEmpty();
 
         moktak(userA, round, 8).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+    }
+
+    @Test
+    void RICE_01_16_전달_전에는_번뇌_보상_없음() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED.minusSeconds(1));
+
+        moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_005"));
+
+        assertThat(beonnoe(userA)).isEmpty();
+    }
+
+    @Test
+    void RESULT_03_17_목탁_수행을_마치면_받은_톡톡에_완료로_나온다() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        clock.set(DELIVERED);
+        received(userA, round).andExpect(jsonPath("$.data.isMoktakDone").value(false));
+
+        moktak(userA, round, 5).andExpect(status().isCreated());
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isMoktakDone").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(5));
     }
 
     @Test
@@ -533,6 +611,11 @@ class DefenseMoktakTest {
 
     private ResultActions defend(User user, Round round) throws Exception {
         return mockMvc.perform(post("/api/rounds/{roundId}/defenses", round.getId()).header("Authorization", bearer(user)));
+    }
+
+    private ResultActions received(User user, Round round) throws Exception {
+        return mockMvc.perform(get("/api/rounds/{roundId}/taps/received", round.getId())
+                .header("Authorization", bearer(user)));
     }
 
     private ResultActions moktak(User user, Round round, int count) throws Exception {

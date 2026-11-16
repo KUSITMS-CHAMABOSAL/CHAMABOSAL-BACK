@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.Room;
@@ -73,6 +75,12 @@ class CertificationCreateTest {
     RoomMemberRepository roomMemberRepository;
 
     @Autowired
+    PotContributionRepository potContributionRepository;
+
+    @Autowired
+    RoomPotRepository roomPotRepository;
+
+    @Autowired
     RoundRepository roundRepository;
 
     @Autowired
@@ -110,6 +118,8 @@ class CertificationCreateTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();

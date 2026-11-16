@@ -72,9 +72,20 @@ public enum BaseErrorCode implements ErrorCode {
     MOKTAK_NO_TAPS(HttpStatus.CONFLICT, "MOKTAK_002", "받은 톡톡이 없습니다."),
     MOKTAK_EXPIRED(HttpStatus.CONFLICT, "MOKTAK_003", "수행 시간이 지났어요."),
     MOKTAK_NOT_FINISHED(HttpStatus.CONFLICT, "MOKTAK_004", "받은 톡톡만큼 두드려야 해요."),
+    MOKTAK_NOT_DELIVERED(HttpStatus.CONFLICT, "MOKTAK_005", "아직 톡톡이 전달되지 않았어요."),
 
     // Store
     RICE_NOT_ENOUGH(HttpStatus.CONFLICT, "STORE_001", "공양미가 부족해요."),
+
+    // Reaction
+    REACTION_ON_MINE(HttpStatus.FORBIDDEN, "REACT_001", "내 인증에는 리액션을 남길 수 없어요."),
+    REACTION_CLOSED(HttpStatus.CONFLICT, "REACT_002", "투표가 시작되어 리액션을 바꿀 수 없어요."),
+
+    // Poke
+    POKE_SELF(HttpStatus.BAD_REQUEST, "POKE_001", "나를 찌를 수 없어요."),
+
+    // Pot
+    POT_NOT_FOUND(HttpStatus.NOT_FOUND, "POT_001", "다 채운 솥이 없어요."),
 
     // Nabal
     NABAL_NOT_FALLEN(HttpStatus.CONFLICT, "NABAL_001", "빠지지 않은 나발은 심을 수 없어요."),

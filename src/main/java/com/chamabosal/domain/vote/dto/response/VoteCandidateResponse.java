@@ -17,23 +17,23 @@ public record VoteCandidateResponse(
         CertificationSummary certification
 ) {
 
-    public static VoteCandidateResponse from(RoundParticipant participant, Certification certification) {
+    public static VoteCandidateResponse from(RoundParticipant participant, Certification certification, String imageUrl) {
         RoomMember member = participant.getMember();
         return new VoteCandidateResponse(
                 member.getId(), member.getNickname(), member.getColor(), List.of(),
-                CertificationSummary.from(certification));
+                CertificationSummary.from(certification, imageUrl));
     }
 
     public record CertificationSummary(
             CertificationResult result, String memo, Integer spentAmount, String imageUrl, LocalDateTime certifiedAt
     ) {
 
-        public static CertificationSummary from(Certification certification) {
+        public static CertificationSummary from(Certification certification, String imageUrl) {
             if (certification == null) {
                 return null;
             }
             return new CertificationSummary(certification.getResult(), certification.getMemo(),
-                    certification.getSpentAmount(), null, certification.getCertifiedAt());
+                    certification.getSpentAmount(), imageUrl, certification.getCertifiedAt());
         }
     }
 }

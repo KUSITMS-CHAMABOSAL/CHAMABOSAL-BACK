@@ -17,6 +17,12 @@ auth:
     enabled: ${AUTH_TEST_TOKEN_ENABLED:false}
     key: ${AUTH_TEST_TOKEN_KEY:}
 
+storage:
+  s3:
+    # 비어 있으면 로컬·테스트용 메모리 저장소를 쓴다. 운영은 application-prod.yml에서 필수로 받는다.
+    bucket: ${AWS_S3_BUCKET:}
+    region: ${AWS_REGION:ap-northeast-2}
+
 discord:
   webhook:
     # 비어 있으면(로컬 등) 에러 알림을 보내지 않는다.

@@ -1,5 +1,7 @@
 package com.chamabosal.domain.vote.service;
 
+import com.chamabosal.domain.pot.entity.PotReason;
+import com.chamabosal.domain.pot.service.PotService;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import com.chamabosal.domain.rice.service.RiceService;
@@ -41,6 +43,7 @@ public class VoteSubmitService {
     private final VoteRepository voteRepository;
     private final VoteCloseService voteCloseService;
     private final RiceService riceService;
+    private final PotService potService;
     private final Clock clock;
 
     /**
@@ -82,9 +85,10 @@ public class VoteSubmitService {
         Vote vote = voteRepository.save(Vote.create(round, me, target));
         int riceEarned = riceService.accrue(room, me, RiceReason.VOTE, RiceRefType.VOTE, vote.getId(),
                 RiceService.VOTE_REWARD);
+        int potEarned = potService.accrue(room, me, PotReason.VOTE, vote.getId(), riceEarned);
 
         boolean isClosed = voteCloseService.closeIfAllVoted(round, now);
-        return new VoteSubmitResponse(riceEarned, isClosed);
+        return new VoteSubmitResponse(riceEarned, potEarned, isClosed);
     }
 
     private void validateRequest(VoteSubmitRequest request) {

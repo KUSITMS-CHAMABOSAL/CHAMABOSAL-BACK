@@ -37,7 +37,7 @@ paths:
       description: |-
         앱인토스 인증 코드로 로그인한다. 처음 온 사용자는 새로 만든다.
 
-        - `isNewUser`: 6개월 안에 돌아와 복구한 사용자는 `false`
+        - `isNewUser`: 새로 만든 사용자. 내 데이터를 삭제한 뒤 같은 계정으로 오면 `true`
       requestBody:
         required: true
         content:
@@ -197,7 +197,7 @@ paths:
       - '[USER] 사용자'
       operationId: deleteMe
       summary: 내 데이터 삭제
-      description: 내 데이터를 삭제한다. 모든 방에서 나가고 사진은 바로 삭제한다. 6개월 안에 돌아오면 복구된다.
+      description: 내 데이터를 바로 삭제한다. 모든 방에서 나가고 공양미·아이템·방어권·알림 동의·나발·사진을 지운다. 투표 결과와 지난 회차 한 줄·금액은 "떠난 보살"로 남는다. 복구는 없다.
       responses:
         '200':
           description: 성공 (data 없음)
@@ -1245,7 +1245,8 @@ paths:
         - 업로드: `uploadUrl`에 `PUT`으로 사진 파일을 보낸다. `Content-Type` 헤더는 요청에 보낸 `contentType`과 같아야 한다. 다르면 저장소가 403으로 거부한다.
         - `expiresIn`은 `uploadUrl`의 유효 시간이다. 올린 사진의 `imageKey`는 업로드 후 1일 동안 인증 등록에 쓸 수 있다.
         - 업로드에 실패해도 `imageKey`를 빼고 사진 없이 인증을 등록할 수 있다.
-        - 허용 형식·크기는 [미정] Q-30. 허용하지 않는 형식이면 `COMMON_002`
+        - `contentType`은 `image/jpeg`, `image/png`, `image/heic`, `image/webp` 중 하나. 크기 상한 10MB는 화면에서 지킨다 (Q-30 임시 결정). 허용하지 않는 형식이면 `COMMON_002`
+        - `imageKey`는 `tmp/{사용자 ID}/{임의 ID}`. 내가 받은 키만 인증 등록·수정에 쓸 수 있고, 다른 사람의 키나 없거나 만료된 키는 `COMMON_002`(field: `imageKey`)
       requestBody:
         required: true
         content:
@@ -1553,6 +1554,7 @@ paths:
 
         - 같은 리액션을 다시 눌러 취소하는 동작은 프론트가 `DELETE`를 부른다.
         - `riceEarned`, `potEarned`: 이 인증에 처음 리액션을 남길 때만 1, 바꾸거나 다시 남기면 0. 방 인원이 1명이면 0 (RICE-01)
+        - 인증이 속한 회차가 인증 중일 때만 남기거나 바꿀 수 있다. 투표가 열리지 않은 회차도 확정되면 마감한다 (Q-33 임시 결정).
         - 확인 순서: 요청 형식(`COMMON_002`) → 없는 인증(`CERT_002`) → 방 멤버 아님(`ROOM_002`) → 본인 인증(`REACT_001`) → 투표 시작 후(`REACT_002`)
       parameters:
       - *id003
@@ -1689,6 +1691,7 @@ paths:
         같은 방 멤버를 콕 찌른다. 인증 여부와 회차 상태에 상관없이 언제나 보낼 수 있다. 연타는 화면에서 1~2초 모아 횟수로 보내고, 서버는 받은 횟수를 더한다.
 
         - `count`: 요청 한 번에 1~30. 앱 안 누적 횟수에는 제한이 없다.
+        - 확인 순서: `COMMON_002` → `ROOM_005` → `ROOM_002` → `POKE_001` → `ROOM_009`
       parameters:
       - *id001
       requestBody:
@@ -2013,7 +2016,7 @@ paths:
         결과 화면이다. 누가 누구에게 투표했는지는 보내지 않는다.
 
         - `canTap`: `PICKED`이고, 내가 지목된 사람이 아니고, 아직 톡톡하지 않았고, `isTapExpired`가 `false`. 15:00에 자동 마감된 결과도 같다.
-        - `isTapExpired`: `PICKED` 결과인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
+        - `isTapExpired`: `PICKED` 결과인데 투표 마감 후 5시간이 지나 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
         - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 처음 조회한 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 조회 시각을 기록한다 (SHIELD-02).
@@ -2085,7 +2088,7 @@ paths:
         - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0(건너뛰기)이면 0. 방 인원이 1명이면 0 (RICE-01)
         - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함)
         - `TAP_003`: 이미 톡톡함. 저장된 횟수는 그대로다.
-        - `TAP_004`: 톡톡 시간 지남. `PICKED` 결과인데 그 뒤 다음 투표가 열림
+        - `TAP_004`: 톡톡 시간 지남. 투표 마감 후 5시간이 지남
       parameters:
       - *id004
       requestBody:
@@ -2166,10 +2169,11 @@ paths:
       operationId: getReceivedTaps
       summary: 받은 톡톡
       description: |-
-        지목된 사람이 아직 재생하지 않은 받은 톡톡이다.
+        지목된 사람이 받은 톡톡이다. 투표 마감 후 5시간(톡톡 마감 시각)이 지나면 한 번에 전달된다.
 
-        - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보낸다.
-        - 재생 완료를 저장한 뒤에는 빈 목록이다. 그 뒤에 도착한 톡톡만 다시 나온다.
+        - 전달 전(`isDelivered`가 `false`)에는 `taps`가 빈 목록이고 `totalCount`는 0이다.
+        - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보낸다. 방어된 회차는 빈 목록이다.
+        - 전달 뒤에는 재생 완료를 저장해도 받은 톡톡 전체가 그대로 나온다. 목탁 수행은 다음 투표 전까지 다시 들어올 수 있다.
       parameters:
       - *id004
       responses:
@@ -2221,7 +2225,7 @@ paths:
       - '[TAP] 톡톡'
       operationId: markReceivedTapsPlayed
       summary: 받은 톡톡 재생 완료
-      description: 받은 톡톡 재생 완료를 저장한다. 이미 재생한 톡톡이면 바꾸지 않고 성공한다 (재시도해도 안전).
+      description: 받은 톡톡 재생 완료를 저장한다. 앱 진입 이벤트에서 한 번 띄운 뒤 다시 띄우지 않으려고 쓴다. 이미 재생한 톡톡이면 바꾸지 않고 성공한다 (재시도해도 안전).
       parameters:
       - *id004
       responses:
@@ -2270,10 +2274,10 @@ paths:
         다 채운 솥의 축하 화면이다.
 
         - `goalAmount`: 이 솥의 목표 석 (방 목표 석, 300~700석 50석 단위)
-        - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%, 반올림은 [미정] Q-81)
+        - `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 그대로, 350석이면 35석. Q-81)
         - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺀다.
         - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
-        - 나간 멤버는 `isLeft: true`로 "떠난 보살" 표시
+        - 그 솥에 넣은 기록이 있는 현재 멤버만 넣는다. 나간 멤버와 넣은 기록이 없는 멤버는 뺀다.
       parameters:
       - *id001
       - name: seq
@@ -2383,7 +2387,8 @@ paths:
         - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않는다.
         - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공한다 (재시도해도 안전).
         - 사용 횟수 제한이 없다. 방어하면 그 회차 번뇌 완료 보상(10석)은 받지 않는다.
-        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_009` → `DEFENSE_002`
+        - 확인 순서 (고칠 수 없는 사유부터): `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002`
+        - `DEFENSE_010`: 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았으면 방어할 수 없다.
       parameters:
       - *id004
       responses:
@@ -2423,7 +2428,7 @@ paths:
                 ROUND_001:
                   $ref: '#/components/examples/ROUND_001'
         '409':
-          description: RESULT_001 / DEFENSE_009 / DEFENSE_002
+          description: RESULT_001 / DEFENSE_010 / DEFENSE_009 / DEFENSE_002
           content:
             application/json:
               schema:
@@ -2431,10 +2436,99 @@ paths:
               examples:
                 RESULT_001:
                   $ref: '#/components/examples/RESULT_001'
+                DEFENSE_010:
+                  $ref: '#/components/examples/DEFENSE_010'
                 DEFENSE_009:
                   $ref: '#/components/examples/DEFENSE_009'
                 DEFENSE_002:
                   $ref: '#/components/examples/DEFENSE_002'
+  /api/rounds/{roundId}/moktak:
+    post:
+      tags:
+      - '[TAP] 톡톡'
+      operationId: completeMoktak
+      summary: 목탁 수행 완료
+      description: |-
+        지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보낸다. 번뇌 완료 보상(개인 +10석)을 준다. 중간에 포기하면 보내지 않는다.
+
+        - 톡톡이 전달된 뒤(투표 마감 후 5시간)부터 다음 투표가 열리기 전까지 보낼 수 있다.
+        - `count`가 받은 톡톡 합계(받은 톡톡 조회의 `totalCount`)보다 적으면 `MOKTAK_004`
+        - 이미 완료한 회차면 보상 없이 `riceEarned: 0`으로 성공한다 (재시도해도 안전).
+        - 확인 순서: `ROUND_001` → `ROOM_002` → `TAP_005` → `MOKTAK_001` → 이미 완료(성공) → `MOKTAK_005` → `MOKTAK_002` → `MOKTAK_003` → `MOKTAK_004`
+      parameters:
+      - *id004
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoktakCompleteRequest'
+      responses:
+        '201':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/MoktakCompleteResponse'
+        '400':
+          description: COMMON_002
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: COMMON_008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                COMMON_008:
+                  $ref: '#/components/examples/COMMON_008'
+        '403':
+          description: ROOM_002 / TAP_005
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_002:
+                  $ref: '#/components/examples/ROOM_002'
+                TAP_005:
+                  $ref: '#/components/examples/TAP_005'
+        '404':
+          description: ROUND_001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROUND_001:
+                  $ref: '#/components/examples/ROUND_001'
+        '409':
+          description: MOKTAK_001 / MOKTAK_005 / MOKTAK_002 / MOKTAK_003 / MOKTAK_004
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                MOKTAK_001:
+                  $ref: '#/components/examples/MOKTAK_001'
+                MOKTAK_005:
+                  $ref: '#/components/examples/MOKTAK_005'
+                MOKTAK_002:
+                  $ref: '#/components/examples/MOKTAK_002'
+                MOKTAK_003:
+                  $ref: '#/components/examples/MOKTAK_003'
+                MOKTAK_004:
+                  $ref: '#/components/examples/MOKTAK_004'
 components:
   securitySchemes:
     bearerAuth:
@@ -2541,6 +2635,11 @@ components:
         contentType:
           type: string
           description: 사진 형식
+          enum:
+          - image/jpeg
+          - image/png
+          - image/heic
+          - image/webp
           example: image/jpeg
     CertificationUploadUrlCreateResponse:
       type: object
@@ -3104,13 +3203,56 @@ components:
     ReceivedTapListResponse:
       type: object
       required:
+      - isDelivered
+      - deliveredAt
+      - totalCount
+      - isMoktakDone
       - taps
       properties:
+        isDelivered:
+          type: boolean
+          description: 톡톡이 전달됐는지 (투표 마감 후 5시간이 지났는지)
+          example: true
+        deliveredAt:
+          type: string
+          format: date-time
+          description: 전달 시각 (투표 마감 + 5시간)
+          example: '2026-11-05T20:00:00'
+        totalCount:
+          type: integer
+          format: int32
+          description: 받은 톡톡 합계. 목탁 수행에서 두드려야 하는 횟수. 전달 전이거나 방어된 회차는 0
+          example: 14
+        isMoktakDone:
+          type: boolean
+          description: 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았는지
+          example: false
         taps:
           type: array
           items:
             $ref: '#/components/schemas/ReceivedTap'
           description: '`count`가 0인 행은 뺌'
+    MoktakCompleteRequest:
+      type: object
+      required:
+      - count
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 0
+          description: 두드린 횟수
+          example: 14
+    MoktakCompleteResponse:
+      type: object
+      required:
+      - riceEarned
+      properties:
+        riceEarned:
+          type: integer
+          format: int32
+          description: 받은 번뇌 완료 보상. 이미 완료했거나 방 인원이 1명이면 0
+          example: 10
     DefenseTicketPurchaseResponse:
       type: object
       required:
@@ -3939,7 +4081,6 @@ components:
       - color
       - equippedItemCodes
       - amount
-      - isLeft
       properties:
         rank:
           type: integer
@@ -3957,13 +4098,9 @@ components:
         equippedItemCodes: *id005
         amount:
           type: integer
-          description: 그 솥에 넣은 석
+          description: 그 솥에 넣은 석. 인증 삭제로 회수한 석은 뺌
           example: 84
           format: int32
-        isLeft:
-          type: boolean
-          description: 나간 멤버 (떠난 보살)
-          example: false
     PotResponse:
       type: object
       required:
@@ -3990,7 +4127,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PotContribution'
-          description: 넣은 석이 많은 순
+          description: 넣은 석이 많은 순. 그 솥에 넣은 기록이 있는 현재 멤버만
   examples:
     AUTH_001:
       summary: AUTH_001 (400)
@@ -4065,6 +4202,42 @@ components:
         success: false
         code: COMMON_008
         message: 인증이 필요합니다.
+    DEFENSE_010:
+      summary: DEFENSE_010 (409)
+      value:
+        success: false
+        code: DEFENSE_010
+        message: 목탁 수행을 마친 결과는 방어할 수 없어요.
+    MOKTAK_001:
+      summary: MOKTAK_001 (409)
+      value:
+        success: false
+        code: MOKTAK_001
+        message: 번뇌 완료 보상이 없는 결과입니다.
+    MOKTAK_002:
+      summary: MOKTAK_002 (409)
+      value:
+        success: false
+        code: MOKTAK_002
+        message: 받은 톡톡이 없습니다.
+    MOKTAK_003:
+      summary: MOKTAK_003 (409)
+      value:
+        success: false
+        code: MOKTAK_003
+        message: 수행 시간이 지났어요.
+    MOKTAK_004:
+      summary: MOKTAK_004 (409)
+      value:
+        success: false
+        code: MOKTAK_004
+        message: 받은 톡톡만큼 두드려야 해요.
+    MOKTAK_005:
+      summary: MOKTAK_005 (409)
+      value:
+        success: false
+        code: MOKTAK_005
+        message: 아직 톡톡이 전달되지 않았어요.
     DEFENSE_002:
       summary: DEFENSE_002 (409)
       value:
@@ -4088,25 +4261,25 @@ components:
       value:
         success: false
         code: POKE_001
-        message: 나를 찌를 수 없습니다.
+        message: 나를 찌를 수 없어요.
     POT_001:
       summary: POT_001 (404)
       value:
         success: false
         code: POT_001
-        message: 아직 다 채우지 않은 솥입니다.
+        message: 다 채운 솥이 없어요.
     REACT_001:
       summary: REACT_001 (403)
       value:
         success: false
         code: REACT_001
-        message: 내 인증에는 리액션을 남길 수 없습니다.
+        message: 내 인증에는 리액션을 남길 수 없어요.
     REACT_002:
       summary: REACT_002 (409)
       value:
         success: false
         code: REACT_002
-        message: 투표가 시작되어 리액션을 바꿀 수 없습니다.
+        message: 투표가 시작되어 리액션을 바꿀 수 없어요.
     RESULT_001:
       summary: RESULT_001 (409)
       value:

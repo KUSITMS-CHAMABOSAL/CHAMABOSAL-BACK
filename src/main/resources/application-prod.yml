@@ -1,6 +1,12 @@
 jwt:
   secret: ${JWT_SECRET}
 
+storage:
+  s3:
+    # 기본값 없이 받아 버킷 설정이 빠지면 서버가 뜨지 않는다.
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION}
+
 spring:
   ssl:
     bundle:

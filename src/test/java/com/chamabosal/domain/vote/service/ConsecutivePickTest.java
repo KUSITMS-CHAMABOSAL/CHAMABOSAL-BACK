@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.pot.repository.PotContributionRepository;
+import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
@@ -46,6 +48,8 @@ class ConsecutivePickTest {
     @Autowired UserRepository userRepository;
     @Autowired RoomRepository roomRepository;
     @Autowired RoomMemberRepository roomMemberRepository;
+    @Autowired PotContributionRepository potContributionRepository;
+    @Autowired RoomPotRepository roomPotRepository;
     @Autowired RoundRepository roundRepository;
     @Autowired RoundParticipantRepository roundParticipantRepository;
     @Autowired CertificationRepository certificationRepository;
@@ -71,6 +75,8 @@ class ConsecutivePickTest {
         roundParticipantRepository.deleteAll();
         certificationRepository.deleteAll();
         roundRepository.deleteAll();
+        potContributionRepository.deleteAll();
+        roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
