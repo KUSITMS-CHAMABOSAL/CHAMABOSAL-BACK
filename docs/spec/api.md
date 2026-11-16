@@ -86,7 +86,7 @@
 | 사용자 | DELETE | `/api/users/me` | USER-05 | ✅ |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
-| 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 |  |
+| 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 | ✅ |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-result` | ROOM-06 |  |
 | 방 | PUT | `/api/rooms/{roomId}/members/me/seen-pot` | ROOM-06 | ✅ |
@@ -280,7 +280,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 
 ### GET /api/rooms/{roomId}/today
 
-ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 돌려줍니다.
+ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 회차를 기준으로 돌려줍니다.
 
 ```json
 {
@@ -291,11 +291,11 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
   "pot": { "amount": 186, "goalAmount": 300 },
   "round": {
     "roundId": 101, "status": "CERTIFYING",
-    "certifiedCount": 3, "isAllCertified": false
+    "certifiedCount": 3, "isAllCertified": false, "isCertificationOpen": true
   },
   "members": [
     {
-      "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": ["SANTA_HAT"],
+      "memberId": 11, "nickname": "민지", "color": "PINK", "equippedItemCodes": ["SANTA_HAT"], "fallenNabalNumbers": [3, 7],
       "isMe": true, "monthlyEnduredCount": 9, "monthlyPickedCount": 3,
       "certification": {
         "certificationId": 501, "result": "ENDURED", "memo": "집밥 해먹었어요", "spentAmount": null,
@@ -316,23 +316,27 @@ ROOM-02. 오늘 탭입니다. 회차 날짜가 오늘인 회차를 기준으로 
 
 - `room.potCompletedCount`: 이 방에서 한 솥을 다 채운 횟수 (쌀가마 배지). 몇 번째 솥인지 표시하고, 안 본 축하를 판단하는 기준(`seen-pot`의 `seenPotCount`)으로도 씀
 - `room.daysTogether`: 방을 만든 회차 날짜부터 지난 일수. 만든 날은 0 ("7일째 같이 참는중")
-- `room.hasVotingRound`: 이 방에 투표 중인 회차가 있음 (어제 회차 포함). 이때 내보내기는 `ROOM_008`로 막힘. `round.status`는 오늘 회차만의 상태라 다를 수 있음
+- `room.hasVotingRound`: 이 방에 투표 중인 회차가 있음 (어제 회차 포함). 이때 내보내기는 `ROOM_008`로 막힘. `round.status`는 지금 회차만의 상태라 다를 수 있음
 - `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증이나 첫 콕 때 만듦
 - `round.status`: 회차 행이 없으면 `CERTIFYING`
 - `round.certifiedCount`: 현재 멤버 중 오늘 인증한 사람 수. 인증하고 나간 멤버는 세지 않음
 - `round.isAllCertified`: 현재 멤버 전원이 인증함
+- `round.isCertificationOpen`: 지금 회차에 인증할 수 있음. 이전 회차 투표가 끝나야 열림(Q-17·Q-82). `false`면 인증 버튼을 막음 (03:00~15:00 어제 투표 중 등)
 - `certification`: 인증 전이면 `null`
 - `editableUntil`: 수정·삭제 마감 시각 (인증 후 10분). `lockReason`이 `null`일 때 남은 시간 표시에 씀
 - `lockReason`: 수정·삭제할 수 있으면 `null`. 10분이 지나면 `TIME_OVER`, 10분 안이어도 투표가 시작되면 `VOTE_STARTED`
-- `equippedItemCodes`: 착용 중인 아이템 코드 목록. 없으면 빈 배열
+- `equippedItemCodes`: 착용 중인 아이템 코드 목록. 없으면 빈 배열. 곳간(STORE-03) 전에는 항상 빈 배열
+- `fallenNabalNumbers`: 그 멤버 보살의 빠진 나발 번호(0~37). 보살은 사용자 단위라 모든 방에 같음 (NABAL-02, Q-101)
 - `members[]`: 홈 카드, 방 정보, 멤버 프로필 시트에 같이 씀. 멤버 프로필 API는 따로 없음
 - `monthlyEnduredCount`, `monthlyPickedCount`: 이 방의 이번 달 참은 횟수와 지목 횟수. 지목은 방어 성공을 세지 않음
 - 리액션 받은 수는 보내지 않음 ([미정] Q-52)
-- `myReaction`: 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
-- `me.isLastCertifier`: 내가 인증하면 전원 인증이 됨. 등록 전 확인 시트에 씀. 어제 회차가 투표 중이어도 등록하면 어제 투표가 닫히고 오늘 투표가 시작됨
-- `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아갈지는 [미정] Q-54
+- `myReaction`: 내가 남긴 리액션(`GOOD`, `BAD`). 남기지 않았으면 `null`. 누가 눌렀는지는 보내지 않음
+- `imageUrl`: 응답할 때마다 만드는 만료 URL. 사진이 없거나 지웠으면 `null` (CERT-04)
+- `me.isLastCertifier`: 인증이 열려 있고 내가 인증하면 전원 인증이 되어 투표가 시작됨. 등록 전 확인 시트("등록하면 바로 투표가 시작되고, 인증내역 수정은 불가능해요")에 씀. 3명 미만 방은 투표가 열리지 않아 `false`
+- `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아갈지는 [미정] Q-54. 누가 찔렀는지는 보내지 않음
+- `pot.amount`: 지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. `pot.goalAmount`는 그 솥의 목표 석. 목표를 채운 뒤 방장이 연장·종료를 고르기 전까지는 계속 쌓여 목표보다 클 수 있음 (Q-86)
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서
-  - `unplayedTapRoundId`가 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
+  - `unplayedTapRoundId`: 투표 마감 5시간 뒤 전달된 톡톡만. 전달 전이면 `null` (RESULT-03 5번). 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
   - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
   - `hasUnseenPotCelebration`이 `true`면 `GET /api/rooms/{roomId}/pots/{room.potCompletedCount}` → 본 뒤 `PUT …/seen-pot`
 - 에러: `ROOM_002` (403), `ROOM_005` (404)

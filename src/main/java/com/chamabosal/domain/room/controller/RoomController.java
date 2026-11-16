@@ -5,7 +5,9 @@ import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenResultUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
+import com.chamabosal.domain.room.dto.response.RoomTodayResponse;
 import com.chamabosal.domain.room.service.RoomService;
+import com.chamabosal.domain.room.service.RoomTodayService;
 import com.chamabosal.global.common.response.ErrorResponse;
 import com.chamabosal.global.common.response.Response;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,10 +35,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
-@Tag(name = "[ROOM] 방 API", description = "방 만들기, 닉네임 수정, 한 솥 확인, 나가기, 내보내기")
+@Tag(name = "[ROOM] 방 API", description = "방 만들기, 오늘 탭, 닉네임 수정, 한 솥 확인, 나가기, 내보내기")
 public class RoomController {
 
     private final RoomService roomService;
+    private final RoomTodayService roomTodayService;
+
+    @GetMapping("/{roomId}/today")
+    @Operation(summary = "오늘 탭 (ROOM-02)",
+            description = """
+                    지금 회차 날짜(03:00 전이면 전날)의 회차를 기준으로 방·한 솥·회차·멤버·진입 항목을 돌려줍니다.
+                    round.isCertificationOpen이 false면 이전 회차 투표가 아직 끝나지 않아 인증할 수 없습니다(03:00~15:00 어제 투표 중 등).
+                    entry는 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면입니다. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서로 재생해 주세요.
+                    entry.unplayedTapRoundId는 투표 마감 5시간 뒤 톡톡이 전달된 뒤에만 채워집니다. 그 전에는 결과만 먼저 보여 주세요.
+                    equippedItemCodes는 곳간 기능 전이라 지금은 빈 배열입니다.
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<RoomTodayResponse>> getToday(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId
+    ) {
+        return ResponseEntity.ok(Response.ok(roomTodayService.getToday(userId, roomId)));
+    }
 
     @PostMapping
     @Operation(summary = "방 만들기 (ROOM-01)",
