@@ -10,11 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.certification.service.LeftMemberCleanupScheduler;
 import com.chamabosal.domain.defense.entity.DefenseTicket;
 import com.chamabosal.domain.defense.repository.DefenseTicketRepository;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
+import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -113,6 +115,9 @@ class ResultTapTest {
 
     @Autowired
     DefenseTicketRepository defenseTicketRepository;
+
+    @Autowired
+    LeftMemberCleanupScheduler leftMemberCleanupScheduler;
 
     private int userSequence;
     private Room room;
@@ -451,6 +456,34 @@ class ResultTapTest {
 
         assertThat(roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(otherRoom.getId(), userB.getId())
                 .orElseThrow().getSeenResultRoundDate()).isNull();
+    }
+
+    // ---------- CLEAN-01 떠난 보살 기록 ----------
+
+    @Test
+    void CLEAN_01_6_정리_뒤에도_투표_결과는_그대로이고_떠난_보살로_표시된다() throws Exception {
+        Round round = announced(NOV_4, picks(memberB, memberA, memberC, memberA, memberD, null, memberA, memberB));
+        RoomMember left = reload(memberA);
+        left.leave(AFTER_CLOSE, LeaveType.LEFT);
+        roomMemberRepository.save(left);
+        clock.set(AFTER_CLOSE.plusMonths(6).plusMinutes(1));
+
+        leftMemberCleanupScheduler.clearExpiredRecords();
+
+        result(userC, round)
+                .andExpect(jsonPath("$.data.resultType").value("PICKED"))
+                .andExpect(jsonPath("$.data.picked.memberId").value(memberA.getId()))
+                .andExpect(jsonPath("$.data.picked.isLeft").value(true))
+                .andExpect(jsonPath("$.data.picked.certificationResult").value("FAILED"))
+                .andExpect(jsonPath("$.data.picked.spentAmount").isEmpty())
+                .andExpect(jsonPath("$.data.voteCounts[0].memberId").value(memberA.getId()))
+                .andExpect(jsonPath("$.data.voteCounts[0].count").value(2))
+                .andExpect(jsonPath("$.data.voteCounts[0].isLeft").value(true))
+                .andExpect(jsonPath("$.data.allBosalCount").value(1));
+        assertThat(certificationRepository.findByRound_IdAndDeletedAtIsNull(round.getId()))
+                .filteredOn(certification -> certification.getMember().getId().equals(memberA.getId()))
+                .singleElement()
+                .satisfies(certification -> assertThat(certification.getMemo()).isNull());
     }
 
     // ---------- 준비 ----------
