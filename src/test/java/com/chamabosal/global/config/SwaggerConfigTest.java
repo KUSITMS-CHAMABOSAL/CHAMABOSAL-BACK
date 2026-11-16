@@ -37,7 +37,7 @@ class SwaggerConfigTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.urls[?(@.url == '/dev/openapi.yaml')]").exists())
                 .andExpect(jsonPath("$.urls[?(@.url == '/v3/api-docs')]").exists())
-                .andExpect(jsonPath("$['urls.primaryName']").value("API 초안 (구현 전)"));
+                .andExpect(jsonPath("$['urls.primaryName']").value("구현된 API"));
     }
 
     @Test

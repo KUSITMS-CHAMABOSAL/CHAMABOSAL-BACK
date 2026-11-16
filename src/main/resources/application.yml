@@ -30,14 +30,14 @@ discord:
 
 springdoc:
   swagger-ui:
-    # Swagger 오른쪽 위에서 구현된 API와 프론트 공유용 초안(static/dev/openapi.yaml)을 고른다.
-    # 구현된 API가 적은 동안은 초안을 먼저 보여준다.
+    # Swagger 오른쪽 위에서 구현된 API와 예전 프론트 공유용 초안(static/dev/openapi.yaml)을 고른다.
+    # API 구현이 끝나 구현된 API를 먼저 보여준다. 초안은 프론트가 보던 이전 공유본이라 지우지 않고 더 고치지 않는다.
     urls:
-      - name: API 초안 (구현 전)
-        url: /dev/openapi.yaml
       - name: 구현된 API
         url: /v3/api-docs
-    urls-primary-name: API 초안 (구현 전)
+      - name: API 초안 (이전 공유본)
+        url: /dev/openapi.yaml
+    urls-primary-name: 구현된 API
 
 management:
   endpoints:
