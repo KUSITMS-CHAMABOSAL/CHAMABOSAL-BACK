@@ -4021,7 +4021,6 @@ components:
       - goalTitle
       - goalDescription
       - memberCount
-      - memberLimit
       properties:
         roomId:
           type: integer
@@ -4043,10 +4042,6 @@ components:
         memberCount:
           type: integer
           example: 3
-          format: int32
-        memberLimit:
-          type: integer
-          example: 4
           format: int32
     InvitePreviewResponse:
       type: object

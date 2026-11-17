@@ -40,7 +40,7 @@ class InvitePreviewTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.data.room.name").value("배달 끊기 방"))
                 .andExpect(jsonPath("$.data.room.goal").value("DELIVERY"))
                 .andExpect(jsonPath("$.data.room.memberCount").value(3))
-                .andExpect(jsonPath("$.data.room.memberLimit").value(4))
+                .andExpect(jsonPath("$.data.room.memberLimit").doesNotExist())
                 .andExpect(jsonPath("$.data.inviterNickname").value("민지"))
                 .andExpect(jsonPath("$.data.previousNickname").isEmpty());
     }
