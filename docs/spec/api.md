@@ -433,7 +433,7 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
   "room": {
     "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY",
     "goalTitle": "배달 끊기 방", "goalDescription": "배달 대신 집밥 먹고\n공양미 한 솥까지 함께 가요",
-    "memberCount": 3, "memberLimit": 4
+    "memberCount": 3
   },
   "inviterNickname": "민지",
   "previousNickname": null

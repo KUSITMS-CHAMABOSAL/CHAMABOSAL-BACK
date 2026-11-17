@@ -89,7 +89,7 @@
 
 ### 출력
 - 상태: `JOINABLE`, `ALREADY_MEMBER`, `ROOM_LIMIT`, `ROOM_FULL`, `UNAVAILABLE`
-- 방: 방 ID, 이름, 목표, 목표 제목, 목표 설명, 인원 수, 함께할 인원
+- 방: 방 ID, 이름, 목표, 목표 제목, 목표 설명, 인원 수
 - 초대한 사람 닉네임
 - 내 예전 닉네임
 
