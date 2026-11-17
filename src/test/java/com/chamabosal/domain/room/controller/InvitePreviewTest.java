@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
+import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,7 @@ class InvitePreviewTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.data.room.name").value("배달 끊기 방"))
                 .andExpect(jsonPath("$.data.room.goal").value("DELIVERY"))
                 .andExpect(jsonPath("$.data.room.memberCount").value(3))
-                .andExpect(jsonPath("$.data.room.memberLimit").value(4))
+                .andExpect(jsonPath("$.data.room.memberLimit").doesNotExist())
                 .andExpect(jsonPath("$.data.inviterNickname").value("민지"))
                 .andExpect(jsonPath("$.data.previousNickname").isEmpty());
     }
@@ -189,6 +190,17 @@ class InvitePreviewTest extends RoomTestSupport {
         preview(userD, TOKEN_A)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ROOM_FULL"));
+    }
+
+    @Test
+    void INVITE_02_15_방_정보에_목표별_제목과_설명을_돌려준다() throws Exception {
+        createRoomWithInviter(4, userA, RoomGoal.SNACK);
+
+        preview(userD, TOKEN_A)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.room.goal").value("SNACK"))
+                .andExpect(jsonPath("$.data.room.goalTitle").value("간식 참기 방"))
+                .andExpect(jsonPath("$.data.room.goalDescription").value("달콤한 유혹은 잠시 내려놓고\n공양미 한 솥까지 함께 가요"));
     }
 
     /** 방장, A(`민지`, 초대한 사람), B(`지수2`) 3명이 있는 방. */

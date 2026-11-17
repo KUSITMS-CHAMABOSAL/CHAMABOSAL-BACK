@@ -95,7 +95,7 @@ class CalendarTest {
         clock.set(NOW);
         userA = userRepository.save(User.create("anon-a"));
         room1 = roomRepository.save(Room.create("배달 끊기 방", RoomGoal.DELIVERY, 4, 300));
-        room2 = roomRepository.save(Room.create("카페 참기 방", RoomGoal.CAFE, 4, 300));
+        room2 = roomRepository.save(Room.create("간식 참기 방", RoomGoal.SNACK, 4, 300));
         memberA1 = roomMemberRepository.save(RoomMember.create(room1, userA, "민지", BosalColor.PINK, NOW.minusMonths(2)));
         memberA2 = roomMemberRepository.save(RoomMember.create(room2, userA, "민지", BosalColor.PINK, NOW.minusMonths(2)));
     }

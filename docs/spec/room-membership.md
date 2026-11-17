@@ -11,7 +11,7 @@
 
 ### 입력
 - 방 이름
-- 절약 목표: `DELIVERY`, `CAFE`, `SHOPPING`, `ETC`
+- 절약 목표: `DELIVERY` 배달 끊기, `SNACK` 간식 참기, `SHOPPING` 쇼핑 참기, `ETC` 자율 절약
 - 함께할 인원: 2~4명
 - 공양미 목표: 300~700석
 - 닉네임

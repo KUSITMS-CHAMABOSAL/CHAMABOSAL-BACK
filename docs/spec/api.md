@@ -49,7 +49,7 @@
 
 | 이름 | 값 |
 |---|---|
-| RoomGoal | `DELIVERY` `CAFE` `SHOPPING` `ETC` |
+| RoomGoal | `DELIVERY` (배달 끊기) `SNACK` (간식 참기) `SHOPPING` (쇼핑 참기) `ETC` (자율 절약) |
 | BosalColor | `PINK` `PURPLE` `MINT` `YELLOW` |
 | CertificationResult | `ENDURED` (참았어요) `FAILED` (못 참았어요) |
 | LockReason | `TIME_OVER` (10분 지남) `VOTE_STARTED` (투표 시작) |
@@ -430,7 +430,11 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
 ```json
 {
   "status": "JOINABLE",
-  "room": { "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY", "memberCount": 3, "memberLimit": 4 },
+  "room": {
+    "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY",
+    "goalTitle": "배달 끊기 방", "goalDescription": "배달 대신 집밥 먹고\n공양미 한 솥까지 함께 가요",
+    "memberCount": 3
+  },
   "inviterNickname": "민지",
   "previousNickname": null
 }
@@ -446,6 +450,7 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
 | `JOINABLE` | 모두 통과 |
 
 - `room`: `UNAVAILABLE`이면 `null`
+- `room.goalTitle`, `room.goalDescription`: 절약 목표별 고정 문구 (INVITE-02 8번). 설명의 줄바꿈은 `\n`
 - `inviterNickname`: 초대한 사람이 나갔으면 `null`
 - `previousNickname`: 나간 지 6개월 안 된 방이면 예전 닉네임. 그 닉네임을 지금 다른 멤버가 쓰고 있으면 `null` (닉네임을 다시 받음)
 

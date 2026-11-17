@@ -3344,10 +3344,10 @@ components:
       type: string
       enum:
       - DELIVERY
-      - CAFE
+      - SNACK
       - SHOPPING
       - ETC
-      description: '절약 목표: `DELIVERY` 배달 끊기, `CAFE` 카페 참기, `SHOPPING` 쇼핑 참기, `ETC` 기타'
+      description: '절약 목표: `DELIVERY` 배달 끊기, `SNACK` 간식 참기, `SHOPPING` 쇼핑 참기, `ETC` 자율 절약'
     RoundStatus:
       type: string
       enum:
@@ -4018,8 +4018,9 @@ components:
       - roomId
       - name
       - goal
+      - goalTitle
+      - goalDescription
       - memberCount
-      - memberLimit
       properties:
         roomId:
           type: integer
@@ -4030,13 +4031,17 @@ components:
           example: 배달 끊기 방
         goal:
           $ref: '#/components/schemas/RoomGoal'
+        goalTitle:
+          type: string
+          description: 절약 목표별 제목
+          example: 배달 끊기 방
+        goalDescription:
+          type: string
+          description: '절약 목표별 설명. 줄바꿈은 `\n`'
+          example: "배달 대신 집밥 먹고\n공양미 한 솥까지 함께 가요"
         memberCount:
           type: integer
           example: 3
-          format: int32
-        memberLimit:
-          type: integer
-          example: 4
           format: int32
     InvitePreviewResponse:
       type: object
