@@ -436,7 +436,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 |---|---|---|
 | `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
-| `certifications` | `(member_id)` | 이번 달 참은 횟수·연속 인증·인증 캘린더 (멤버 → 사용자 기준 집계) |
+| `certifications` | `(member_id)` | 방별 인증 캘린더, 오늘 탭 이번 달 참은 횟수 |
 | `rounds` | `(status, round_date)` | 03:00·15:00 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |
 
 ---

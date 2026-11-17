@@ -55,7 +55,4 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
     /** 투표 탭 상태(VOTE-05) 판정용, 그 방의 가장 최근 회차 행 (상태 무관). */
     Optional<Round> findFirstByRoom_IdOrderByRoundDateDesc(Long roomId);
 
-    /** 내 보살 지목 횟수 (USER-02 5번): 기간 안에 내가 지목된 회차 수, 방 합산. 방어 성공(DEFENDED)은 넘긴 결과 유형이 아니라 세지 않는다. */
-    long countByPickedUser_IdAndResultTypeAndRoundDateBetween(Long userId, RoundResultType resultType, LocalDate from,
-                                                              LocalDate to);
 }
