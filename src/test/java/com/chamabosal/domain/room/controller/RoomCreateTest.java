@@ -267,7 +267,7 @@ class RoomCreateTest {
 
     private void joinRooms(int count) {
         IntStream.range(0, count).forEach(i -> roomService.create(user.getId(),
-                new RoomCreateRequest("기존 방" + i, RoomGoal.CAFE, 4, 300, "기존" + i)));
+                new RoomCreateRequest("기존 방" + i, RoomGoal.SNACK, 4, 300, "기존" + i)));
     }
 
     /** 성공하면 true, 참여 방 2개 제한에 걸리면 false. */

@@ -108,7 +108,7 @@ class UserMeTest {
     @Test
     void USER_01_2_방이_2개면_두_방을_돌려주고_새_방을_만들_수_없다() throws Exception {
         RoomMember member1 = join(newRoom("배달 끊기 방"), "민지", BosalColor.PINK, NOW.minusDays(2));
-        RoomMember member2 = join(newRoom("카페 참기 방"), "Minji", BosalColor.MINT, NOW.minusDays(1));
+        RoomMember member2 = join(newRoom("간식 참기 방"), "Minji", BosalColor.MINT, NOW.minusDays(1));
 
         me()
                 .andExpect(status().isOk())
@@ -128,7 +128,7 @@ class UserMeTest {
         RoomMember left = join(newRoom("배달 끊기 방"), "민지", BosalColor.PINK, NOW.minusDays(2));
         left.leave(NOW.minusDays(1), LeaveType.LEFT);
         roomMemberRepository.save(left);
-        RoomMember current = join(newRoom("카페 참기 방"), "민지", BosalColor.PINK, NOW.minusDays(1));
+        RoomMember current = join(newRoom("간식 참기 방"), "민지", BosalColor.PINK, NOW.minusDays(1));
 
         me()
                 .andExpect(status().isOk())

@@ -123,7 +123,11 @@ abstract class RoomTestSupport {
 
     /** 방장이 방을 만들고, 초대 토큰 TOKEN_A를 가진 A(`민지`)를 멤버로 넣는다. */
     Room createRoomWithInviter(int memberLimit, User inviter) {
-        Room room = createRoom(memberLimit);
+        return createRoomWithInviter(memberLimit, inviter, RoomGoal.DELIVERY);
+    }
+
+    Room createRoomWithInviter(int memberLimit, User inviter, RoomGoal goal) {
+        Room room = createRoom(memberLimit, goal);
         RoomMember member = RoomMember.create(room, inviter, "민지", unusedColor(room), NOW.minusDays(1));
         member.issueInviteToken(TOKEN_A);
         roomMemberRepository.save(member);
@@ -131,8 +135,12 @@ abstract class RoomTestSupport {
     }
 
     Room createRoom(int memberLimit) {
+        return createRoom(memberLimit, RoomGoal.DELIVERY);
+    }
+
+    Room createRoom(int memberLimit, RoomGoal goal) {
         Long roomId = roomService.create(newUser().getId(),
-                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, memberLimit, 300, "방장")).roomId();
+                new RoomCreateRequest("배달 끊기 방", goal, memberLimit, 300, "방장")).roomId();
         return roomRepository.findById(roomId).orElseThrow();
     }
 
