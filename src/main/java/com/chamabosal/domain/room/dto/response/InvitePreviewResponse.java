@@ -24,10 +24,25 @@ public record InvitePreviewResponse(
         return new InvitePreviewResponse(InviteStatus.UNAVAILABLE, null, null, null);
     }
 
-    public record RoomSummary(Long roomId, String name, RoomGoal goal, int memberCount, int memberLimit) {
+    public record RoomSummary(
+            Long roomId,
+            String name,
+            RoomGoal goal,
+
+            @Schema(description = "절약 목표별 제목", example = "배달 끊기 방")
+            String goalTitle,
+
+            @Schema(description = "절약 목표별 설명. 줄바꿈은 \\n", example = "배달 대신 집밥 먹고\n공양미 한 솥까지 함께 가요")
+            String goalDescription,
+
+            int memberCount,
+            int memberLimit
+    ) {
 
         public static RoomSummary from(Room room, int memberCount) {
-            return new RoomSummary(room.getId(), room.getName(), room.getGoal(), memberCount, room.getMemberLimit());
+            RoomGoal goal = room.getGoal();
+            return new RoomSummary(room.getId(), room.getName(), goal, goal.title(), goal.description(),
+                    memberCount, room.getMemberLimit());
         }
     }
 }
