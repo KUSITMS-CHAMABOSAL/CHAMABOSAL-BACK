@@ -2,9 +2,7 @@ package com.chamabosal.domain.user.controller;
 
 import com.chamabosal.domain.user.dto.request.PushAgreementCreateRequest;
 import com.chamabosal.domain.user.dto.request.UserSettingsUpdateRequest;
-import com.chamabosal.domain.user.dto.response.MyCalendarResponse;
 import com.chamabosal.domain.user.dto.response.UserMeResponse;
-import com.chamabosal.domain.user.service.CalendarService;
 import com.chamabosal.domain.user.service.UserService;
 import com.chamabosal.global.common.response.ErrorResponse;
 import com.chamabosal.global.common.response.Response;
@@ -25,39 +23,15 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/users/me")
-@Tag(name = "[USER] 사용자 API", description = "내 정보, 내 보살 기록, 알림 설정, 토스 알림 동의, 내 데이터 삭제")
+@Tag(name = "[USER] 사용자 API", description = "내 정보, 인증 캘린더, 알림 설정, 토스 알림 동의, 내 데이터 삭제")
 public class UserController {
 
     private final UserService userService;
-    private final CalendarService calendarService;
-
-    @GetMapping("/calendar")
-    @Operation(summary = "내 보살 이번 달 기록 (USER-02)",
-            description = """
-                    내 보살 탭의 기록입니다. 참여한 방을 합쳐 나 기준으로 줍니다. 지금은 나간 방의 기록도 들어갑니다.
-                    enduredCount(참은 횟수)·pickedCount(지목 횟수, 방어 성공 제외)·calendar는 month 기준이고, streakDays(연속 인증)는 월과 상관없이 지금 기준입니다.
-                    캘린더는 그날 인증 중 하나라도 못 참았으면 FAILED입니다. month(yyyy-MM)를 비우면 지금 회차 날짜의 달입니다.
-                    """)
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON_002 월 형식 오류 (field: month)",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    public ResponseEntity<Response<MyCalendarResponse>> getCalendar(
-            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
-            @Parameter(description = "yyyy-MM. 비우면 지금 회차 날짜의 달", example = "2026-11")
-            @RequestParam(required = false) String month
-    ) {
-        return ResponseEntity.ok(Response.ok(calendarService.getCalendar(userId, month)));
-    }
 
     @GetMapping
     @Operation(summary = "내 정보 (USER-01)",

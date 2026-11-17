@@ -105,19 +105,11 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             """)
     List<String> findImageKeysOfUser(Long userId);
 
-    /** 내 보살 기록 (USER-02): 나간 방까지 포함한 내 인증의 [회차 날짜, 결과], 회차 날짜 순. 삭제한 인증은 뺀다. */
+    /** 인증 캘린더 (USER-02). 그 멤버 행의 삭제하지 않은 인증을 회차 날짜 순으로 가져온다. */
     @Query("""
-            select r.roundDate, c.result from Certification c join c.round r
-            where c.member.user.id = :userId and c.deletedAt is null and r.roundDate between :from and :to
+            select c from Certification c join fetch c.round r
+            where c.member.id = :memberId and c.deletedAt is null and r.roundDate between :from and :to
             order by r.roundDate
             """)
-    List<Object[]> findMyResultsInPeriod(Long userId, LocalDate from, LocalDate to);
-
-    /** 내 보살 연속 인증 (USER-02 6번): 하나라도 인증한 회차 날짜, 최근 순. */
-    @Query("""
-            select distinct r.roundDate from Certification c join c.round r
-            where c.member.user.id = :userId and c.deletedAt is null and r.roundDate <= :until
-            order by r.roundDate desc
-            """)
-    List<LocalDate> findMyCertifiedDatesUntil(Long userId, LocalDate until);
+    List<Certification> findCalendar(Long memberId, LocalDate from, LocalDate to);
 }
