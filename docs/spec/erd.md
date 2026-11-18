@@ -127,7 +127,7 @@ erDiagram
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | user_id | BIGINT | FK users, NULL | 내 데이터를 삭제하면 바로 연결을 끊음 (NULL, USER-05 6번) |
 | nickname | VARCHAR(8) | NOT NULL | 방 안 닉네임 |
-| color | VARCHAR(20) | NOT NULL | `PINK` / `PURPLE` / `MINT` / `YELLOW`. 들어올 때 방 멤버가 안 쓰는 색 중 랜덤. 기본보살은 인증 작성 화면에서만 쓰는 고정 이미지라 저장 안 함 (기획 확정) |
+| color | VARCHAR(20) | NOT NULL | `PINK` / `PURPLE` / `MINT` / `YELLOW`. 들어올 때 방 멤버가 안 쓰는 색 중 랜덤. 방장은 방 만들기 전에 뽑은 색 (ROOM-01). 기본보살은 인증 작성 화면에서만 쓰는 고정 이미지라 저장 안 함 (기획 확정) |
 | joined_at | DATETIME | NOT NULL | 방장 위임 순서("가장 먼저 들어온 멤버") 기준. 다시 들어오면 새로 기록 |
 | left_at | DATETIME | NULL | 나간 시각. NULL이면 현재 멤버 |
 | leave_type | VARCHAR(20) | NULL | `LEFT` / `KICKED` / `DATA_DELETED` |

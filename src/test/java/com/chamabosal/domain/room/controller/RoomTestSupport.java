@@ -140,7 +140,7 @@ abstract class RoomTestSupport {
 
     Room createRoom(int memberLimit, RoomGoal goal) {
         Long roomId = roomService.create(newUser().getId(),
-                new RoomCreateRequest("배달 끊기 방", goal, memberLimit, 300, "방장")).roomId();
+                new RoomCreateRequest("배달 끊기 방", goal, memberLimit, 300, "방장", BosalColor.PINK)).roomId();
         return roomRepository.findById(roomId).orElseThrow();
     }
 

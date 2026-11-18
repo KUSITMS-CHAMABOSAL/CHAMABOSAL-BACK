@@ -85,6 +85,7 @@
 | 나발 | POST | `/api/users/me/nabal-replants` | NABAL-03 | ✅ |
 | 사용자 | DELETE | `/api/users/me` | USER-05 | ✅ |
 | 사용자 | POST | `/api/users/me/push-agreements` | NOTI-01 | ✅ |
+| 방 | GET | `/api/rooms/new-color` | ROOM-01 | ✅ |
 | 방 | POST | `/api/rooms` | ROOM-01 | ✅ |
 | 방 | GET | `/api/rooms/{roomId}/today` | ROOM-02 | ✅ |
 | 방 | PATCH | `/api/rooms/{roomId}/members/me/nickname` | ROOM-04 | ✅ |
@@ -267,13 +268,23 @@ NOTI-01. 클라이언트가 받은 토스 알림 동의 결과를 저장합니�
 
 ## 4. 방
 
+### GET /api/rooms/new-color
+
+ROOM-01. 방 만들기 전에 내 보살 색을 뽑습니다 (내 보살 받기 화면). 저장하지 않아 부를 때마다 새로 뽑습니다.
+
+```json
+{ "color": "PINK" }
+```
+
+- 에러: `COMMON_008` (401)
+
 ### POST /api/rooms
 
-ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색은 서버가 배정합니다.
+ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색은 색 뽑기에서 받은 색으로 확정합니다.
 
 ```json
 // request
-{ "name": "배달 끊기 방", "goal": "DELIVERY", "memberLimit": 4, "potGoalAmount": 350, "nickname": "민지" }
+{ "name": "배달 끊기 방", "goal": "DELIVERY", "memberLimit": 4, "potGoalAmount": 350, "nickname": "민지", "color": "PINK" }
 
 // response 201
 { "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
@@ -281,6 +292,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 
 - `name`: 1~12자, `memberLimit`: 2~4, `nickname`: 1~8자, 둘 다 앞뒤 띄어쓰기는 지움 (형식은 `common.md`)
 - `potGoalAmount`: 공양미 한 솥 목표 석. 300~700 중 50 단위 (Q-80)
+- `color`: 필수. `GET /api/rooms/new-color`에서 받은 색
 - 방과 방장 멤버를 한 번에 만듦 (Q-37)
 - 에러: `ROOM_001` (409), `COMMON_002` (400)
 
