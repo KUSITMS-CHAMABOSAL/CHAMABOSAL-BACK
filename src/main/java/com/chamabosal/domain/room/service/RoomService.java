@@ -12,6 +12,7 @@ import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
 import com.chamabosal.domain.room.dto.request.RoomNicknameUpdateRequest;
 import com.chamabosal.domain.room.dto.request.RoomSeenPotUpdateRequest;
 import com.chamabosal.domain.room.dto.response.RoomCreateResponse;
+import com.chamabosal.domain.room.dto.response.RoomNewColorResponse;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -58,6 +59,11 @@ public class RoomService {
     private final CertificationPhotoService certificationPhotoService;
     private final Clock clock;
 
+    /** 새 방이라 겹칠 색이 없다. 저장하지 않아 부를 때마다 새로 뽑는다. */
+    public RoomNewColorResponse drawNewColor() {
+        return new RoomNewColorResponse(bosalColorPicker.pick(List.of()));
+    }
+
     @Transactional
     public RoomCreateResponse create(Long userId, RoomCreateRequest request) {
         String name = validateRoomName(request.name());
@@ -74,7 +80,7 @@ public class RoomService {
 
         Room room = roomRepository.save(Room.create(name, request.goal(), request.memberLimit(), request.potGoalAmount()));
         RoomMember owner = roomMemberRepository.save(RoomMember.create(
-                room, user, request.nickname(), bosalColorPicker.pick(List.of()), LocalDateTime.now(clock)));
+                room, user, request.nickname(), request.color(), LocalDateTime.now(clock)));
         room.assignOwner(owner.getId());
         return RoomCreateResponse.from(owner);
     }

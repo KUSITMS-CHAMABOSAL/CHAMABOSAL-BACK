@@ -372,6 +372,42 @@ paths:
               examples:
                 COMMON_008:
                   $ref: '#/components/examples/COMMON_008'
+  /api/rooms/new-color:
+    get:
+      tags:
+      - '[ROOM] 방'
+      operationId: drawNewRoomColor
+      summary: 보살 색 뽑기
+      description: |-
+        방 만들기 전 내 보살 받기 화면에서 쓴다. 4종 중 하나를 랜덤으로 돌려주고 저장하지 않는다.
+      responses:
+        '200':
+          description: 뽑기 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - color
+                      properties:
+                        color:
+                          $ref: '#/components/schemas/BosalColor'
+        '401':
+          description: COMMON_008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                COMMON_008:
+                  $ref: '#/components/examples/COMMON_008'
   /api/rooms:
     post:
       tags:
@@ -379,9 +415,10 @@ paths:
       operationId: createRoom
       summary: 방 만들기
       description: |-
-        방을 만들고 만든 사람을 방장 멤버로 등록한다. 색은 서버가 배정한다.
+        방을 만들고 만든 사람을 방장 멤버로 등록한다. 색은 색 뽑기에서 받은 색으로 확정한다.
 
-        - `name`: 1~8자, `memberLimit`: 2~4, `nickname`: 1~8자
+        - `name`: 1~12자, `memberLimit`: 2~4, `nickname`: 1~8자
+        - `color`: 필수. `GET /api/rooms/new-color`에서 받은 색
       requestBody:
         required: true
         content:
@@ -3667,13 +3704,14 @@ components:
       - memberLimit
       - potGoalAmount
       - nickname
+      - color
       properties:
         name:
           type: string
-          description: 1~8자
+          description: 1~12자
           example: 배달 끊기 방
           minLength: 1
-          maxLength: 8
+          maxLength: 12
         goal:
           $ref: '#/components/schemas/RoomGoal'
         memberLimit:
@@ -3697,6 +3735,8 @@ components:
           example: 민지
           minLength: 1
           maxLength: 8
+        color:
+          $ref: '#/components/schemas/BosalColor'
     RoomJoinResponse:
       type: object
       required:

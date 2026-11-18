@@ -1,5 +1,6 @@
 package com.chamabosal.domain.room.dto.request;
 
+import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -31,7 +32,11 @@ public record RoomCreateRequest(
         @Schema(description = "이 방에서 쓸 닉네임. 앞뒤 띄어쓰기를 지운 뒤 한글·영문·숫자 1~8자", example = "민지")
         @NotNull(message = "닉네임을 입력해 주세요.")
         @Pattern(regexp = RoomNicknameUpdateRequest.NICKNAME_PATTERN, message = RoomNicknameUpdateRequest.NICKNAME_MESSAGE)
-        String nickname
+        String nickname,
+
+        @Schema(description = "내 보살 색. GET /api/rooms/new-color에서 받은 색", example = "PINK")
+        @NotNull(message = "보살 색을 받아 주세요.")
+        BosalColor color
 ) {
 
     public RoomCreateRequest {
