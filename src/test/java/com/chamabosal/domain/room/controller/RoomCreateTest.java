@@ -1,6 +1,7 @@
 package com.chamabosal.domain.room.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,6 +11,7 @@ import com.chamabosal.domain.pot.repository.PotContributionRepository;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
+import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -26,12 +28,14 @@ import com.chamabosal.global.security.jwt.JwtProvider;
 import com.chamabosal.support.MutableClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -251,14 +255,60 @@ class RoomCreateTest {
         assertThat(roomRepository.count()).isZero();
     }
 
+    @Test
+    void ROOM_01_12_색을_뽑으면_4종_중_하나를_돌려주고_저장하지_않는다() throws Exception {
+        mockMvc.perform(get("/api/rooms/new-color")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.color").value(Matchers.in(
+                        Arrays.stream(BosalColor.values()).map(Enum::name).toList())));
+
+        assertThat(roomRepository.count()).isZero();
+        assertThat(roomMemberRepository.count()).isZero();
+    }
+
+    @Test
+    void ROOM_01_13_뽑은_색으로_방을_만든다() throws Exception {
+        create("배달 끊기 방", 4, 300, "민지", "\"MINT\"")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.color").value("MINT"));
+
+        assertThat(roomMemberRepository.findAll()).extracting(RoomMember::getColor).containsExactly(BosalColor.MINT);
+    }
+
+    @Test
+    void ROOM_01_14_색상이_없으면_입력값_오류다() throws Exception {
+        create("배달 끊기 방", 4, 300, "민지", "null")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_002"))
+                .andExpect(jsonPath("$.field").value("color"));
+        mockMvc.perform(post("/api/rooms")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"배달 끊기 방","goal":"DELIVERY","memberLimit":4,"potGoalAmount":300,"nickname":"민지"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_002"))
+                .andExpect(jsonPath("$.field").value("color"));
+
+        assertThat(roomRepository.count()).isZero();
+    }
+
     private ResultActions create(String name, int memberLimit, String nickname) throws Exception {
         return create(name, memberLimit, 300, nickname);
     }
 
     private ResultActions create(String name, int memberLimit, int potGoalAmount, String nickname) throws Exception {
+        return create(name, memberLimit, potGoalAmount, nickname, "\"PINK\"");
+    }
+
+    /** color는 JSON 값 그대로 넣는다. 누락은 "null"로 보낸다. */
+    private ResultActions create(String name, int memberLimit, int potGoalAmount, String nickname, String color)
+            throws Exception {
         String body = """
-                {"name":"%s","goal":"DELIVERY","memberLimit":%d,"potGoalAmount":%d,"nickname":"%s"}
-                """.formatted(name, memberLimit, potGoalAmount, nickname);
+                {"name":"%s","goal":"DELIVERY","memberLimit":%d,"potGoalAmount":%d,"nickname":"%s","color":%s}
+                """.formatted(name, memberLimit, potGoalAmount, nickname, color);
         return mockMvc.perform(post("/api/rooms")
                 .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId()))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -267,7 +317,7 @@ class RoomCreateTest {
 
     private void joinRooms(int count) {
         IntStream.range(0, count).forEach(i -> roomService.create(user.getId(),
-                new RoomCreateRequest("기존 방" + i, RoomGoal.SNACK, 4, 300, "기존" + i)));
+                new RoomCreateRequest("기존 방" + i, RoomGoal.SNACK, 4, 300, "기존" + i, BosalColor.PINK)));
     }
 
     /** 성공하면 true, 참여 방 2개 제한에 걸리면 false. */
@@ -279,7 +329,7 @@ class RoomCreateTest {
                     ready.countDown();
                     await(start);
                     try {
-                        roomService.create(user.getId(), new RoomCreateRequest("새 방" + i, RoomGoal.ETC, 4, 300, "새방" + i));
+                        roomService.create(user.getId(), new RoomCreateRequest("새 방" + i, RoomGoal.ETC, 4, 300, "새방" + i, BosalColor.PINK));
                         return true;
                     } catch (BaseException e) {
                         assertThat(e.getErrorCode()).isEqualTo(BaseErrorCode.ROOM_LIMIT_EXCEEDED);

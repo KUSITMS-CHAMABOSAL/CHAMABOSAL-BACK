@@ -20,6 +20,7 @@ import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
 import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
+import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.KickBlock;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
@@ -267,7 +268,7 @@ class UserDataDeleteTest extends RoomTestSupport {
 
     private Room ownRoom(User owner) {
         Long roomId = roomService.create(owner.getId(),
-                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, 300, "민지")).roomId();
+                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, 300, "민지", BosalColor.PINK)).roomId();
         return roomRepository.findById(roomId).orElseThrow();
     }
 

@@ -12,6 +12,7 @@ import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.photo.PreparedPhoto;
 import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.room.dto.request.RoomCreateRequest;
+import com.chamabosal.domain.room.entity.BosalColor;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
@@ -51,7 +52,7 @@ class RoomKickTest extends RoomTestSupport {
         userA = newUser();
         userB = newUser();
         Long roomId = roomService.create(userA.getId(),
-                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, 300, "민지")).roomId();
+                new RoomCreateRequest("배달 끊기 방", RoomGoal.DELIVERY, 4, 300, "민지", BosalColor.PINK)).roomId();
         room = roomRepository.findById(roomId).orElseThrow();
         memberA = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userA.getId()).orElseThrow();
         memberB = addMember(room, userB, "지수");
