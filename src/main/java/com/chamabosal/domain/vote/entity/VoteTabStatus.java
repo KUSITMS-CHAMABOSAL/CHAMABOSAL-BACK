@@ -8,5 +8,7 @@ public enum VoteTabStatus {
     VOTING,
     VOTED,
     RESULT_UNSEEN,
+    TAP,
+    MOKTAK,
     RESULT_SEEN
 }
