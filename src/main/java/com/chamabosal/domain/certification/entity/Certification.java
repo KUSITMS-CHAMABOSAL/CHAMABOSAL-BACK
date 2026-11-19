@@ -54,7 +54,7 @@ public class Certification extends BaseEntity {
     private CertificationResult result;
 
     /** 6개월 정리 때 NULL이 된다. */
-    @Column(length = 40)
+    @Column(length = 50)
     private String memo;
 
     /** `FAILED`일 때만 있다. */

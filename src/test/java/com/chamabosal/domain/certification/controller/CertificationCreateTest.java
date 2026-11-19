@@ -172,16 +172,16 @@ class CertificationCreateTest {
     }
 
     @Test
-    void CERT_01_4_한_줄_기록이_비어_있거나_41자면_거부한다() throws Exception {
-        for (String memo : List.of("", "   ", "가".repeat(41))) {
+    void CERT_01_4_한_줄_기록이_비어_있거나_51자면_거부한다() throws Exception {
+        for (String memo : List.of("", "   ", "가".repeat(51))) {
             certify(userA, "{\"result\": \"ENDURED\", \"memo\": \"" + memo + "\"}")
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.field").value("memo"));
         }
-        certify(userA, "{\"result\": \"ENDURED\", \"memo\": \" " + "가".repeat(38) + " \"}")
+        certify(userA, "{\"result\": \"ENDURED\", \"memo\": \" " + "가".repeat(48) + " \"}")
                 .andExpect(status().isCreated());
 
-        assertThat(onlyCertification().getMemo()).isEqualTo(" " + "가".repeat(38) + " ");
+        assertThat(onlyCertification().getMemo()).isEqualTo(" " + "가".repeat(48) + " ");
     }
 
     @Test

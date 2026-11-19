@@ -41,9 +41,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CertificationService {
 
-    private static final int MEMO_MAX_LENGTH = 40;
+    private static final int MEMO_MAX_LENGTH = 50;
     private static final int SPENT_AMOUNT_MAX = 999_999;
-    private static final String MEMO_MESSAGE = "한 줄 기록은 1~40자예요.";
+    private static final String MEMO_MESSAGE = "한 줄 기록은 1~50자예요.";
     private static final String SPENT_AMOUNT_MESSAGE = "못 참았으면 쓴 금액을 1~999,999원으로 입력해 주세요.";
 
     private final RoomRepository roomRepository;
@@ -207,7 +207,7 @@ public class CertificationService {
                 .orElse(true);
     }
 
-    /** 이모지도 한 글자로 세도록 코드포인트로 센다 (DB VARCHAR(40)과 같은 기준). 띄어쓰기만 있으면 비어 있는 것으로 본다. */
+    /** 이모지도 한 글자로 세도록 코드포인트로 센다 (DB VARCHAR(50)과 같은 기준). 띄어쓰기만 있으면 비어 있는 것으로 본다. */
     private void validateMemo(String memo) {
         if (memo.isBlank() || memo.codePointCount(0, memo.length()) > MEMO_MAX_LENGTH) {
             throw BaseException.withField(BaseErrorCode.INVALID_REQUEST, MEMO_MESSAGE, "memo");
