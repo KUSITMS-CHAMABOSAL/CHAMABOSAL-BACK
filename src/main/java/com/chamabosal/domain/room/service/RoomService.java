@@ -41,8 +41,6 @@ import java.util.regex.Pattern;
 public class RoomService {
 
     public static final int MAX_JOINED_ROOMS = 2;
-    /** 함께할 인원(memberLimit)과 관계없는 입장 제한. 함께할 인원은 예상 기간 계산에만 쓴다 (INVITE-02 5번). */
-    public static final int MAX_MEMBERS = 4;
     private static final int ROOM_NAME_MAX_LENGTH = 12;
     private static final Pattern ROOM_NAME_PATTERN = Pattern.compile("[가-힣a-zA-Z0-9 ]+");
     private static final String ROOM_NAME_MESSAGE = "방 이름은 한글, 영문, 숫자, 띄어쓰기 1~12자예요.";

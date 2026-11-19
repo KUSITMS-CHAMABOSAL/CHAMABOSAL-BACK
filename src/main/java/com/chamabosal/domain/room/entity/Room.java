@@ -20,6 +20,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Room extends BaseEntity {
 
+    /** 함께할 인원(memberLimit)과 관계없는 입장 제한. 함께할 인원은 예상 기간 계산에만 쓴다 (INVITE-02 5번). */
+    public static final int MAX_MEMBERS = 4;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,6 +35,7 @@ public class Room extends BaseEntity {
     @Column(nullable = false, columnDefinition = "varchar(20)")
     private RoomGoal goal;
 
+    /** 함께할 인원 2~4명. 예상 기간 계산에만 쓰고 입장 제한은 MAX_MEMBERS다. */
     @Column(nullable = false)
     private int memberLimit;
 
