@@ -1,6 +1,7 @@
 package com.chamabosal.domain.room.service;
 
 import com.chamabosal.domain.certification.photo.CertificationPhotoService;
+import com.chamabosal.domain.certification.service.LeftMemberRecordCleaner;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.room.dto.response.LeavePreviewResponse;
 import com.chamabosal.domain.round.repository.RoundRepository;
@@ -57,6 +58,7 @@ public class RoomService {
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
     private final CertificationPhotoService certificationPhotoService;
+    private final LeftMemberRecordCleaner leftMemberRecordCleaner;
     private final Clock clock;
 
     /** 새 방이라 겹칠 색이 없다. 저장하지 않아 부를 때마다 새로 뽑는다. */
@@ -241,18 +243,19 @@ public class RoomService {
     /**
      * 목표 달성 뒤 [방 닫기] (ROOM-09 6·7번). 현재 멤버 전원을 나가게 하고 방을 삭제한다. 목표를 채운 방이라 나가기 차감은 없다.
      * 멤버를 남겨 두면 삭제된 방에 현재 멤버가 남아 기록 정리(CLEAN-01)와 내 데이터 삭제(USER-05)에서 빠져서 나간 것으로 처리한다.
-     * 진행 중 회차는 마지막 멤버가 나가 삭제될 때(ROOM-07 11번)처럼 그대로 두고, 사진은 나가기처럼 바로 지운다.
+     * 진행 중 회차는 마감·판정·알림 없이 멈추고, 사진·한 줄 기록·쓴 금액은 바로 지운다. 다른 멤버에게 푸시는 보내지 않는다 (Q-106).
      * 참여 방 수를 줄이기만 해서 멤버의 사용자 행은 잠그지 않는다.
      */
     @Transactional
     public void close(Long userId, Long roomId) {
         Room room = lockPotDecision(userId, roomId);
         LocalDateTime now = LocalDateTime.now(clock);
-        for (RoomMember member : roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())) {
-            deletePhotos(member, now);
-            member.leave(now, LeaveType.ROOM_CLOSED);
-        }
+        roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())
+                .forEach(member -> member.leave(now, LeaveType.ROOM_CLOSED));
         room.delete(now);
+        // 다시 들어올 방이 없어 예전에 나간 멤버까지 이 방에 있었던 멤버 전원의 사진·한 줄·쓴 금액을 6개월을 기다리지 않고
+        // 바로 지운다 (6번, CLEAN-01 6번, Q-106). 정리의 일괄 update가 위 나가기·삭제를 먼저 flush한 뒤 실행된다.
+        leftMemberRecordCleaner.clear(roomMemberRepository.findIdsByRoomId(room.getId()), now);
     }
 
     /**

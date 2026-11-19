@@ -157,8 +157,8 @@ public class InviteService {
             member = roomMemberRepository.save(
                     RoomMember.create(room, user, nickname, bosalColorPicker.pick(usedColors), now));
         }
-        // usedColors는 들어오기 전 현재 멤버의 색이라, 비어 있지 않으면 이번 입장으로 2명 이상이 된다 (ROOM-02 20번).
-        if (!usedColors.isEmpty()) {
+        // usedColors는 들어오기 전 현재 멤버의 색이라, 1개면 이번 입장으로 1명에서 2명이 된다 (ROOM-02 20번, Q-105).
+        if (usedColors.size() == 1) {
             room.startTogether(Round.dateOf(now));
         }
         member.fillSeenResult(roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(

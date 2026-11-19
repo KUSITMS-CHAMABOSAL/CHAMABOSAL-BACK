@@ -76,11 +76,9 @@ public class Room extends BaseEntity {
         potCompletedCount++;
     }
 
-    /** 현재 멤버가 2명 이상이 되면 부른다. 처음 한 번만 기록한다 (ROOM-02 20번, Q-105). 방 행 락 안에서 부른다. */
+    /** 현재 멤버가 1명에서 2명이 될 때 부른다. 혼자 남았다가 다시 2명이 되면 그날부터 새로 센다 (ROOM-02 20번, Q-105). 방 행 락 안에서 부른다. */
     public void startTogether(LocalDate roundDate) {
-        if (togetherStartedDate == null) {
-            togetherStartedDate = roundDate;
-        }
+        togetherStartedDate = roundDate;
     }
 
     /** 솥을 채울 때 부른다. 이미 선택 대기면 그대로 둬서 한 번만 고른다 (ROOM-09 9번). 방 행 락 안에서 부른다. */
