@@ -122,7 +122,7 @@ class PotTest {
 
         certify(userA).andExpect(status().isCreated()).andExpect(jsonPath("$.data.potEarned").value(10));
 
-        RoomPot pot = currentPot();
+        RoomPot pot = potOf(room, 1);
         assertThat(pot.getAmount()).isEqualTo(305);
         assertThat(pot.isCompleted()).isTrue();
         assertThat(potRewards()).extracting(RiceHistory::getDelta).containsExactly(30, 30, 30);
@@ -149,7 +149,9 @@ class PotTest {
             executor.shutdown();
         }
 
-        assertThat(currentPot().getAmount()).isEqualTo(315);
+        // 먼저 들어간 적립이 1번째 솥을 채우고(305석), 나중 적립은 이월 5석으로 시작한 2번째 솥에 쌓인다 (POT-01 6·7번).
+        assertThat(potOf(room, 1).getAmount()).isEqualTo(305);
+        assertThat(potOf(room, 2).getAmount()).isEqualTo(15);
         assertThat(potRewards()).hasSize(3);
         assertThat(reloadRoom().getPotCompletedCount()).isEqualTo(1);
     }
@@ -258,6 +260,46 @@ class PotTest {
         assertThat(potRewards()).extracting(RiceHistory::getDelta).containsExactly(50, 50);
     }
 
+    @Test
+    void POT_01_11_목표를_채우면_넘친_석으로_다음_솥이_시작된다() throws Exception {
+        potAt(room, 295);
+
+        certify(userA).andExpect(status().isCreated());
+
+        assertThat(potOf(room, 1).isCompleted()).isTrue();
+        RoomPot next = potOf(room, 2);
+        assertThat(next.getGoalAmount()).isEqualTo(300);
+        assertThat(next.getCarriedOver()).isEqualTo(5);
+        assertThat(next.getAmount()).isEqualTo(5);
+        assertThat(next.isCompleted()).isFalse();
+    }
+
+    @Test
+    void POT_01_12_다음_솥이_시작돼도_잔액은_보너스만_더해진다() throws Exception {
+        riceHistoryRepository.save(RiceHistory.create(userA, room, 120, RiceReason.CERTIFICATION, RiceRefType.CERTIFICATION, -1L));
+        potAt(room, 295);
+
+        certify(userA).andExpect(status().isCreated());
+
+        // 120석 + 인증 10석 + 목표 달성 보너스 30석
+        mockMvc.perform(get("/api/store").header("Authorization", bearer(userA)))
+                .andExpect(jsonPath("$.data.riceBalance").value(160));
+    }
+
+    @Test
+    void POT_01_13_다음_솥을_채우면_다시_보너스를_준다() throws Exception {
+        potAt(room, 295);
+        certify(userA).andExpect(status().isCreated());
+        setPotAmount(295);
+
+        certify(userB).andExpect(status().isCreated());
+
+        assertThat(potOf(room, 2).isCompleted()).isTrue();
+        assertThat(potOf(room, 3).getAmount()).isEqualTo(5);
+        assertThat(potRewards()).hasSize(6);
+        assertThat(reloadRoom().getPotCompletedCount()).isEqualTo(2);
+    }
+
     /** RICE-01 8번: 10%가 10석 단위로 떨어지지 않으면 반올림한다 (Q-81). */
     @Test
     void 보너스는_10석_단위로_반올림한다() throws Exception {
@@ -332,6 +374,10 @@ class PotTest {
     private void leave(RoomMember member) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status ->
                 roomMemberRepository.findById(member.getId()).orElseThrow().leave(T0, LeaveType.LEFT));
+    }
+
+    private RoomPot potOf(Room target, int seq) {
+        return roomPotRepository.findByRoom_IdAndSeq(target.getId(), seq).orElseThrow();
     }
 
     private RoomPot currentPot() {
