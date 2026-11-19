@@ -18,6 +18,7 @@ import com.chamabosal.domain.tap.dto.response.ReceivedTapsResponse;
 import com.chamabosal.domain.tap.dto.response.TapSendResponse;
 import com.chamabosal.domain.tap.entity.Tap;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
@@ -39,6 +40,7 @@ public class TapService {
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final TapRepository tapRepository;
+    private final VoteRepository voteRepository;
     private final RiceService riceService;
     private final RiceHistoryRepository riceHistoryRepository;
     private final PotService potService;
@@ -67,6 +69,12 @@ public class TapService {
         }
         if (round.getPickedMember().getId().equals(me.getId())) {
             throw new BaseException(BaseErrorCode.TAP_SELF);
+        }
+        // 그 회차에 투표한 사람만 보낸다 (RESULT-02 4번). 투표한 뒤 나갔다가 투표 시작 뒤 다시 들어오면 같은 멤버 행이라
+        // 표가 남아 있지만, 투표 제출·마감(Q-36)처럼 그 회차 명단 밖으로 보고 막는다 (코드리뷰 반영).
+        if (round.isJoinedAfterVoteStart(me)
+                || !voteRepository.existsByRound_IdAndVoterMember_Id(roundId, me.getId())) {
+            throw new BaseException(BaseErrorCode.TAP_NOT_VOTED);
         }
         if (tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId())) {
             throw new BaseException(BaseErrorCode.ALREADY_TAPPED);

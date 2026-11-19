@@ -275,7 +275,7 @@ erDiagram
 | id | BIGINT | PK | |
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NOT NULL | 두드린 사람 |
-| count | INT | NOT NULL | 0~999 |
+| count | INT | NOT NULL | 0 이상, 상한 없음 |
 | played_at | DATETIME | NULL | 전달 뒤 받은 사람의 앱 진입 화면에서 재생된 시각. NULL이면 아직 안 본 톡톡 → 다음에 열 때 재생 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트

@@ -141,6 +141,11 @@ public class Round extends BaseEntity {
         this.pickedUser = pickedMember != null ? pickedMember.getUser() : null;
     }
 
+    /** 투표 시작 뒤에 들어온(다시 들어온 포함) 멤버인지. 그 회차 명단 밖으로 본다 (Q-36). */
+    public boolean isJoinedAfterVoteStart(RoomMember member) {
+        return voteStartedAt != null && member.getJoinedAt().isAfter(voteStartedAt);
+    }
+
     /** 방어권은 결과 발표 직후 2분 안에만 쓴다. 그때 앱을 켜지 않았으면 쓸 수 없다 (SHIELD-02 3번, Q-75). */
     public LocalDateTime getDefenseClosesAt() {
         return voteClosedAt.plusMinutes(DEFENSE_MINUTES);

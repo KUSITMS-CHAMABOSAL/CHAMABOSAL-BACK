@@ -41,14 +41,15 @@ public class TapController {
     @PostMapping("/rounds/{roundId}/taps")
     @Operation(summary = "이마 톡톡 보내기 (RESULT-03)",
             description = """
-                    톡톡을 끝낼 때(다 침·건너뛰기·화면 나가기) 친 횟수를 한 번만 보냅니다. 0번(건너뛰기)도 보냅니다.
+                    톡톡을 끝낼 때(다 침·건너뛰기·화면 나가기) 친 횟수를 한 번만 보냅니다. 0번(건너뛰기)도 보냅니다. 횟수 상한은 없습니다.
+                    그 회차에 투표한 사람만 보낼 수 있습니다.
                     지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받고 한 솥에도 5석(potEarned)이 들어갑니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "저장 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON_002 횟수가 0~999가 아님 (field: count)",
+            @ApiResponse(responseCode = "400", description = "COMMON_002 횟수가 0보다 작음 (field: count)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인",
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차에 투표하지 않음",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),

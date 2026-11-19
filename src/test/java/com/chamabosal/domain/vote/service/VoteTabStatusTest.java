@@ -341,6 +341,17 @@ class VoteTabStatusTest {
                 .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberB.getId() + ")]").isNotEmpty());
     }
 
+    @Test
+    void VOTE_05_11_투표_중_3명_미만이_돼도_투표_탭은_투표_중이다() throws Exception {
+        startVotingRound(memberA, memberB, memberC, memberD);
+        clock.set(VOTE_STARTED_AT.plusHours(1));
+
+        roomService.leave(userC.getId(), room.getId());
+        roomService.leave(userD.getId(), room.getId());
+
+        tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("VOTING"));
+    }
+
     private org.springframework.test.web.servlet.ResultActions tab(Long roomId, User user) throws Exception {
         return mockMvc.perform(get("/api/rooms/{roomId}/vote", roomId)
                         .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId())))
