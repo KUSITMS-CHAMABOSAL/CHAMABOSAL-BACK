@@ -14,6 +14,7 @@ import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.store.service.StoreService;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.tap.service.TapService;
 import com.chamabosal.domain.vote.entity.Vote;
 import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
@@ -44,6 +45,7 @@ public class RoundResultService {
     private final TapRepository tapRepository;
     private final DefenseTicketRepository defenseTicketRepository;
     private final DefenseService defenseService;
+    private final TapService tapService;
     private final StoreService storeService;
     private final Clock clock;
 
@@ -78,13 +80,9 @@ public class RoundResultService {
         }
 
         boolean isTapExpired = isPicked && !round.isTapOpen(now);
-        // 지목된 사람이 방을 나갔으면 톡톡이 없다 (RESULT-02 4번, Q-27).
         List<Vote> votes = voteRepository.findWithTargetByRound_Id(roundId);
-        // 투표한 사람만 톡톡한다. 투표 시작 뒤 다시 들어왔으면 표가 남아 있어도 명단 밖이다 (RESULT-02 4번, TapService와 같은 기준).
-        boolean hasVoted = !round.isJoinedAfterVoteStart(me)
-                && votes.stream().anyMatch(vote -> vote.getVoterMember().getId().equals(me.getId()));
-        boolean canTap = isPicked && !isMePicked && !isTapExpired && picked.isCurrent() && hasVoted
-                && !tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId());
+        // 톡톡 보내기와 같은 판단을 쓴다 (RESULT-02 4번, RESULT-03).
+        boolean canTap = isPicked && tapService.findTapBlock(round, me, false) == null;
         // 득표 수는 지목된 보살이 없을 때만 보여준다 (RESULT-02 2번).
         boolean isCountShown = picked == null;
 
