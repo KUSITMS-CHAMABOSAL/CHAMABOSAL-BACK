@@ -304,7 +304,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 {
   "room": {
     "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY",
-    "memberCount": 4, "memberLimit": 4, "isOwner": true, "potCompletedCount": 1, "hasVotingRound": true, "daysTogether": 7
+    "memberCount": 4, "isOwner": true, "potCompletedCount": 1, "hasVotingRound": true, "daysTogether": 7
   },
   "pot": { "amount": 186, "goalAmount": 300 },
   "round": {
@@ -715,7 +715,7 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 
 | status | 채우는 필드 |
 |---|---|
-| `UNDER_THREE` | `memberCount`, `memberLimit` |
+| `UNDER_THREE` | `memberCount` |
 | `BEFORE_FIRST_VOTE` | `uncertifiedCount`, `firstUncertifiedMember` |
 | `NOT_IN_LIST` | `roundId`, `roundDate`, `closesAt` |
 | `NO_VOTING_RIGHT` | `roundId`, `roundDate`, `closesAt`, `candidates` (투표 버튼만 막고 후보는 보여줌) |
