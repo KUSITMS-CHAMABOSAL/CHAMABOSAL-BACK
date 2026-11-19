@@ -171,7 +171,7 @@ class InvitePreviewTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_02_14_예전_닉네임을_지금_다른_멤버가_쓰면_비어_있다() throws Exception {
+    void INVITE_02_14_예전_닉네임을_지금_다른_멤버가_써도_돌려준다() throws Exception {
         Room room = roomOfThree(4);
         // D가 나간 뒤 B가 같은 닉네임으로 들어와 있다.
         addLeftMember(room, userD, "지수2", BosalColor.MINT, NOW.minusMonths(1), LeaveType.LEFT);
@@ -179,7 +179,7 @@ class InvitePreviewTest extends RoomTestSupport {
         preview(userD, TOKEN_A)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("JOINABLE"))
-                .andExpect(jsonPath("$.data.previousNickname").isEmpty());
+                .andExpect(jsonPath("$.data.previousNickname").value("지수2"));
     }
 
     @Test
