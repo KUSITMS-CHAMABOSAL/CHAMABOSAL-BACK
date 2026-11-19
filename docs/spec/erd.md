@@ -111,7 +111,7 @@ erDiagram
 | id | BIGINT | PK | |
 | name | VARCHAR(12) | NOT NULL | 방 이름, 수정 불가 |
 | goal | VARCHAR(20) | NOT NULL | `DELIVERY` / `SNACK` / `SHOPPING` / `ETC` |
-| member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가 |
+| member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가. 예상 기간 계산에만 씀 (입장 제한은 항상 4명) |
 | pot_goal_amount | INT | NOT NULL | 공양미 한 솥 목표 석 300~700 (50 단위). 솥을 만들 때 `room_pots.goal_amount`로 복사 |
 | owner_member_id | BIGINT | NULL | 방장의 `room_members.id`. `rooms`와 `room_members`가 서로를 가리키는 순환을 피하려고 FK 없이 둠. 방과 방장 멤버를 만드는 같은 요청에서 채움 (방을 먼저 저장해야 해서 컬럼은 NULL 허용) |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
@@ -146,7 +146,7 @@ erDiagram
 - 내보내진 사람 판단: `leave_type = 'KICKED'`인 행이 (room_id, user_id)에 있는지, 또는 `kick_blocks`에 (room_id, 입장자 `toss_anon_key`의 SHA-256 해시) 행이 있고 `expires_at`이 지금보다 뒤인지 (내 데이터 삭제 후 다시 가입한 경우, Q-51)
 - 인덱스: `(room_id, left_at)` → 방의 현재 멤버 목록·인원 수 / `(user_id, left_at)` → 내가 참여 중인 방 목록·개수
   - 인원 수는 컬럼으로 저장하지 않고 매번 셈 (방당 최대 4명이라 인덱스로 몇 행만 읽음)
-  - 동시 입장으로 `member_limit`을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
+  - 동시 입장으로 최대 4명을 넘지 않게 입장할 때 `rooms` 행에 락(`SELECT ... FOR UPDATE`) 후 인원 확인. 방 2개 제한도 같은 이유로 `users` 행에 락
   - 두 락을 함께 잡을 때는 항상 `users` → `rooms` 순서로 잡는다. 순서가 다르면 동시 요청끼리 서로 기다리다 멈출 수 있다 (데드락)
 - 참여 중인 방 개수: user_id 기준 `left_at IS NULL` 행 수 (삭제된 방 제외)
 - 초대 링크: `Share.createLink({ path: "intoss://{앱이름}/invite?token={invite_token}" })`
@@ -434,7 +434,7 @@ UNIQUE 제약은 자동으로 인덱스가 생기므로 따로 적지 않음. �
 
 | 테이블 | 인덱스 | 쓰이는 곳 |
 |---|---|---|
-| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 `member_limit` 확인) |
+| `room_members` | `(room_id, left_at)` | 방의 현재 멤버 목록·인원 수 (오늘 탭, 입장 시 4명 확인) |
 | `room_members` | `(user_id, left_at)` | 내가 참여 중인 방 목록·개수 (내 보살 탭, 방 2개 제한) |
 | `certifications` | `(member_id)` | 방별 인증 캘린더, 오늘 탭 이번 달 참은 횟수 |
 | `rounds` | `(status, round_date)` | 03:00·15:00 배치가 처리할 회차 찾기 (인증 중·투표 중인 회차) |

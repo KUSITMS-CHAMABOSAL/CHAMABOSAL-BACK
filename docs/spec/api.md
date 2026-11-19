@@ -290,7 +290,7 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 { "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
 ```
 
-- `name`: 1~12자, `memberLimit`: 2~4, `nickname`: 1~8자, 둘 다 앞뒤 띄어쓰기는 지움 (형식은 `common.md`)
+- `name`: 1~12자, `memberLimit`: 2~4 (예상 기간 계산용, 입장 제한은 항상 4명), `nickname`: 1~8자, 둘 다 앞뒤 띄어쓰기는 지움 (형식은 `common.md`)
 - `potGoalAmount`: 공양미 한 솥 목표 석. 300~700 중 50 단위 (Q-80)
 - `color`: 필수. `GET /api/rooms/new-color`에서 받은 색
 - 방과 방장 멤버를 한 번에 만듦 (Q-37)
@@ -458,7 +458,7 @@ INVITE-02. 초대 미리보기와 입장 판단입니다. 막힌 경우도 200�
 | `ALREADY_MEMBER` | 이미 이 방 멤버 |
 | `UNAVAILABLE` | 내가 이 방에서 내보내짐 (사유 표시 안 함) |
 | `ROOM_LIMIT` | 참여 중인 방이 2개 |
-| `ROOM_FULL` | 방 인원이 함께할 인원만큼 참 |
+| `ROOM_FULL` | 방 인원이 4명 (함께할 인원과 관계없음) |
 | `JOINABLE` | 모두 통과 |
 
 - `room`: `UNAVAILABLE`이면 `null`
