@@ -59,8 +59,7 @@ public class MoktakService {
         if (round.getResultType() != RoundResultType.PICKED) {
             throw new BaseException(BaseErrorCode.MOKTAK_NOT_AVAILABLE);
         }
-        if (riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
-                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId)) {
+        if (isDone(userId, roundId)) {
             return new MoktakCompleteResponse(0);
         }
         if (round.isTapOpen(LocalDateTime.now(clock))) {
@@ -69,8 +68,7 @@ public class MoktakService {
         if (!tapRepository.existsByRound_IdAndCountGreaterThan(roundId, 0)) {
             throw new BaseException(BaseErrorCode.MOKTAK_NO_TAPS);
         }
-        if (roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(
-                roomId, round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED))) {
+        if (isExpired(round)) {
             throw new BaseException(BaseErrorCode.MOKTAK_EXPIRED);
         }
         // 전달 뒤에는 톡톡이 더 오지 않아 합계가 바뀌지 않는다. 더 두드린 것은 막지 않는다.
@@ -79,5 +77,38 @@ public class MoktakService {
         }
         return new MoktakCompleteResponse(riceService.accrue(
                 room, me, RiceReason.BEONNOE, RiceRefType.ROUND, roundId, BEONNOE_REWARD));
+    }
+
+    /**
+     * 지목된 본인이 지금 목탁 수행을 해야 하는지. 완료 요청이 보상을 주는 조건과 같다 (투표 탭 MOKTAK, VOTE-05).
+     * `PICKED`(방어 안 함), 톡톡 전달됨, 받은 톡톡 1번 이상, 아직 안 마침, 다음 투표 전, 방 인원 2명 이상.
+     * 완료 여부는 보상 기록으로 보는데 1명 방은 보상이 쌓이지 않아, 인원 조건이 없으면 마쳐도 계속 남는다 (코드리뷰 반영).
+     */
+    @Transactional(readOnly = true)
+    public boolean isMoktakDue(Long userId, Round round, RoomMember me, LocalDateTime now) {
+        return round.getResultType() == RoundResultType.PICKED
+                && round.getPickedMember() != null && round.getPickedMember().getId().equals(me.getId())
+                && !round.isTapOpen(now)
+                && tapRepository.existsByRound_IdAndCountGreaterThan(round.getId(), 0)
+                && !isDone(userId, round.getId())
+                && !isExpired(round)
+                && riceService.isAccruing(round.getRoom().getId());
+    }
+
+    /** 목탁 수행에서 두드려야 하는 횟수: 그 회차에 받은 톡톡 합계. */
+    @Transactional(readOnly = true)
+    public long getMoktakCount(Long roundId) {
+        return tapRepository.sumCountByRoundId(roundId);
+    }
+
+    private boolean isDone(Long userId, Long roundId) {
+        return riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
+                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId);
+    }
+
+    /** 다음 투표가 열렸으면 목탁 수행 기한이 지났다 (Q-92). */
+    private boolean isExpired(Round round) {
+        return roundRepository.existsByRoom_IdAndRoundDateAfterAndStatusIn(round.getRoom().getId(),
+                round.getRoundDate(), List.of(RoundStatus.VOTING, RoundStatus.ANNOUNCED));
     }
 }

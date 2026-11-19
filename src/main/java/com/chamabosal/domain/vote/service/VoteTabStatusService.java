@@ -7,11 +7,14 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundParticipant;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
-import com.chamabosal.domain.vote.dto.response.VoteTabStatusResponse;
+import com.chamabosal.domain.tap.service.MoktakService;
+import com.chamabosal.domain.tap.service.TapService;
 import com.chamabosal.domain.vote.dto.response.VoteTabStatusResponse.MemberSummary;
+import com.chamabosal.domain.vote.dto.response.VoteTabStatusResponse;
 import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
@@ -28,8 +31,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 투표 탭 상태 (VOTE-05). 투표 중인 회차를 가장 먼저 확인하고(시작한 투표는 3명 미만이 돼도 유지, Q-34),
- * 그다음 방 인원 3명 미만, 가장 최근 발표 회차가 있는지로 나머지 상태를 가른다.
+ * 투표 탭 상태 (VOTE-05). 투표 중 → 결과 미확인 → 이마 톡톡 → 목탁 수행 → 3명 미만 → 결과 확인 후·첫 투표 전 순서로 정한다
+ * (5번). 시작한 투표와 결과 뒤 남은 일은 인원이 3명 미만이 돼도 먼저 보여준다 (Q-34).
  */
 @Service
 @RequiredArgsConstructor
@@ -44,6 +47,8 @@ public class VoteTabStatusService {
     private final CertificationRepository certificationRepository;
     private final VoteRepository voteRepository;
     private final VoteCandidateService voteCandidateService;
+    private final TapService tapService;
+    private final MoktakService moktakService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -60,14 +65,21 @@ public class VoteTabStatusService {
         if (votingRound.isPresent()) {
             return votingStatus(votingRound.get(), me);
         }
+        // 결과 미확인 → 이마 톡톡 → 목탁 수행은 인원보다 먼저 본다. 결과가 나온 뒤 인원이 줄어도 남은 일을 먼저 보여준다 (VOTE-05 5번).
+        Optional<Round> announced = roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
+                roomId, RoundStatus.ANNOUNCED);
+        if (announced.isPresent()) {
+            Optional<VoteTabStatusResponse> pending = pendingAfterResult(announced.get(), me, userId);
+            if (pending.isPresent()) {
+                return pending.get();
+            }
+        }
         int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId);
         if (memberCount < MIN_VOTERS) {
             return VoteTabStatusResponse.underThree(memberCount, room.getMemberLimit());
         }
-        Optional<Round> announced = roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
-                roomId, RoundStatus.ANNOUNCED);
         if (announced.isPresent()) {
-            return resultStatus(announced.get(), me);
+            return VoteTabStatusResponse.resultSeen(announced.get().getId(), announced.get().getRoundDate());
         }
         return beforeFirstVote(roomId, me);
     }
@@ -96,11 +108,22 @@ public class VoteTabStatusService {
                 voteCandidateService.findCandidates(round.getId(), me.getId()));
     }
 
-    /** 결과를 본 뒤 ~ 다음 투표 시작 전까지는 가장 최근 발표 회차로 안 봤는지를 가른다. */
-    private VoteTabStatusResponse resultStatus(Round latestAnnounced, RoomMember me) {
-        return me.hasUnseenResult(latestAnnounced.getRoundDate())
-                ? VoteTabStatusResponse.resultUnseen(latestAnnounced.getId(), latestAnnounced.getRoundDate())
-                : VoteTabStatusResponse.resultSeen(latestAnnounced.getId(), latestAnnounced.getRoundDate());
+    /**
+     * 가장 최근 발표 회차에서 남은 일. 안 본 결과 → 지금 보낼 수 있는 톡톡 → 지금 해야 하는 목탁 수행 순서다.
+     * 톡톡·목탁은 실제 API와 같은 판단을 쓴다 (TapService, MoktakService). 남은 일이 없으면 비어 있다.
+     */
+    private Optional<VoteTabStatusResponse> pendingAfterResult(Round round, RoomMember me, Long userId) {
+        if (me.hasUnseenResult(round.getRoundDate())) {
+            return Optional.of(VoteTabStatusResponse.resultUnseen(round.getId(), round.getRoundDate()));
+        }
+        if (round.getResultType() == RoundResultType.PICKED && tapService.findTapBlock(round, me, false) == null) {
+            return Optional.of(VoteTabStatusResponse.tap(round.getId(), round.getRoundDate(), round.getTapClosesAt()));
+        }
+        if (moktakService.isMoktakDue(userId, round, me, LocalDateTime.now(clock))) {
+            return Optional.of(VoteTabStatusResponse.moktak(round.getId(), round.getRoundDate(),
+                    moktakService.getMoktakCount(round.getId())));
+        }
+        return Optional.empty();
     }
 
     /** 첫 번째 미인증 멤버를 고르는 순서는 아직 정하지 않아 (Q-25) 입장 순서로 임시 정렬한다. */

@@ -95,34 +95,47 @@ public class TapService {
     }
 
     /**
-     * 톡톡 시작·보내기 공통 확인. 확인 순서: 톡톡 없는 결과 → 지목된 사람이 나감 → 본인 → 투표 안 함 → 이미 보냄 → 톡톡 마감.
-     * isStartedBeforeDefense가 참이면 방어된(`DEFENDED`) 결과도 허용한다.
+     * 톡톡 시작·보내기 공통 확인. 막히면 그 사유를 던진다 (findTapBlock).
      */
     private void checkCanTap(Round round, RoomMember me, boolean isStartedBeforeDefense) {
+        BaseErrorCode block = findTapBlock(round, me, isStartedBeforeDefense);
+        if (block != null) {
+            throw new BaseException(block);
+        }
+    }
+
+    /**
+     * 지금 톡톡을 보낼 수 있으면 null, 아니면 막히는 사유. 결과 화면 canTap과 투표 탭 TAP 상태도 이 판단을 쓴다 (RESULT-03, VOTE-05).
+     * 확인 순서: 톡톡 없는 결과 → 지목된 사람이 나감 → 본인 → 투표 안 함 → 이미 보냄 → 톡톡 마감.
+     * isStartedBeforeDefense가 참이면 방어된(`DEFENDED`) 결과도 허용한다.
+     */
+    @Transactional(readOnly = true)
+    public BaseErrorCode findTapBlock(Round round, RoomMember me, boolean isStartedBeforeDefense) {
         boolean isPicked = round.getResultType() == RoundResultType.PICKED;
         boolean isDefendedAfterStart = round.getResultType() == RoundResultType.DEFENDED && isStartedBeforeDefense;
         if (round.getStatus() != RoundStatus.ANNOUNCED || !(isPicked || isDefendedAfterStart)) {
-            throw new BaseException(BaseErrorCode.TAP_NOT_AVAILABLE);
+            return BaseErrorCode.TAP_NOT_AVAILABLE;
         }
         // 지목된 사람이 방을 나갔으면 이마 톡톡이 없다 (RESULT-03 예외, Q-27).
         if (!round.getPickedMember().isCurrent()) {
-            throw new BaseException(BaseErrorCode.TAP_NOT_AVAILABLE);
+            return BaseErrorCode.TAP_NOT_AVAILABLE;
         }
         if (round.getPickedMember().getId().equals(me.getId())) {
-            throw new BaseException(BaseErrorCode.TAP_SELF);
+            return BaseErrorCode.TAP_SELF;
         }
         // 그 회차에 투표한 사람만 보낸다 (RESULT-02 4번). 투표한 뒤 나갔다가 투표 시작 뒤 다시 들어오면 같은 멤버 행이라
         // 표가 남아 있지만, 투표 제출·마감(Q-36)처럼 그 회차 명단 밖으로 보고 막는다.
         if (round.isJoinedAfterVoteStart(me)
                 || !voteRepository.existsByRound_IdAndVoterMember_Id(round.getId(), me.getId())) {
-            throw new BaseException(BaseErrorCode.TAP_NOT_VOTED);
+            return BaseErrorCode.TAP_NOT_VOTED;
         }
         if (tapRepository.existsByRound_IdAndFromMember_Id(round.getId(), me.getId())) {
-            throw new BaseException(BaseErrorCode.ALREADY_TAPPED);
+            return BaseErrorCode.ALREADY_TAPPED;
         }
         if (!round.isTapOpen(LocalDateTime.now(clock))) {
-            throw new BaseException(BaseErrorCode.TAP_EXPIRED);
+            return BaseErrorCode.TAP_EXPIRED;
         }
+        return null;
     }
 
     @Transactional(readOnly = true)

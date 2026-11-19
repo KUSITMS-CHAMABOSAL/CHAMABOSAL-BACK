@@ -202,7 +202,8 @@ class ResultTapTest {
 
         seenResult(userB, room, wednesday.getId()).andExpect(status().isOk());
 
-        voteTab(userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+        // 결과를 봤으니 결과 미확인이 아니다. B는 투표했고 아직 톡톡하지 않아 이마 톡톡 상태다 (VOTE-05 5번).
+        voteTab(userB).andExpect(jsonPath("$.data.status").value("TAP"));
         assertThat(reload(memberB).getSeenResultRoundDate()).isEqualTo(NOV_4);
     }
 
@@ -553,7 +554,8 @@ class ResultTapTest {
 
         seenResult(userB, room, round.getId()).andExpect(status().isOk());
 
-        voteTab(userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+        // 결과를 봤으니 결과 미확인이 아니다. B는 투표했고 아직 톡톡하지 않아 이마 톡톡 상태다 (VOTE-05 5번).
+        voteTab(userB).andExpect(jsonPath("$.data.status").value("TAP"));
     }
 
     @Test

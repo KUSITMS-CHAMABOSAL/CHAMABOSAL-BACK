@@ -19,50 +19,62 @@ public record VoteTabStatusResponse(
         LocalDateTime closesAt,
         Integer votedCount,
         Integer voterCount,
-        List<VoteCandidateResponse> candidates
+        List<VoteCandidateResponse> candidates,
+        LocalDateTime tapClosesAt,
+        Long moktakCount
 ) {
 
     public static VoteTabStatusResponse underThree(int memberCount, int memberLimit) {
         return new VoteTabStatusResponse(VoteTabStatus.UNDER_THREE, memberCount, memberLimit,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse beforeFirstVote(int uncertifiedCount, MemberSummary firstUncertifiedMember) {
         return new VoteTabStatusResponse(VoteTabStatus.BEFORE_FIRST_VOTE, null, null,
-                uncertifiedCount, firstUncertifiedMember, null, null, null, null, null, null);
+                uncertifiedCount, firstUncertifiedMember, null, null, null, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse notInList(Long roundId, LocalDate roundDate, LocalDateTime closesAt) {
         return new VoteTabStatusResponse(VoteTabStatus.NOT_IN_LIST, null, null, null, null,
-                roundId, roundDate, closesAt, null, null, null);
+                roundId, roundDate, closesAt, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse noVotingRight(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                        List<VoteCandidateResponse> candidates) {
         return new VoteTabStatusResponse(VoteTabStatus.NO_VOTING_RIGHT, null, null, null, null,
-                roundId, roundDate, closesAt, null, null, candidates);
+                roundId, roundDate, closesAt, null, null, candidates, null, null);
     }
 
     public static VoteTabStatusResponse voting(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                 int votedCount, int voterCount, List<VoteCandidateResponse> candidates) {
         return new VoteTabStatusResponse(VoteTabStatus.VOTING, null, null, null, null,
-                roundId, roundDate, closesAt, votedCount, voterCount, candidates);
+                roundId, roundDate, closesAt, votedCount, voterCount, candidates, null, null);
     }
 
     public static VoteTabStatusResponse voted(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                int votedCount, int voterCount) {
         return new VoteTabStatusResponse(VoteTabStatus.VOTED, null, null, null, null,
-                roundId, roundDate, closesAt, votedCount, voterCount, null);
+                roundId, roundDate, closesAt, votedCount, voterCount, null, null, null);
     }
 
     public static VoteTabStatusResponse resultUnseen(Long roundId, LocalDate roundDate) {
         return new VoteTabStatusResponse(VoteTabStatus.RESULT_UNSEEN, null, null, null, null,
-                roundId, roundDate, null, null, null, null);
+                roundId, roundDate, null, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse resultSeen(Long roundId, LocalDate roundDate) {
         return new VoteTabStatusResponse(VoteTabStatus.RESULT_SEEN, null, null, null, null,
-                roundId, roundDate, null, null, null, null);
+                roundId, roundDate, null, null, null, null, null, null);
+    }
+
+    public static VoteTabStatusResponse tap(Long roundId, LocalDate roundDate, LocalDateTime tapClosesAt) {
+        return new VoteTabStatusResponse(VoteTabStatus.TAP, null, null, null, null,
+                roundId, roundDate, null, null, null, null, tapClosesAt, null);
+    }
+
+    public static VoteTabStatusResponse moktak(Long roundId, LocalDate roundDate, long moktakCount) {
+        return new VoteTabStatusResponse(VoteTabStatus.MOKTAK, null, null, null, null,
+                roundId, roundDate, null, null, null, null, null, moktakCount);
     }
 
     public record MemberSummary(Long memberId, String nickname, BosalColor color) {

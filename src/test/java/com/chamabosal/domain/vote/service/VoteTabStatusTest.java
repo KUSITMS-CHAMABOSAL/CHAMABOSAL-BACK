@@ -1,5 +1,7 @@
 package com.chamabosal.domain.vote.service;
 
+import com.chamabosal.domain.room.dto.request.RoomSeenResultUpdateRequest;
+import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.room.service.RoomService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -131,6 +133,7 @@ class VoteTabStatusTest {
 
     @Autowired ItemRepository itemRepository;
     @Autowired RoomService roomService;
+    @Autowired TapRepository tapRepository;
     @Autowired UserItemRepository userItemRepository;
 
     @AfterEach
@@ -138,6 +141,7 @@ class VoteTabStatusTest {
         userItemRepository.deleteAll();
         // 시작 때 넣은 카탈로그는 남기고 테스트가 만든 아이템만 지운다.
         itemRepository.findByCode("EQUIP_HAT").ifPresent(itemRepository::delete);
+        tapRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
@@ -350,6 +354,105 @@ class VoteTabStatusTest {
         roomService.leave(userD.getId(), room.getId());
 
         tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("VOTING"));
+    }
+
+    // ---------- 결과 뒤 이마 톡톡·목탁 수행 (VOTE-05 5번) ----------
+
+    @Test
+    void VOTE_05_12_결과를_보고_톡톡할_수_있으면_이마_톡톡이다() throws Exception {
+        Round round = pickedB();
+        seeResult(userA, round);
+
+        tab(room.getId(), userA)
+                .andExpect(jsonPath("$.data.status").value("TAP"))
+                .andExpect(jsonPath("$.data.roundId").value(round.getId()))
+                .andExpect(jsonPath("$.data.tapClosesAt").value("2026-11-06T20:00:00"));
+    }
+
+    @Test
+    void VOTE_05_13_톡톡을_보낸_뒤에는_결과_확인_후다() throws Exception {
+        Round round = pickedB();
+        seeResult(userA, round);
+        sendTap(userA, round, 3);
+
+        tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+    }
+
+    @Test
+    void VOTE_05_14_지목된_사람은_톡톡_전달_전까지_결과_확인_후다() throws Exception {
+        Round round = pickedB();
+        seeResult(userB, round);
+        sendTap(userA, round, 5);
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 19, 59));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+    }
+
+    @Test
+    void VOTE_05_15_톡톡이_전달되면_지목된_사람은_목탁_수행이고_마치면_결과_확인_후다() throws Exception {
+        Round round = pickedB();
+        seeResult(userB, round);
+        sendTap(userA, round, 5);
+        sendTap(userC, round, 3);
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 20, 0));
+        tab(room.getId(), userB)
+                .andExpect(jsonPath("$.data.status").value("MOKTAK"))
+                .andExpect(jsonPath("$.data.moktakCount").value(8));
+        mockMvc.perform(post("/api/rounds/{roundId}/moktak", round.getId())
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(userB.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"count\": 8}"))
+                .andExpect(status().isCreated());
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+    }
+
+    @Test
+    void 결과_뒤_인원이_3명_미만이_돼도_톡톡을_먼저_보여준다() throws Exception {
+        Round round = pickedB();
+        seeResult(userA, round);
+        roomService.leave(userC.getId(), room.getId());
+        roomService.leave(userD.getId(), room.getId());
+
+        tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("TAP"));
+    }
+
+    /** 혼자 남은 방은 공양미가 쌓이지 않아 목탁 수행을 띄우지 않는다. 띄우면 마쳐도 완료 기록이 남지 않아 계속 남는다 (코드리뷰 반영). */
+    @Test
+    void 혼자_남은_방에서는_목탁_수행을_띄우지_않는다() throws Exception {
+        Round round = pickedB();
+        seeResult(userB, round);
+        sendTap(userA, round, 5);
+        roomService.leave(userA.getId(), room.getId());
+        roomService.leave(userC.getId(), room.getId());
+        roomService.leave(userD.getId(), room.getId());
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 20, 0));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("UNDER_THREE"));
+    }
+
+    /** A·C·D가 B를, B가 A를 골라 11/6 15:00에 B가 지목된 11/5 회차. 지금은 11/6 16:00이다. */
+    private Round pickedB() {
+        Round round = startVotingRound(memberA, memberB, memberC, memberD);
+        vote(round, memberA, memberB);
+        vote(round, memberC, memberB);
+        vote(round, memberD, memberB);
+        vote(round, memberB, memberA);
+        voteCloseService.closeAtDeadline(room.getId(), round.getId(), LocalDateTime.of(2026, 11, 6, 15, 0));
+        clock.set(LocalDateTime.of(2026, 11, 6, 16, 0));
+        return roundRepository.findById(round.getId()).orElseThrow();
+    }
+
+    private void seeResult(User user, Round round) {
+        roomService.markResultSeen(user.getId(), room.getId(), new RoomSeenResultUpdateRequest(round.getId()));
+    }
+
+    private void sendTap(User user, Round round, int count) throws Exception {
+        mockMvc.perform(post("/api/rounds/{roundId}/taps", round.getId())
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(user.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"count\": " + count + "}"))
+                .andExpect(status().isCreated());
     }
 
     private org.springframework.test.web.servlet.ResultActions tab(Long roomId, User user) throws Exception {

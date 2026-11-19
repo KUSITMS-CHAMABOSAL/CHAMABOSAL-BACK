@@ -61,7 +61,7 @@ public class VoteController {
     }
 
     @GetMapping("/rooms/{roomId}/vote")
-    @Operation(summary = "투표 탭 상태 (VOTE-05)", description = "사용자와 방의 상황에 맞는 투표 탭 상태를 반환합니다.")
+    @Operation(summary = "투표 탭 상태 (VOTE-05)", description = "사용자와 방의 상황에 맞는 투표 탭 상태를 반환합니다. 결과를 본 뒤 톡톡을 보낼 수 있으면 TAP(tapClosesAt), 지목된 본인이 목탁 수행을 해야 하면 MOKTAK(moktakCount)입니다. 순서: 투표 중 → RESULT_UNSEEN → TAP → MOKTAK → UNDER_THREE → RESULT_SEEN·BEFORE_FIRST_VOTE")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님",
