@@ -202,14 +202,15 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_02_2_지목된_사람을_뺀_멤버는_투표하지_않았어도_톡톡_기회가_있다() throws Exception {
+    void RESULT_02_2_지목된_사람을_뺀_멤버_중_투표한_사람만_톡톡_기회가_있다() throws Exception {
         // B는 투표하지 않는다. C, D가 A를 골라 A가 지목된다.
         Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA, memberA, memberC));
 
-        for (User user : new User[] {userB, userC, userD}) {
+        for (User user : new User[] {userC, userD}) {
             result(user, round).andExpect(jsonPath("$.data.resultType").value("PICKED"))
                     .andExpect(jsonPath("$.data.canTap").value(true));
         }
+        result(userB, round).andExpect(jsonPath("$.data.canTap").value(false));
         result(userA, round).andExpect(jsonPath("$.data.isMePicked").value(true))
                 .andExpect(jsonPath("$.data.canTap").value(false));
     }
@@ -258,18 +259,28 @@ class ResultTapTest {
     }
 
     @Test
-    void 결과_화면은_지목된_사람의_인증과_표를_받은_멤버의_득표_수만_보여준다() throws Exception {
+    void RESULT_02_7_지목이_있으면_득표_수를_보여주지_않는다() throws Exception {
         Round round = announced(NOV_4, picks(memberB, memberA, memberC, memberA, memberD, null, memberA, memberB));
 
         result(userC, round)
                 .andExpect(jsonPath("$.data.picked.memberId").value(memberA.getId()))
                 .andExpect(jsonPath("$.data.picked.certificationResult").value("FAILED"))
                 .andExpect(jsonPath("$.data.picked.spentAmount").value(23000))
+                .andExpect(jsonPath("$.data.voteCounts").isEmpty())
+                .andExpect(jsonPath("$.data.allBosalCount").isEmpty());
+    }
+
+    @Test
+    void RESULT_02_8_지목이_없으면_표를_받은_멤버의_득표_수를_보여준다() throws Exception {
+        Round round = announced(NOV_4, picks(memberA, memberB, memberB, memberA, memberC, memberA, memberD, memberB));
+
+        result(userC, round)
+                .andExpect(jsonPath("$.data.resultType").value("ALL_SAFE"))
                 .andExpect(jsonPath("$.data.voteCounts.length()").value(2))
                 .andExpect(jsonPath("$.data.voteCounts[0].memberId").value(memberA.getId()))
                 .andExpect(jsonPath("$.data.voteCounts[0].count").value(2))
                 .andExpect(jsonPath("$.data.voteCounts[1].memberId").value(memberB.getId()))
-                .andExpect(jsonPath("$.data.allBosalCount").value(1));
+                .andExpect(jsonPath("$.data.allBosalCount").value(0));
     }
 
     @Test
@@ -283,13 +294,13 @@ class ResultTapTest {
     // ---------- RESULT-03 이마 톡톡 ----------
 
     @Test
-    void RESULT_03_1_999번까지_보낼_수_있고_재시도해도_저장된_횟수는_그대로다() throws Exception {
+    void RESULT_03_1_횟수_상한_없이_보낼_수_있고_재시도해도_저장된_횟수는_그대로다() throws Exception {
         Round round = pickedA();
-        tap(userC, round, 1000).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("COMMON_002"));
-        tap(userB, round, 999).andExpect(status().isCreated());
+        tap(userC, round, -1).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("COMMON_002"));
+        tap(userB, round, 5000).andExpect(status().isCreated());
 
-        tap(userB, round, 999).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_003"));
-        assertThat(tapOf(round, memberB).getCount()).isEqualTo(999);
+        tap(userB, round, 5000).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_003"));
+        assertThat(tapOf(round, memberB).getCount()).isEqualTo(5000);
     }
 
     @Test
@@ -328,12 +339,15 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_03_6_투표_시작_뒤_들어온_멤버도_보낼_수_있다() throws Exception {
-        Round round = pickedA();
+    void RESULT_03_6_투표하지_않은_멤버는_보낼_수_없다() throws Exception {
+        // B는 투표하지 않았고, E는 투표 시작 뒤 들어왔다.
+        Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA, memberA, memberC));
         User userE = newUser();
         addMember(room, userE, "은우", BosalColor.PINK, AFTER_CLOSE.minusHours(1));
 
-        tap(userE, round, 5).andExpect(status().isCreated());
+        tap(userE, round, 5).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_006"));
+        tap(userB, round, 5).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_006"));
+        assertThat(tapRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -460,11 +474,11 @@ class ResultTapTest {
 
     @Test
     void RESULT_03_14_15시에_자동_마감된_결과에도_보낼_수_있다() throws Exception {
-        // A, B는 투표하지 않은 채 15:00에 자동 마감되고, C·D의 표로 A가 지목된다.
+        // A, B는 투표하지 않은 채 15:00에 자동 마감되고, C·D의 표로 A가 지목된다. 투표한 C는 톡톡할 수 있다.
         Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA));
         assertThat(round.getResultType()).isEqualTo(RoundResultType.PICKED);
 
-        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC, round, 5).andExpect(status().isCreated());
     }
 
     @Test
@@ -579,11 +593,7 @@ class ResultTapTest {
                 .andExpect(jsonPath("$.data.picked.memberId").value(memberA.getId()))
                 .andExpect(jsonPath("$.data.picked.isLeft").value(true))
                 .andExpect(jsonPath("$.data.picked.certificationResult").value("FAILED"))
-                .andExpect(jsonPath("$.data.picked.spentAmount").isEmpty())
-                .andExpect(jsonPath("$.data.voteCounts[0].memberId").value(memberA.getId()))
-                .andExpect(jsonPath("$.data.voteCounts[0].count").value(2))
-                .andExpect(jsonPath("$.data.voteCounts[0].isLeft").value(true))
-                .andExpect(jsonPath("$.data.allBosalCount").value(1));
+                .andExpect(jsonPath("$.data.picked.spentAmount").isEmpty());
         assertThat(certificationRepository.findByRound_IdAndDeletedAtIsNull(round.getId()))
                 .filteredOn(certification -> certification.getMember().getId().equals(memberA.getId()))
                 .singleElement()

@@ -65,20 +65,24 @@ public class RoundResultService {
 
         boolean isTapExpired = isPicked && !round.isTapOpen(now);
         // 지목된 사람이 방을 나갔으면 톡톡이 없다 (RESULT-02 4번, Q-27).
-        boolean canTap = isPicked && !isMePicked && !isTapExpired && picked.isCurrent()
+        List<Vote> votes = voteRepository.findWithTargetByRound_Id(roundId);
+        // 투표한 사람만 톡톡한다 (RESULT-02 4번).
+        boolean hasVoted = votes.stream().anyMatch(vote -> vote.getVoterMember().getId().equals(me.getId()));
+        boolean canTap = isPicked && !isMePicked && !isTapExpired && picked.isCurrent() && hasVoted
                 && !tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId());
+        // 득표 수는 지목된 보살이 없을 때만 보여준다 (RESULT-02 2번).
+        boolean isCountShown = picked == null;
 
         Integer ticketCount = isMePicked && (isPicked || resultType == RoundResultType.DEFENDED)
                 ? (int) defenseTicketRepository.countByUser_IdAndUsedAtIsNull(userId) : null;
 
-        List<Vote> votes = voteRepository.findWithTargetByRound_Id(roundId);
         return new RoundResultResponse(
                 round.getId(), round.getRoundDate(), resultType,
                 picked == null ? null : Picked.from(picked, certificationRepository
                         .findByRound_IdAndMember_IdAndDeletedAtIsNull(roundId, picked.getId()).orElse(null),
                         storeService.getEquippedItemCodesByMember(List.of(picked)).get(picked.getId())),
-                voteCounts(votes),
-                (int) votes.stream().filter(vote -> vote.getTargetMember() == null).count(),
+                isCountShown ? voteCounts(votes) : List.of(),
+                isCountShown ? (int) votes.stream().filter(vote -> vote.getTargetMember() == null).count() : null,
                 isMePicked,
                 isMePicked && isPicked ? round.getDefenseClosesAt() : null,
                 ticketCount,

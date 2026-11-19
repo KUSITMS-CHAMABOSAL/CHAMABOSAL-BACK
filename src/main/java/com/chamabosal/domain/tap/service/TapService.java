@@ -18,6 +18,7 @@ import com.chamabosal.domain.tap.dto.response.ReceivedTapsResponse;
 import com.chamabosal.domain.tap.dto.response.TapSendResponse;
 import com.chamabosal.domain.tap.entity.Tap;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
@@ -39,6 +40,7 @@ public class TapService {
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final TapRepository tapRepository;
+    private final VoteRepository voteRepository;
     private final RiceService riceService;
     private final RiceHistoryRepository riceHistoryRepository;
     private final PotService potService;
@@ -67,6 +69,10 @@ public class TapService {
         }
         if (round.getPickedMember().getId().equals(me.getId())) {
             throw new BaseException(BaseErrorCode.TAP_SELF);
+        }
+        // 그 회차에 투표한 사람만 보낸다. 투표 시작 뒤 들어온 멤버도 투표하지 않았으니 막힌다 (RESULT-02 4번).
+        if (!voteRepository.existsByRound_IdAndVoterMember_Id(roundId, me.getId())) {
+            throw new BaseException(BaseErrorCode.TAP_NOT_VOTED);
         }
         if (tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId())) {
             throw new BaseException(BaseErrorCode.ALREADY_TAPPED);

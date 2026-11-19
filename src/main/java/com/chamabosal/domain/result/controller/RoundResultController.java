@@ -31,6 +31,7 @@ public class RoundResultController {
     @Operation(summary = "결과 화면 (RESULT-02)",
             description = """
                     발표된 회차의 결과입니다. 누가 누구에게 투표했는지는 보내지 않고, voteCounts는 표를 받은 멤버만 득표 수가 많은 순입니다.
+                    득표 수(voteCounts, allBosalCount)는 지목이 없을 때(ALL_BOSAL·ALL_SAFE)만 채웁니다. 그 회차에 투표한 사람만 canTap이 true일 수 있습니다.
                     defenseUsableUntil은 결과 발표(투표 마감) 시각 + 2분입니다. 지목된 사람이 방을 나갔으면 canTap은 false입니다.
                     지목된 본인에게는 보유한 방어권 개수(defenseTicketCount)와 지금 쓰면 성공하는지(canUseDefense)를 줍니다. 결과를 본 뒤에는 seen-result로 확인을 저장해 주세요.
                     """)

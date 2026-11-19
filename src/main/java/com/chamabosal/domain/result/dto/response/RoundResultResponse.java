@@ -16,8 +16,9 @@ public record RoundResultResponse(
         LocalDate roundDate,
         RoundResultType resultType,
         @Schema(description = "PICKED·DEFENDED일 때만. 나머지는 null") Picked picked,
-        @Schema(description = "표를 받은 멤버만, 득표 수가 많은 순") List<VoteCount> voteCounts,
-        int allBosalCount,
+        @Schema(description = "지목이 없을 때(ALL_BOSAL·ALL_SAFE)만. 표를 받은 멤버만, 득표 수가 많은 순. 지목이 있으면 빈 배열")
+        List<VoteCount> voteCounts,
+        @Schema(description = "지목이 없을 때만 \"오늘은 모두 보살\" 득표 수. 지목이 있으면 null") Integer allBosalCount,
         boolean isMePicked,
         @Schema(description = "내가 지목된 PICKED 결과일 때만, 결과 발표 + 2분") LocalDateTime defenseUsableUntil,
         @Schema(description = "내가 지목된 PICKED·DEFENDED 결과일 때만, 보유한 방어권 개수") Integer defenseTicketCount,

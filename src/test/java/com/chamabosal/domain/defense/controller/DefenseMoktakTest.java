@@ -191,10 +191,7 @@ class DefenseMoktakTest {
     void RESULT_01_8_단독_지목된_사람이_1분_안에_방어하면_DEFENDED이고_다른_사람은_지목되지_않는다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
-        result(userA, round)
-                .andExpect(jsonPath("$.data.voteCounts[0].memberId").value(party.a().getId()))
-                .andExpect(jsonPath("$.data.voteCounts[0].count").value(3))
-                .andExpect(jsonPath("$.data.voteCounts[1].count").value(1));
+        result(userA, round);
 
         clock.set(AFTER_CLOSE.plusMinutes(1));
         defend(userA, round).andExpect(status().isCreated());
