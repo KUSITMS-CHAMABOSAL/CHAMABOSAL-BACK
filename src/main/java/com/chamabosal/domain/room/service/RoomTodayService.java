@@ -113,7 +113,7 @@ public class RoomTodayService {
         // 두 번째 멤버가 들어온 회차가 1일째이고, 혼자인 동안은 0일째다 (19번).
         int daysTogether = memberCount < 2 || room.getTogetherStartedDate() == null ? 0
                 : (int) ChronoUnit.DAYS.between(room.getTogetherStartedDate(), roundDate) + 1;
-        return new RoomTodayResponse.Room(room.getId(), room.getName(), room.getGoal(), memberCount, room.getMemberLimit(),
+        return new RoomTodayResponse.Room(room.getId(), room.getName(), room.getGoal(), memberCount,
                 me.getId().equals(room.getOwnerMemberId()), room.getPotCompletedCount(), hasVotingRound, daysTogether);
     }
 
