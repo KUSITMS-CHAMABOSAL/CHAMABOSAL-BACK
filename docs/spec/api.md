@@ -55,7 +55,7 @@
 | LockReason | `TIME_OVER` (10분 지남) `VOTE_STARTED` (투표 시작) |
 | RoundStatus | `CERTIFYING` (인증 중) `VOTING` (투표 중) `ANNOUNCED` (발표) `NO_VOTE` (투표 없음) |
 | ReactionType | `GOOD` `BAD` |
-| VoteTabStatus | `UNDER_THREE` `BEFORE_FIRST_VOTE` `NOT_IN_LIST` `NO_VOTING_RIGHT` `VOTING` `VOTED` `RESULT_UNSEEN` `RESULT_SEEN` |
+| VoteTabStatus | `UNDER_THREE` `BEFORE_FIRST_VOTE` `NOT_IN_LIST` `NO_VOTING_RIGHT` `VOTING` `VOTED` `RESULT_UNSEEN` `TAP` `MOKTAK` `RESULT_SEEN` |
 | VoteTargetType | `MEMBER` (후보) `ALL_BOSAL` (오늘은 모두 보살) |
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
 | InviteStatus | `JOINABLE` `ALREADY_MEMBER` `ROOM_LIMIT` `ROOM_FULL` `UNAVAILABLE` |
@@ -729,7 +729,11 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 | `VOTING` | 투표 중, 아직 투표 안 함 |
 | `VOTED` | 투표한 뒤 마감 전 |
 | `RESULT_UNSEEN` | 마감 후 결과를 아직 안 봄 |
-| `RESULT_SEEN` | 결과를 본 뒤 다음 투표 전 |
+| `TAP` | 결과를 봤고 지금 이마 톡톡을 보낼 수 있음 (결과 화면 `canTap`과 같은 기준) |
+| `MOKTAK` | 결과를 봤고 지목된 본인이 지금 목탁 수행을 해야 함 (톡톡 전달 뒤, 받은 톡톡 1번 이상, 아직 안 마침) |
+| `RESULT_SEEN` | 결과를 본 뒤 톡톡·목탁 수행을 끝냈거나 할 것이 없음, 다음 투표 전 |
+
+판단 순서: 투표 중(`NOT_IN_LIST`·`NO_VOTING_RIGHT`·`VOTING`·`VOTED`) → `RESULT_UNSEEN` → `TAP` → `MOKTAK` → `UNDER_THREE` → `RESULT_SEEN`·`BEFORE_FIRST_VOTE` (VOTE-05 5번)
 
 status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4번)
 
@@ -742,6 +746,8 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 | `VOTING` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount`, `candidates` |
 | `VOTED` | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount` |
 | `RESULT_UNSEEN`, `RESULT_SEEN` | `roundId`, `roundDate` (가장 최근 발표 회차. 내용은 `GET /api/rounds/{roundId}/result`) |
+| `TAP` | `roundId`, `roundDate`, `tapClosesAt` (톡톡 마감 시각) |
+| `MOKTAK` | `roundId`, `roundDate`, `moktakCount` (두드려야 할 횟수 = 받은 톡톡 합계) |
 
 ```json
 // BEFORE_FIRST_VOTE 예
