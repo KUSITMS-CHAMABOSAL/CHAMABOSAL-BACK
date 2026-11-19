@@ -386,30 +386,14 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_03_8_재생_완료를_저장해도_받은_톡톡_전체가_나온다() throws Exception {
+    void RESULT_03_8_다시_조회해도_받은_톡톡_전체가_나온다() throws Exception {
         Round round = pickedA();
         tap(userB, round, 5).andExpect(status().isCreated());
         clock.set(DELIVERED);
-        played(userA, round).andExpect(status().isOk());
-        played(userA, round).andExpect(status().isOk());
+        received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1));
 
         received(userA, round).andExpect(jsonPath("$.data.taps.length()").value(1))
                 .andExpect(jsonPath("$.data.totalCount").value(5));
-        assertThat(tapOf(round, memberB).getPlayedAt()).isEqualTo(DELIVERED);
-    }
-
-    @Test
-    void RESULT_03_18_전달_전에_재생_완료를_보내면_아무것도_바뀌지_않는다() throws Exception {
-        Round round = pickedA();
-        tap(userB, round, 5).andExpect(status().isCreated());
-
-        clock.set(DELIVERED.minusMinutes(1));
-        played(userA, round).andExpect(status().isOk());
-
-        assertThat(tapOf(round, memberB).getPlayedAt()).isNull();
-        clock.set(DELIVERED);
-        played(userA, round).andExpect(status().isOk());
-        assertThat(tapOf(round, memberB).getPlayedAt()).isEqualTo(DELIVERED);
     }
 
     @Test
@@ -528,7 +512,6 @@ class ResultTapTest {
         Round round = pickedA();
 
         received(userB, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_005"));
-        played(userB, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_005"));
     }
 
     @Test
@@ -683,11 +666,6 @@ class ResultTapTest {
 
     private ResultActions received(User user, Round round) throws Exception {
         return mockMvc.perform(get("/api/rounds/{roundId}/taps/received", round.getId())
-                .header("Authorization", bearer(user)));
-    }
-
-    private ResultActions played(User user, Round round) throws Exception {
-        return mockMvc.perform(put("/api/rounds/{roundId}/taps/received/played", round.getId())
                 .header("Authorization", bearer(user)));
     }
 

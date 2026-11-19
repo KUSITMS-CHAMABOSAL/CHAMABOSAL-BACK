@@ -573,10 +573,26 @@ class DefenseMoktakTest {
         tap(userC(), round, 3).andExpect(status().isCreated());
         clock.set(DELIVERED);
 
-        moktak(userA, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_004"));
+        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(0));
         assertThat(beonnoe(userA)).isEmpty();
+        assertThat(reload(round).isMoktakEnded()).isTrue();
 
-        moktak(userA, round, 8).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+        // 끝난 회차라 다 두드려 다시 보내도 보상이 없다.
+        moktak(userA, round, 8).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(0));
+        assertThat(beonnoe(userA)).isEmpty();
+    }
+
+    @Test
+    void RESULT_03_18_종료하기로_끝내면_받은_톡톡에_끝냄으로_나오고_다시_못_한다() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+        clock.set(DELIVERED);
+
+        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(0));
+
+        received(userA, round).andExpect(jsonPath("$.data.isMoktakDone").value(true));
+        moktak(userA, round, 8).andExpect(jsonPath("$.data.riceEarned").value(0));
     }
 
     @Test
