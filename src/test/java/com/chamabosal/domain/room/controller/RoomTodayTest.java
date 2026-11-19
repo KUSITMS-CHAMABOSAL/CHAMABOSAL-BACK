@@ -250,6 +250,53 @@ class RoomTodayTest extends RoomTestSupport {
         today(userA).andExpect(jsonPath("$.data.members[1].monthlyPickedCount").value(1));
     }
 
+    // ---------- RESULT-04 이번 달 지목 횟수 (집계 규칙, 표시는 오늘 탭 멤버 목록) ----------
+
+    @Test
+    void RESULT_04_2_방어는_세지_않아_PICKED_DEFENDED_PICKED면_2다() throws Exception {
+        announce(LocalDate.of(2026, 11, 3), RoundResultType.PICKED, memberB);
+        announce(LocalDate.of(2026, 11, 4), RoundResultType.DEFENDED, memberB);
+        announce(LocalDate.of(2026, 11, 5), RoundResultType.PICKED, memberB);
+
+        today(userA).andExpect(jsonPath("$.data.members[1].monthlyPickedCount").value(2));
+    }
+
+    @Test
+    void RESULT_04_3_다른_사람_지목이나_모두_보살이_나와도_초기화하지_않는다() throws Exception {
+        announce(LocalDate.of(2026, 11, 3), RoundResultType.PICKED, memberB);
+        announce(LocalDate.of(2026, 11, 4), RoundResultType.PICKED, memberC);
+        announce(LocalDate.of(2026, 11, 5), RoundResultType.ALL_BOSAL, null);
+
+        today(userA).andExpect(jsonPath("$.data.members[1].monthlyPickedCount").value(1));
+    }
+
+    @Test
+    void RESULT_04_4_지난달_회차의_지목은_이번_달에_세지_않는다() throws Exception {
+        announce(LocalDate.of(2026, 10, 30), RoundResultType.PICKED, memberB);
+        announce(LocalDate.of(2026, 10, 31), RoundResultType.PICKED, memberB);
+
+        today(userA).andExpect(jsonPath("$.data.members[1].monthlyPickedCount").value(0));
+    }
+
+    @Test
+    void RESULT_04_5_나갔다가_6개월_안에_다시_들어오면_이번_달_지목_횟수가_이어진다() throws Exception {
+        announce(LocalDate.of(2026, 11, 3), RoundResultType.PICKED, memberB);
+        announce(LocalDate.of(2026, 11, 4), RoundResultType.PICKED, memberB);
+        // 나갔다가 다시 들어오면 같은 멤버 행을 다시 쓰고 입장 시각만 바뀐다 (RoomMember.rejoin).
+        RoomMember rejoined = roomMemberRepository.findById(memberB.getId()).orElseThrow();
+        ReflectionTestUtils.setField(rejoined, "joinedAt", NOW.minusDays(1));
+        roomMemberRepository.save(rejoined);
+
+        today(userA).andExpect(jsonPath("$.data.members[2].memberId").value(memberB.getId()))
+                .andExpect(jsonPath("$.data.members[2].monthlyPickedCount").value(2));
+    }
+
+    private void announce(LocalDate roundDate, RoundResultType resultType, RoomMember picked) {
+        Round round = saveRound(room, roundDate, RoundStatus.VOTING);
+        round.announce(roundDate.plusDays(1).atTime(15, 0), resultType, picked);
+        roundRepository.save(round);
+    }
+
     @Test
     void ROOM_02_14_어제_회차가_투표_중이면_투표_중인_회차가_있고_오늘_회차는_인증_중이다() throws Exception {
         saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
