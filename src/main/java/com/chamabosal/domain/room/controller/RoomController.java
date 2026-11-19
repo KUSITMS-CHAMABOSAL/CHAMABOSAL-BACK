@@ -121,7 +121,7 @@ public class RoomController {
     @Operation(summary = "닉네임 수정 (ROOM-04)",
             description = """
                     이 방에서 쓰는 내 닉네임을 바꿉니다.
-                    앞뒤 띄어쓰기는 지우고, 현재 멤버의 닉네임은 쓸 수 없습니다(나간 멤버의 닉네임은 가능). 영문 대소문자는 구분하지 않습니다.
+                    앞뒤 띄어쓰기는 지우고, 다른 멤버와 같은 닉네임도 쓸 수 있습니다.
                     지금 닉네임과 같으면 저장하지 않고 성공합니다.
                     """)
     @ApiResponses({
@@ -153,14 +153,6 @@ public class RoomController {
             @ApiResponse(
                     responseCode = "404",
                     description = "ROOM_005 없거나 삭제된 방",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "ROOM_004 이미 쓰는 닉네임 (field: nickname)",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)
