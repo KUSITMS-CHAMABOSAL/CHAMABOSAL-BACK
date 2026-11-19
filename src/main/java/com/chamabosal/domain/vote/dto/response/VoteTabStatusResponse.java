@@ -11,7 +11,6 @@ import java.util.List;
 public record VoteTabStatusResponse(
         VoteTabStatus status,
         Integer memberCount,
-        Integer memberLimit,
         Integer uncertifiedCount,
         MemberSummary firstUncertifiedMember,
         Long roundId,
@@ -22,46 +21,46 @@ public record VoteTabStatusResponse(
         List<VoteCandidateResponse> candidates
 ) {
 
-    public static VoteTabStatusResponse underThree(int memberCount, int memberLimit) {
-        return new VoteTabStatusResponse(VoteTabStatus.UNDER_THREE, memberCount, memberLimit,
+    public static VoteTabStatusResponse underThree(int memberCount) {
+        return new VoteTabStatusResponse(VoteTabStatus.UNDER_THREE, memberCount,
                 null, null, null, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse beforeFirstVote(int uncertifiedCount, MemberSummary firstUncertifiedMember) {
-        return new VoteTabStatusResponse(VoteTabStatus.BEFORE_FIRST_VOTE, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.BEFORE_FIRST_VOTE, null,
                 uncertifiedCount, firstUncertifiedMember, null, null, null, null, null, null);
     }
 
     public static VoteTabStatusResponse notInList(Long roundId, LocalDate roundDate, LocalDateTime closesAt) {
-        return new VoteTabStatusResponse(VoteTabStatus.NOT_IN_LIST, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.NOT_IN_LIST, null, null, null,
                 roundId, roundDate, closesAt, null, null, null);
     }
 
     public static VoteTabStatusResponse noVotingRight(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                        List<VoteCandidateResponse> candidates) {
-        return new VoteTabStatusResponse(VoteTabStatus.NO_VOTING_RIGHT, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.NO_VOTING_RIGHT, null, null, null,
                 roundId, roundDate, closesAt, null, null, candidates);
     }
 
     public static VoteTabStatusResponse voting(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                 int votedCount, int voterCount, List<VoteCandidateResponse> candidates) {
-        return new VoteTabStatusResponse(VoteTabStatus.VOTING, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.VOTING, null, null, null,
                 roundId, roundDate, closesAt, votedCount, voterCount, candidates);
     }
 
     public static VoteTabStatusResponse voted(Long roundId, LocalDate roundDate, LocalDateTime closesAt,
                                                int votedCount, int voterCount) {
-        return new VoteTabStatusResponse(VoteTabStatus.VOTED, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.VOTED, null, null, null,
                 roundId, roundDate, closesAt, votedCount, voterCount, null);
     }
 
     public static VoteTabStatusResponse resultUnseen(Long roundId, LocalDate roundDate) {
-        return new VoteTabStatusResponse(VoteTabStatus.RESULT_UNSEEN, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.RESULT_UNSEEN, null, null, null,
                 roundId, roundDate, null, null, null, null);
     }
 
     public static VoteTabStatusResponse resultSeen(Long roundId, LocalDate roundDate) {
-        return new VoteTabStatusResponse(VoteTabStatus.RESULT_SEEN, null, null, null, null,
+        return new VoteTabStatusResponse(VoteTabStatus.RESULT_SEEN, null, null, null,
                 roundId, roundDate, null, null, null, null);
     }
 

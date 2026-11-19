@@ -111,6 +111,7 @@ class RoomTodayTest extends RoomTestSupport {
 
         today(userC)
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.room.memberLimit").doesNotExist())
                 .andExpect(jsonPath("$.data.round.certifiedCount").value(2))
                 .andExpect(jsonPath("$.data.round.isAllCertified").value(false))
                 .andExpect(jsonPath("$.data.members[2].memberId").value(memberC.getId()))
