@@ -258,6 +258,19 @@ class PotTest {
         assertThat(potRewards()).extracting(RiceHistory::getDelta).containsExactly(50, 50);
     }
 
+    /** RICE-01 8번: 10%가 10석 단위로 떨어지지 않으면 반올림한다 (Q-81). */
+    @Test
+    void 보너스는_10석_단위로_반올림한다() throws Exception {
+        Room room350 = newRoom(350);
+        addMember(room350, userA, "민지");
+        addMember(room350, userB, "지수");
+        potAt(room350, 345);
+
+        certifyIn(userA, room350).andExpect(status().isCreated());
+
+        assertThat(potRewards()).extracting(RiceHistory::getDelta).containsExactly(40, 40);
+    }
+
     private ResultActions certify(User user) throws Exception {
         return certifyIn(user, room);
     }

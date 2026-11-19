@@ -83,8 +83,8 @@ public class RoomPot extends BaseEntity {
         completedAt = now;
     }
 
-    /** 목표의 10%를 그대로 준다 (RICE-01 8번, Q-81). */
+    /** 목표의 10%를 10석 단위로 반올림해 준다. 350석이면 40석이다 (RICE-01 8번, Q-81). */
     public int getRewardAmount() {
-        return goalAmount * REWARD_PERCENT / 100;
+        return (goalAmount * REWARD_PERCENT + 500) / 1000 * 10;
     }
 }
