@@ -53,6 +53,9 @@ public class Room extends BaseEntity {
     /** 현재 멤버가 처음 2명이 된 회차 날짜. 같이 참은 일수의 1일째다 (ROOM-02 19번). */
     private LocalDate togetherStartedDate;
 
+    /** 솥을 채운 뒤 방장이 아직 고르지 않았으면 채운 시각, 아니면 NULL (ROOM-09). */
+    private LocalDateTime potDecisionRequestedAt;
+
     private LocalDateTime deletedAt;
 
     public static Room create(String name, RoomGoal goal, int memberLimit, int potGoalAmount) {
@@ -78,6 +81,22 @@ public class Room extends BaseEntity {
         if (togetherStartedDate == null) {
             togetherStartedDate = roundDate;
         }
+    }
+
+    /** 솥을 채울 때 부른다. 이미 선택 대기면 그대로 둬서 한 번만 고른다 (ROOM-09 9번). 방 행 락 안에서 부른다. */
+    public void requestPotDecision(LocalDateTime now) {
+        if (potDecisionRequestedAt == null) {
+            potDecisionRequestedAt = now;
+        }
+    }
+
+    /** [더 수행하기] (ROOM-09 5번). */
+    public void continuePot() {
+        potDecisionRequestedAt = null;
+    }
+
+    public boolean isPotDecisionPending() {
+        return potDecisionRequestedAt != null;
     }
 
     public void delete(LocalDateTime deletedAt) {

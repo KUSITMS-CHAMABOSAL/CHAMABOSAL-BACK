@@ -99,8 +99,10 @@ public class RoomTodayService {
         // 3명 미만이거나 이미 투표 없음이 된 회차는 전원이 인증해도 투표가 열리지 않는다 (VOTE-01 4번).
         boolean startsVote = members.size() >= VoteStartService.MIN_VOTERS && round.map(Round::isCertifying).orElse(true);
         int receivedPokeCount = round.map(found -> pokeRepository.sumReceived(found.getId(), me.getId())).orElse(0);
+        // 선택 대기는 방 상태라 방장이 위임되면 새 방장에게 보인다 (21번, ROOM-09 10번).
+        boolean isPotDecisionPending = room.isPotDecisionPending() && me.getId().equals(room.getOwnerMemberId());
         Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
-                && certifiedCount == members.size() - 1, receivedPokeCount);
+                && certifiedCount == members.size() - 1, receivedPokeCount, isPotDecisionPending);
         return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), pot(room),
                 roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me, now));
     }

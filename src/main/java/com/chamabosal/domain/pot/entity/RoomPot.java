@@ -17,7 +17,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 공양미 한 솥 (POT-01). 목표를 채운 뒤에도 연장 전까지는 이 솥에 계속 쌓인다 (Q-86). */
+/** 공양미 한 솥 (POT-01). 목표를 채우는 순간 다음 솥이 시작되고, 넘친 석은 다음 솥으로 이월한다 (6·7번). */
 @Getter
 @Entity
 @Table(name = "room_pots", uniqueConstraints = {
@@ -57,6 +57,17 @@ public class RoomPot extends BaseEntity {
         pot.room = room;
         pot.seq = 1;
         pot.goalAmount = room.getPotGoalAmount();
+        return pot;
+    }
+
+    /** 다 채운 솥 다음 솥이다. 같은 목표로, 넘친 석부터 담는다 (POT-01 6·7번). */
+    public static RoomPot next(RoomPot previous) {
+        RoomPot pot = new RoomPot();
+        pot.room = previous.room;
+        pot.seq = previous.seq + 1;
+        pot.goalAmount = previous.goalAmount;
+        pot.carriedOver = previous.amount - previous.goalAmount;
+        pot.amount = pot.carriedOver;
         return pot;
     }
 

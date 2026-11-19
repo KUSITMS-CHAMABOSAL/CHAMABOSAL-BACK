@@ -45,7 +45,8 @@ public class PotService {
 
     /**
      * 개인 적립이 실제로 기록됐을 때만 같은 석을 솥에 쌓는다. 그래서 1명 방, 이미 받은 보상은 솥에도 쌓이지 않는다 (POT-01 1번).
-     * 솥이 없으면 첫 솥을 만들고, 목표를 넘기면 그 순간 현재 멤버 전원에게 보상을 준다 (POT-01 4·5번). 쌓은 석, 쌓지 않았으면 0.
+     * 솥이 없으면 첫 솥을 만들고, 목표를 넘기면 그 순간 현재 멤버 전원에게 보상을 주고 다음 솥을 시작한다 (POT-01 4~7번).
+     * 넘기는 적립은 나누지 않고 채운 솥의 기여로 기록해서, 한 인증의 기여 행이 하나로 남는다 (ROOM-09 계획서 주요 결정 1). 쌓은 석, 쌓지 않았으면 0.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public int accrue(Room room, RoomMember member, PotReason reason, Long refId, int riceEarned) {
@@ -118,8 +119,11 @@ public class PotService {
     }
 
     private void complete(Room room, RoomPot pot) {
-        pot.complete(LocalDateTime.now(clock));
+        LocalDateTime now = LocalDateTime.now(clock);
+        pot.complete(now);
         room.completePot();
+        roomPotRepository.save(RoomPot.next(pot));
+        room.requestPotDecision(now);
         roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId()).forEach(member -> riceService.accrue(
                 room, member, RiceReason.POT, RiceRefType.ROOM_POT, pot.getId(), pot.getRewardAmount()));
     }

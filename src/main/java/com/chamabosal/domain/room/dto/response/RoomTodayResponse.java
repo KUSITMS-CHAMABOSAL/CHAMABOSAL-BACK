@@ -89,7 +89,9 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
             @Schema(description = "내가 등록하면 바로 투표가 시작됨. 등록 전 마지막 인증 확인 시트를 띄울 때 씀. "
                     + "인증이 열려 있고, 나만 인증 전이고, 현재 멤버 3명 이상이고, 회차가 인증 중일 때만 true. "
                     + "3명 미만 방은 전원 인증해도 투표가 열리지 않아 false") boolean isLastCertifier,
-            @Schema(description = "이번 회차에 받은 콕 수. 누가 찔렀는지는 돌려주지 않음") int receivedPokeCount
+            @Schema(description = "이번 회차에 받은 콕 수. 누가 찔렀는지는 돌려주지 않음") int receivedPokeCount,
+            @Schema(description = "솥을 채운 뒤 방장이 아직 [더 수행하기]·[방 닫기]를 고르지 않음. 방장에게만 true. "
+                    + "true면 방에 들어올 때마다 선택 팝업 (ROOM-09)") boolean isPotDecisionPending
     ) {
     }
 
