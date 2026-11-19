@@ -332,7 +332,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 }
 ```
 
-- `room.potCompletedCount`: 이 방에서 한 솥을 다 채운 횟수 (쌀가마 배지). 몇 번째 솥인지 표시하고, 안 본 축하를 판단하는 기준(`seen-pot`의 `seenPotCount`)으로도 씀
+- `room.potCompletedCount`: 이 방에서 한 솥을 다 채운 횟수. 몇 번째 솥인지 표시하고, 안 본 축하를 판단하는 기준(`seen-pot`의 `seenPotCount`)으로도 씀
 - `room.daysTogether`: 두 번째 멤버가 들어온 회차 날짜가 1일째 ("7일째 같이 참는중"). 혼자인 동안은 0
 - `room.hasVotingRound`: 이 방에 투표 중인 회차가 있음 (어제 회차 포함). 이때 내보내기는 `ROOM_008`로 막힘. `round.status`는 지금 회차만의 상태라 다를 수 있음
 - `round.roundId`: 오늘 회차 행이 아직 없으면 `null`. 행은 첫 인증이나 첫 콕 때 만듦

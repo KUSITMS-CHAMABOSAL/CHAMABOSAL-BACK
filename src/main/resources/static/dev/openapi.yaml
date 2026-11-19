@@ -3777,7 +3777,7 @@ components:
           example: true
         potCompletedCount:
           type: integer
-          description: 한 솥을 다 채운 횟수 (쌀가마 배지). 몇 번째 솥인지와 안 본 축하 판단에도 씀
+          description: 한 솥을 다 채운 횟수. 몇 번째 솥인지와 안 본 축하 판단에도 씀
           example: 1
           format: int32
         hasVotingRound:
