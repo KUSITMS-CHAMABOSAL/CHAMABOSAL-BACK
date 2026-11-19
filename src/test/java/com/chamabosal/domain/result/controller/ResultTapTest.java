@@ -37,6 +37,7 @@ import com.chamabosal.domain.store.repository.ItemRepository;
 import com.chamabosal.domain.store.repository.UserItemRepository;
 import com.chamabosal.domain.tap.entity.Tap;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.tap.repository.TapStartRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.domain.vote.entity.Vote;
@@ -126,6 +127,9 @@ class ResultTapTest {
     TapRepository tapRepository;
 
     @Autowired
+    TapStartRepository tapStartRepository;
+
+    @Autowired
     RiceHistoryRepository riceHistoryRepository;
 
     @Autowired
@@ -172,6 +176,7 @@ class ResultTapTest {
         itemRepository.findByCode("EQUIP_HAT").ifPresent(itemRepository::delete);
         defenseTicketRepository.deleteAll();
         riceHistoryRepository.deleteAll();
+        tapStartRepository.deleteAll();
         tapRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
@@ -238,7 +243,7 @@ class ResultTapTest {
 
         clock.set(NOV_3.atTime(15, 1));
         result(userA, round)
-                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T15:02:00"))
+                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T15:03:00"))
                 .andExpect(jsonPath("$.data.defenseTicketCount").value(2))
                 .andExpect(jsonPath("$.data.canUseDefense").value(true));
         result(userB, round)
@@ -458,6 +463,8 @@ class ResultTapTest {
         defend(round);
 
         tap(userC, round, 5).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_001"));
+        mockMvc.perform(post("/api/rounds/{roundId}/taps/start", round.getId()).header("Authorization", bearer(userD)))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_001"));
         clock.set(DELIVERED);
         received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty())
                 .andExpect(jsonPath("$.data.totalCount").value(0));

@@ -25,7 +25,8 @@ public record RoundResultResponse(
         boolean canUseDefense,
         boolean canTap,
         @Schema(description = "PICKED인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남") boolean isTapExpired,
-        @Schema(description = "나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수") int tappedMemberCount
+        @Schema(description = "나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수") int tappedMemberCount,
+        @Schema(description = "지목된 사람이 아직 방어권을 쓸 수 있는지 (방어권 고민 중 표시). 표시용이라 canTap과 상관없음") boolean isDefensePending
 ) {
 
     public record Picked(

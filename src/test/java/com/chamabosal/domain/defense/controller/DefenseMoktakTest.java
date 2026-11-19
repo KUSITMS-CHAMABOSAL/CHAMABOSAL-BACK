@@ -32,6 +32,7 @@ import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.tap.repository.TapStartRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.domain.vote.entity.Vote;
@@ -91,6 +92,7 @@ class DefenseMoktakTest {
     @Autowired CertificationRepository certificationRepository;
     @Autowired VoteRepository voteRepository;
     @Autowired TapRepository tapRepository;
+    @Autowired TapStartRepository tapStartRepository;
     @Autowired RiceHistoryRepository riceHistoryRepository;
     @Autowired DefenseTicketRepository defenseTicketRepository;
 
@@ -117,6 +119,7 @@ class DefenseMoktakTest {
         reactionRepository.deleteAll();
         defenseTicketRepository.deleteAll();
         riceHistoryRepository.deleteAll();
+        tapStartRepository.deleteAll();
         tapRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
@@ -376,15 +379,66 @@ class DefenseMoktakTest {
     }
 
     @Test
-    void RESULT_02_6_방어_시간이_지난_뒤_처음_조회하면_방어권을_쓸_수_없다() throws Exception {
+    void RESULT_02_6_톡톡_마감_뒤_처음_조회하면_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
 
-        clock.set(AFTER_CLOSE.plusMinutes(3));
+        clock.set(DELIVERED);
         result(userA, round)
-                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-05T15:02:00"))
+                .andExpect(jsonPath("$.data.defenseUsableUntil").isEmpty())
                 .andExpect(jsonPath("$.data.canUseDefense").value(false));
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
+    }
+
+    @Test
+    void SHIELD_02_13_늦게_처음_열어도_그때부터_2분_동안_쓸_수_있다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+
+        clock.set(NOV_5.atTime(19, 0));
+        result(userA, round).andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-05T19:02:00"));
+        clock.set(NOV_5.atTime(19, 1));
+        defend(userA, round).andExpect(status().isCreated());
+
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.DEFENDED);
+    }
+
+    @Test
+    void SHIELD_02_14_톡톡_마감_뒤에_처음_열면_방어권을_쓸_수_없다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+
+        clock.set(DELIVERED);
+        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
+
+        assertThat(ticketCount(userA)).isEqualTo(1);
+    }
+
+    @Test
+    void RESULT_02_9_지목된_사람이_열기_전과_연_뒤_2분_동안만_방어권_고민_중이다() throws Exception {
+        Round round = pickedA(party);
+
+        clock.set(NOV_5.atTime(16, 0));
+        result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(true));
+        result(userA, round);
+        clock.set(NOV_5.atTime(16, 1));
+        result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(true));
+        clock.set(NOV_5.atTime(16, 3));
+        result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(false));
+    }
+
+    @Test
+    void RESULT_03_20_방어_전에_시작한_톡톡은_방어_뒤에도_보내고_5석을_받지만_전달하지_않는다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        tapStart(userB, round).andExpect(status().isOk());
+        defend(userA, round).andExpect(status().isCreated());
+
+        tap(userB, round, 7).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(5));
+        tapStart(userC(), round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("TAP_001"));
+
+        clock.set(DELIVERED);
+        received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty());
     }
 
     @Test
@@ -639,6 +693,10 @@ class DefenseMoktakTest {
     private ResultActions result(User user, Round round) throws Exception {
         return mockMvc.perform(get("/api/rounds/{roundId}/result", round.getId()).header("Authorization", bearer(user)))
                 .andExpect(status().isOk());
+    }
+
+    private ResultActions tapStart(User user, Round round) throws Exception {
+        return mockMvc.perform(post("/api/rounds/{roundId}/taps/start", round.getId()).header("Authorization", bearer(user)));
     }
 
     private ResultActions tap(User user, Round round, int count) throws Exception {

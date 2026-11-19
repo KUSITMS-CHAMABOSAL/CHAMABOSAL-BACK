@@ -58,9 +58,10 @@ public class DefenseService {
 
     /**
      * 확인 순서: 없는 회차 → 방 멤버 아님 → 발표 전 → 이미 방어함(성공) → 지목된 사람 아님 → 인증하지 않음 → 목탁 수행 마침
-     * → 방어 시간 지남 → 방어권 없음 (SHIELD-02 10번).
+     * → 방어 시간 지남 → 방어권 없음 (SHIELD-02 10번). 결과를 보지 않고 바로 쓰면 이 시각을 처음 연 시각으로 남긴다 (3번).
+     * 처음 연 시각을 남긴 뒤 거부돼도 그 시각은 커밋한다. 롤백되면 나중 요청에서 2분이 새로 시작된다.
      */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = BaseException.class)
     public void use(Long userId, Long roundId) {
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -89,6 +90,7 @@ public class DefenseService {
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
+        round.markPickedSeenIfAbsent(now);
         if (isExpired(round, now)) {
             throw new BaseException(BaseErrorCode.DEFENSE_EXPIRED);
         }
@@ -98,9 +100,10 @@ public class DefenseService {
         round.defend();
     }
 
-    /** 결과 발표 직후 2분이 지나면 방어할 수 없다 (SHIELD-02 3번, Q-75). */
+    /** 처음 연 지 2분이 지났거나, 톡톡 마감 뒤에 처음 열었으면 방어할 수 없다 (SHIELD-02 3번, Q-75·Q-77). */
     public boolean isExpired(Round round, LocalDateTime now) {
-        return now.isAfter(round.getDefenseClosesAt());
+        LocalDateTime closesAt = round.getDefenseClosesAt();
+        return closesAt == null || now.isAfter(closesAt);
     }
 
     /** 지목된 사람이 그 회차에 인증했는지. 투표 시작 시점의 투표권으로 본다 (SHIELD-02 8번, Q-76). */
