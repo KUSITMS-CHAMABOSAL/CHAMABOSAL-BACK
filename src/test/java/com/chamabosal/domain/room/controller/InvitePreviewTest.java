@@ -183,13 +183,13 @@ class InvitePreviewTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_02_13_함께할_인원이_3명인_방에_3명이면_ROOM_FULL이다() throws Exception {
+    void INVITE_02_13_함께할_인원이_3명인_방에_3명이어도_들어올_수_있다() throws Exception {
         roomOfThree(3);
         joinOtherRooms(userD, 1);
 
         preview(userD, TOKEN_A)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("ROOM_FULL"));
+                .andExpect(jsonPath("$.data.status").value("JOINABLE"));
     }
 
     @Test
