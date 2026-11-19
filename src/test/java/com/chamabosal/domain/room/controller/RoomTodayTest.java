@@ -351,6 +351,21 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
+    void ROOM_02_20_혼자_남았다가_다시_2명이_되면_그날이_1일째다() throws Exception {
+        User owner = newUser();
+        User second = newUser();
+        Room together = createRoomOf(owner);
+        joinByInvite(together, second, LocalDateTime.of(2026, 11, 3, 12, 0));
+        clock.set(LocalDateTime.of(2026, 11, 5, 12, 0));
+        mockMvc.perform(delete("/api/rooms/{roomId}/members/me", together.getId()).header("Authorization", bearer(second)))
+                .andExpect(status().isOk());
+        joinByInvite(together, newUser(), LocalDateTime.of(2026, 11, 8, 12, 0));
+
+        clock.set(LocalDateTime.of(2026, 11, 10, 12, 0));
+        todayOf(together, owner).andExpect(jsonPath("$.data.room.daysTogether").value(3));
+    }
+
+    @Test
     void ROOM_02_19_새벽_3시_전에_들어오면_전날_회차가_1일째다() throws Exception {
         User owner = newUser();
         Room together = createRoomOf(owner);
@@ -397,7 +412,7 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
-    void 진입_항목으로_재생할_톡톡과_안_본_결과와_축하를_돌려준다() throws Exception {
+    void ROOM_02_21_앱을_열_때_톡톡은_띄우지_않고_안_본_결과와_축하를_돌려준다() throws Exception {
         Round round = saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
         round.announce(NOW.minusHours(Round.TAP_HOURS), RoundResultType.PICKED, memberA);
         roundRepository.save(round);
@@ -405,23 +420,12 @@ class RoomTodayTest extends RoomTestSupport {
         ReflectionTestUtils.setField(room, "potCompletedCount", 1);
         roomRepository.save(room);
 
+        // 이마 톡톡·목탁은 투표 탭에서만 진행한다 (13번, Q-107).
+        // 전달된 톡톡이 있어도 진입 항목은 안 본 결과와 축하 두 가지뿐이다.
         today(userA)
-                .andExpect(jsonPath("$.data.entry.unplayedTapRoundId").value(round.getId()))
+                .andExpect(jsonPath("$.data.entry.length()").value(2))
                 .andExpect(jsonPath("$.data.entry.unseenResultRoundId").value(round.getId()))
                 .andExpect(jsonPath("$.data.entry.hasUnseenPotCelebration").value(true));
-        today(userB).andExpect(jsonPath("$.data.entry.unplayedTapRoundId").doesNotExist());
-    }
-
-    @Test
-    void 투표_마감_5시간이_지나_전달되기_전의_톡톡은_재생할_항목이_아니다() throws Exception {
-        Round round = saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
-        round.announce(NOW.minusHours(Round.TAP_HOURS).plusMinutes(1), RoundResultType.PICKED, memberA);
-        roundRepository.save(round);
-        tapRepository.save(Tap.create(round, memberB, 3));
-
-        today(userA)
-                .andExpect(jsonPath("$.data.entry.unplayedTapRoundId").doesNotExist())
-                .andExpect(jsonPath("$.data.entry.unseenResultRoundId").value(round.getId()));
     }
 
     @Test

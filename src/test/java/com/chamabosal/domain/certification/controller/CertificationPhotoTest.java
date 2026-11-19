@@ -19,6 +19,7 @@ import com.chamabosal.domain.pot.repository.PotContributionRepository;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.room.entity.BosalColor;
+import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -34,6 +35,7 @@ import com.chamabosal.support.MutableClock;
 import com.jayway.jsonpath.JsonPath;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -314,11 +316,16 @@ class CertificationPhotoTest {
     }
 
     @Test
-    void ROOM_09_11_방을_닫으면_멤버_전원의_사진이_바로_삭제된다() throws Exception {
+    void ROOM_09_11_방을_닫으면_예전에_나간_멤버까지_기록이_바로_삭제된다() throws Exception {
         Long idA = certifyWithPhoto(userA);
-        Long idB = certifyWithPhoto(userB);
-        String savedA = imageKeyOf(idA);
-        String savedB = imageKeyOf(idB);
+        Long idB = certifyFailedWithPhoto(userB);
+        // D는 인증한 뒤 방을 닫기 전에 나갔다. 나가기 사진 즉시 삭제(Q-48) 전에 나간 경우처럼 사진·한 줄·쓴 금액이 남아 있다.
+        User userD = newUser();
+        RoomMember memberD = addMember(userD, "도윤");
+        Long idD = certifyFailedWithPhoto(userD);
+        memberD.leave(T0.plusMinutes(1), LeaveType.LEFT);
+        roomMemberRepository.save(memberD);
+        List<String> saved = List.of(imageKeyOf(idA), imageKeyOf(idB), imageKeyOf(idD));
         RoomMember owner = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userA.getId()).orElseThrow();
         Room loaded = roomRepository.findById(room.getId()).orElseThrow();
         loaded.assignOwner(owner.getId());
@@ -328,11 +335,15 @@ class CertificationPhotoTest {
         mockMvc.perform(delete("/api/rooms/{roomId}", room.getId()).header("Authorization", bearer(userA)))
                 .andExpect(status().isOk());
 
-        assertThat(certificationRepository.findById(idA).orElseThrow().hasImage()).isFalse();
-        assertThat(certificationRepository.findById(idB).orElseThrow().hasImage()).isFalse();
-        assertThat(storage().contains(savedA)).isFalse();
-        assertThat(storage().contains(savedB)).isFalse();
+        assertThat(saved).noneMatch(key -> storage().contains(key));
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())).isEmpty();
+        // 다시 들어올 방이 없어 6개월을 기다리지 않고 한 줄 기록과 쓴 금액도 바로 지운다 (ROOM-09 6번, CLEAN-01 6번).
+        assertThat(certificationRepository.findAllById(List.of(idA, idB, idD)))
+                .allSatisfy(certification -> {
+                    assertThat(certification.hasImage()).isFalse();
+                    assertThat(certification.getMemo()).isNull();
+                    assertThat(certification.getSpentAmount()).isNull();
+                });
     }
 
     @Test
@@ -407,6 +418,17 @@ class CertificationPhotoTest {
                 .header("Authorization", bearer(user))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"contentType\": \"" + contentType + "\"}"));
+    }
+
+    private Long certifyFailedWithPhoto(User user) throws Exception {
+        String imageKey = uploadPhoto(user);
+        String content = mockMvc.perform(post("/api/rooms/{roomId}/certifications", room.getId())
+                        .header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\": \"FAILED\", \"memo\": \"치킨 시켰어요\", \"spentAmount\": 23000, \"imageKey\": \"" + imageKey + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return ((Number) JsonPath.read(content, "$.data.certificationId")).longValue();
     }
 
     private ResultActions certify(User user, String imageKey) throws Exception {
