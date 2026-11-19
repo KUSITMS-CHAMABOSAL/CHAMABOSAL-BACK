@@ -114,7 +114,7 @@ erDiagram
 | member_limit | TINYINT | NOT NULL | 함께할 인원 2~4명, 수정 불가. 예상 기간 계산에만 씀 (입장 제한은 항상 4명) |
 | pot_goal_amount | INT | NOT NULL | 공양미 한 솥 목표 석 300~700 (50 단위). 솥을 만들 때 `room_pots.goal_amount`로 복사 |
 | owner_member_id | BIGINT | NULL | 방장의 `room_members.id`. `rooms`와 `room_members`가 서로를 가리키는 순환을 피하려고 FK 없이 둠. 방과 방장 멤버를 만드는 같은 요청에서 채움 (방을 먼저 저장해야 해서 컬럼은 NULL 허용) |
-| pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
+| pot_completed_count | INT | NOT NULL, 기본 0 | 한 솥 완성 횟수. 안 본 축하 판단에 씀 |
 | together_started_date | DATE | NULL | 현재 멤버가 처음 2명이 된 회차 날짜. 같이 참은 일수의 1일째 (ROOM-02 19번). 혼자인 동안은 NULL |
 | deleted_at | DATETIME | NULL | 마지막 멤버가 나가면 삭제 |
 
