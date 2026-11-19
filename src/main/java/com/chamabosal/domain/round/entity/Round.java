@@ -125,11 +125,6 @@ public class Round extends BaseEntity {
         return voteClosedAt.plusHours(TAP_HOURS);
     }
 
-    /** 투표 마감이 이 시각 이전이면 톡톡이 전달됐다. isTapOpen과 같은 기준을 DB 조회에 쓴다 (ROOM-02 13번). */
-    public static LocalDateTime tapDeliveredVoteClosedBy(LocalDateTime now) {
-        return now.minusHours(TAP_HOURS);
-    }
-
     /** 톡톡 마감 시각 전까지만 보낼 수 있다. 그 시각부터는 전달된 것으로 보아 둘이 겹치지 않는다. */
     public boolean isTapOpen(LocalDateTime now) {
         return now.isBefore(getTapClosesAt());

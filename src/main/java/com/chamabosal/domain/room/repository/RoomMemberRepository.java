@@ -20,6 +20,10 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     List<RoomMember> findByRoom_IdAndLeftAtIsNull(Long roomId);
 
+    /** 나간 멤버를 포함해 이 방에 있었던 멤버 전원의 ID (ROOM-09 6번 방 닫기 정리). */
+    @Query("select m.id from RoomMember m where m.room.id = :roomId")
+    List<Long> findIdsByRoomId(Long roomId);
+
     /** 나발 판정(NABAL-01) 대상: 삭제하지 않았고 살아 있는 방에 참여 중인 사용자. */
     @Query("""
             select distinct m.user.id from RoomMember m

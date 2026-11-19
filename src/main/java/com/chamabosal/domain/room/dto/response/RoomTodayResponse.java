@@ -20,7 +20,7 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
             Long roomId, String name, RoomGoal goal, int memberCount, int memberLimit, boolean isOwner,
             @Schema(description = "한 솥을 다 채운 횟수. 안 본 축하 판단에 씀") int potCompletedCount,
             @Schema(description = "이 방에 투표 중인 회차가 있음 (어제 회차 포함). 내보내기 버튼 상태") boolean hasVotingRound,
-            @Schema(description = "두 번째 멤버가 들어온 회차 날짜가 1일째. 혼자인 동안은 0") int daysTogether
+            @Schema(description = "현재 멤버가 1명에서 2명이 된 회차 날짜가 1일째. 혼자인 동안은 0이고, 다시 2명이 되면 새로 셈") int daysTogether
     ) {
     }
 
@@ -96,7 +96,6 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
     }
 
     public record Entry(
-            @Schema(description = "재생할 받은 톡톡이 있는 회차") Long unplayedTapRoundId,
             @Schema(description = "안 본 최근 결과의 회차") Long unseenResultRoundId,
             @Schema(description = "안 본 한 솥 축하가 있음") boolean hasUnseenPotCelebration
     ) {

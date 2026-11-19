@@ -48,8 +48,8 @@ public class RoomController {
             description = """
                     지금 회차 날짜(03:00 전이면 전날)의 회차를 기준으로 방·한 솥·회차·멤버·진입 항목을 돌려줍니다.
                     round.isCertificationOpen이 false면 이전 회차 투표가 아직 끝나지 않아 인증할 수 없습니다(03:00~15:00 어제 투표 중 등).
-                    entry는 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면입니다. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서로 재생해 주세요.
-                    entry.unplayedTapRoundId는 투표 마감 5시간 뒤 톡톡이 전달된 뒤에만 채워집니다. 그 전에는 결과만 먼저 보여 주세요.
+                    entry는 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면입니다. 미인증 투표 팝업·탈모 → 결과 → 한 솥 축하 → 방장 선택 팝업 → 방 홈 순서입니다.
+                    이마 톡톡·목탁은 앱을 열 때 띄우지 않고 투표 탭에서만 진행합니다(Q-107).
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

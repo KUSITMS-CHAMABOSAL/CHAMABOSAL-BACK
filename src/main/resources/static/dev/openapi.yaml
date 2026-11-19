@@ -476,8 +476,7 @@ paths:
         오늘 탭이다. 회차 날짜가 오늘인 회차를 기준으로 돌려준다.
 
         - `members[]`: 홈 카드, 방 정보, 멤버 프로필 시트에 같이 쓴다. 멤버 프로필 API는 따로 없다.
-        - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 톡톡 → 결과 → 한 솥 축하 → 방 홈 순서
-          - `unplayedTapRoundId`가 있으면 `GET /api/rounds/{roundId}/taps/received` → 재생 후 `PUT …/played`
+        - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 미인증 투표 팝업·탈모 → 결과 → 한 솥 축하 → 방장 선택 팝업(`me.isPotDecisionPending`) → 방 홈 순서. 이마 톡톡·목탁은 앱을 열 때 띄우지 않고 투표 탭에서만 진행 (Q-107)
           - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
           - `hasUnseenPotCelebration`이 `true`면 `GET /api/rooms/{roomId}/pots/{room.potCompletedCount}` → 본 뒤 `PUT …/seen-pot`
       parameters:
@@ -3959,7 +3958,7 @@ components:
           example: true
         daysTogether:
           type: integer
-          description: 두 번째 멤버가 들어온 회차 날짜가 1일째. 혼자인 동안은 0
+          description: 현재 멤버가 1명에서 2명이 된 회차 날짜가 1일째. 혼자인 동안은 0이고, 다시 2명이 되면 새로 셈 (Q-105)
           example: 7
           format: int32
     TodayPot:
@@ -4131,15 +4130,9 @@ components:
       type: object
       description: 홈보다 먼저 띄울 화면
       required:
-      - unplayedTapRoundId
       - unseenResultRoundId
       - hasUnseenPotCelebration
       properties:
-        unplayedTapRoundId:
-          type: integer
-          description: 투표 마감 5시간 뒤 전달됐지만 재생하지 않은 받은 톡톡이 있는 회차. 전달 전이면 `null`
-          nullable: true
-          format: int64
         unseenResultRoundId:
           type: integer
           description: 안 본 결과 회차

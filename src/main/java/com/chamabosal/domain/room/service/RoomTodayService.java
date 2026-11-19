@@ -29,7 +29,6 @@ import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.store.service.StoreService;
-import com.chamabosal.domain.tap.repository.TapRepository;
 import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
@@ -62,7 +61,6 @@ public class RoomTodayService {
     private final CertificationRepository certificationRepository;
     private final CertificationService certificationService;
     private final CertificationPhotoService certificationPhotoService;
-    private final TapRepository tapRepository;
     private final RoomPotRepository roomPotRepository;
     private final NabalLossRepository nabalLossRepository;
     private final ReactionRepository reactionRepository;
@@ -104,7 +102,7 @@ public class RoomTodayService {
         Me meInfo = new Me(isOpen && startsVote && !certifications.containsKey(me.getId())
                 && certifiedCount == members.size() - 1, receivedPokeCount, isPotDecisionPending);
         return new RoomTodayResponse(roomInfo(room, me, members.size(), roundDate), pot(room),
-                roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me, now));
+                roundSummary, members(room, members, me, certifications, roundDate, now), meInfo, entry(room, me));
     }
 
     private RoomTodayResponse.Room roomInfo(Room room, RoomMember me, int memberCount, LocalDate roundDate) {
@@ -178,17 +176,14 @@ public class RoomTodayService {
                 .orElseGet(() -> new Pot(0, room.getPotGoalAmount()));
     }
 
-    /** 톡톡 → 결과 → 한 솥 축하 순서로 클라이언트가 재생한다 (13번). */
-    private Entry entry(Room room, RoomMember me, LocalDateTime now) {
-        Long unplayedTapRoundId = tapRepository.findDeliveredUnplayedRoundIds(room.getId(), me.getId(),
-                        RoundResultType.PICKED, Round.tapDeliveredVoteClosedBy(now))
-                .stream().findFirst().map(row -> (Long) row[0]).orElse(null);
+    /** 결과 → 한 솥 축하 순서로 클라이언트가 띄운다. 이마 톡톡은 앱을 열 때 띄우지 않고 투표 탭에서만 진행한다 (13번, Q-107). */
+    private Entry entry(Room room, RoomMember me) {
         Long unseenResultRoundId = roundRepository
                 .findFirstByRoom_IdAndStatusOrderByRoundDateDesc(room.getId(), RoundStatus.ANNOUNCED)
                 .filter(latest -> me.hasUnseenResult(latest.getRoundDate()))
                 .map(Round::getId)
                 .orElse(null);
-        return new Entry(unplayedTapRoundId, unseenResultRoundId, me.hasUnseenPot());
+        return new Entry(unseenResultRoundId, me.hasUnseenPot());
     }
 
     private static Map<Long, Long> toCounts(List<Object[]> rows) {
