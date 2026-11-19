@@ -109,6 +109,7 @@ public class TapService {
      * 확인 순서: 톡톡 없는 결과 → 지목된 사람이 나감 → 본인 → 투표 안 함 → 이미 보냄 → 톡톡 마감.
      * isStartedBeforeDefense가 참이면 방어된(`DEFENDED`) 결과도 허용한다.
      */
+    @Transactional(readOnly = true)
     public BaseErrorCode findTapBlock(Round round, RoomMember me, boolean isStartedBeforeDefense) {
         boolean isPicked = round.getResultType() == RoundResultType.PICKED;
         boolean isDefendedAfterStart = round.getResultType() == RoundResultType.DEFENDED && isStartedBeforeDefense;

@@ -417,6 +417,20 @@ class VoteTabStatusTest {
         tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("TAP"));
     }
 
+    /** 혼자 남은 방은 공양미가 쌓이지 않아 목탁 수행을 띄우지 않는다. 띄우면 마쳐도 완료 기록이 남지 않아 계속 남는다 (코드리뷰 반영). */
+    @Test
+    void 혼자_남은_방에서는_목탁_수행을_띄우지_않는다() throws Exception {
+        Round round = pickedB();
+        seeResult(userB, round);
+        sendTap(userA, round, 5);
+        roomService.leave(userA.getId(), room.getId());
+        roomService.leave(userC.getId(), room.getId());
+        roomService.leave(userD.getId(), room.getId());
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 20, 0));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("UNDER_THREE"));
+    }
+
     /** A·C·D가 B를, B가 A를 골라 11/6 15:00에 B가 지목된 11/5 회차. 지금은 11/6 16:00이다. */
     private Round pickedB() {
         Round round = startVotingRound(memberA, memberB, memberC, memberD);

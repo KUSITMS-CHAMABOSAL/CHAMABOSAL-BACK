@@ -1977,7 +1977,7 @@ paths:
         | `VOTED` | 투표한 뒤 마감 전 | `roundId`, `roundDate`, `closesAt`, `votedCount`, `voterCount` |
         | `RESULT_UNSEEN` | 마감 후 결과를 아직 안 봄 | `roundId`, `roundDate` |
         | `TAP` | 결과를 봤고 지금 이마 톡톡을 보낼 수 있음 | `roundId`, `roundDate`, `tapClosesAt` |
-        | `MOKTAK` | 결과를 봤고 지목된 본인이 지금 목탁 수행을 해야 함 | `roundId`, `roundDate`, `moktakCount` |
+        | `MOKTAK` | 결과를 봤고 지목된 본인이 지금 목탁 수행을 해야 함 (방 인원 2명 이상) | `roundId`, `roundDate`, `moktakCount` |
         | `RESULT_SEEN` | 결과를 본 뒤 톡톡·목탁을 끝냈거나 할 것이 없음, 다음 투표 전 | `roundId`, `roundDate` |
 
         - 판단 순서: 투표 중 → `RESULT_UNSEEN` → `TAP` → `MOKTAK` → `UNDER_THREE` → `RESULT_SEEN`·`BEFORE_FIRST_VOTE`

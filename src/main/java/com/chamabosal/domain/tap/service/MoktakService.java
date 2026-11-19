@@ -81,18 +81,22 @@ public class MoktakService {
 
     /**
      * 지목된 본인이 지금 목탁 수행을 해야 하는지. 완료 요청이 보상을 주는 조건과 같다 (투표 탭 MOKTAK, VOTE-05).
-     * `PICKED`(방어 안 함), 톡톡 전달됨, 받은 톡톡 1번 이상, 아직 안 마침, 다음 투표 전.
+     * `PICKED`(방어 안 함), 톡톡 전달됨, 받은 톡톡 1번 이상, 아직 안 마침, 다음 투표 전, 방 인원 2명 이상.
+     * 완료 여부는 보상 기록으로 보는데 1명 방은 보상이 쌓이지 않아, 인원 조건이 없으면 마쳐도 계속 남는다 (코드리뷰 반영).
      */
+    @Transactional(readOnly = true)
     public boolean isMoktakDue(Long userId, Round round, RoomMember me, LocalDateTime now) {
         return round.getResultType() == RoundResultType.PICKED
                 && round.getPickedMember() != null && round.getPickedMember().getId().equals(me.getId())
                 && !round.isTapOpen(now)
                 && tapRepository.existsByRound_IdAndCountGreaterThan(round.getId(), 0)
                 && !isDone(userId, round.getId())
-                && !isExpired(round);
+                && !isExpired(round)
+                && riceService.isAccruing(round.getRoom().getId());
     }
 
     /** 목탁 수행에서 두드려야 하는 횟수: 그 회차에 받은 톡톡 합계. */
+    @Transactional(readOnly = true)
     public long getMoktakCount(Long roundId) {
         return tapRepository.sumCountByRoundId(roundId);
     }

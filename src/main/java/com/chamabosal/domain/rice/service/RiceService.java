@@ -35,7 +35,7 @@ public class RiceService {
     /** 방 인원이 2명 이상일 때만 적립한다 (RICE-01 1번). 적립한 석, 적립하지 않았으면 0. */
     @Transactional(propagation = Propagation.MANDATORY)
     public int accrue(Room room, RoomMember member, RiceReason reason, RiceRefType refType, Long refId, int amount) {
-        if (roomMemberRepository.countByRoom_IdAndLeftAtIsNull(room.getId()) < MIN_MEMBERS) {
+        if (!isAccruing(room.getId())) {
             return 0;
         }
         Long userId = member.getUser().getId();
@@ -125,6 +125,12 @@ public class RiceService {
         }
         refIds.forEach(refId -> riceHistoryRepository.save(
                 RiceHistory.create(user, null, -unitAmount, RiceReason.PURCHASE, refType, refId)));
+    }
+
+    /** 방 인원이 2명 이상이면 공양미가 쌓인다 (RICE-01 1번). 목탁 수행이 필요한지도 이 기준으로 본다 (VOTE-05). */
+    @Transactional(readOnly = true)
+    public boolean isAccruing(Long roomId) {
+        return roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId) >= MIN_MEMBERS;
     }
 
     /** 화면 표시 잔액. 실제 잔액이 음수면 0석이다 (RICE-01-6). */
