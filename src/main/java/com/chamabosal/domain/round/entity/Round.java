@@ -75,6 +75,9 @@ public class Round extends BaseEntity {
     /** 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준이다 (SHIELD-02 3번). */
     private LocalDateTime pickedSeenAt;
 
+    /** 지목된 사람이 목탁 수행을 끝낸 시각(끝까지 했거나 [종료하기]). 있으면 다시 수행할 수 없다 (RESULT-03 9번). */
+    private LocalDateTime moktakEndedAt;
+
     /** 전원 인증·투표 이벤트와 03:00·15:00 배치가 같은 회차를 동시에 바꾸면 나중 쪽을 실패시킨다. */
     @Version
     @Column(nullable = false)
@@ -161,6 +164,17 @@ public class Round extends BaseEntity {
             return false;
         }
         return pickedSeenAt == null || !now.isAfter(pickedSeenAt.plusMinutes(DEFENSE_MINUTES));
+    }
+
+    /** 목탁 수행을 끝낸 것으로 남긴다. 이미 끝났으면 처음 시각을 그대로 둔다. */
+    public void endMoktak(LocalDateTime endedAt) {
+        if (moktakEndedAt == null) {
+            moktakEndedAt = endedAt;
+        }
+    }
+
+    public boolean isMoktakEnded() {
+        return moktakEndedAt != null;
     }
 
     /** 지목된 사람이 방어권을 쓰면 결과만 `DEFENDED`로 바꾼다. 차순위로 넘기지 않아 지목된 사람은 그대로다 (SHIELD-02 5번). */

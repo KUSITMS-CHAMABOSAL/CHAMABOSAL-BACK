@@ -74,6 +74,7 @@ public enum BaseErrorCode implements ErrorCode {
     MOKTAK_NOT_AVAILABLE(HttpStatus.CONFLICT, "MOKTAK_001", "번뇌 완료 보상이 없는 결과예요."),
     MOKTAK_NO_TAPS(HttpStatus.CONFLICT, "MOKTAK_002", "받은 톡톡이 없어요."),
     MOKTAK_EXPIRED(HttpStatus.CONFLICT, "MOKTAK_003", "수행 시간이 지났어요."),
+    /** 더 이상 쓰지 않는다. 덜 두드리면 부분 보상 없이 끝난다 (Q-108). 정해진 code는 바꾸지 않아 남겨 둔다. */
     MOKTAK_NOT_FINISHED(HttpStatus.CONFLICT, "MOKTAK_004", "받은 톡톡만큼 두드려야 해요."),
     MOKTAK_NOT_DELIVERED(HttpStatus.CONFLICT, "MOKTAK_005", "아직 톡톡이 전달되지 않았어요."),
 
