@@ -533,7 +533,7 @@ paths:
         이 방에서 쓰는 내 닉네임을 바꾼다.
 
         - 1~8자, 한글(완성형)·영문·숫자
-        - 현재 멤버와 나간 지 6개월이 안 된 멤버의 닉네임은 쓸 수 없다. 영문 대소문자는 구분하지 않는다.
+        - 다른 멤버와 같은 닉네임도 쓸 수 있다 (중복 검사 없음).
         - 지금 닉네임과 같으면 저장하지 않고 성공한다.
       parameters:
       - *id001
@@ -586,15 +586,6 @@ paths:
               examples:
                 ROOM_005:
                   $ref: '#/components/examples/ROOM_005'
-        '409':
-          description: ROOM_004
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                ROOM_004:
-                  $ref: '#/components/examples/ROOM_004'
   /api/rooms/{roomId}/members/me/seen-result:
     put:
       tags:
@@ -1110,7 +1101,7 @@ paths:
       description: |-
         방에 들어온다(201). 이미 멤버면 새로 만들지 않고 기존 정보를 돌려준다(200).
 
-        - 닉네임 규칙은 닉네임 수정과 같다. 다시 들어오는 사람은 자기 예전 닉네임을 쓸 수 있다.
+        - 닉네임 규칙은 닉네임 수정과 같다. 예전 닉네임을 다른 멤버가 써도 그대로 쓸 수 있다.
         - 나간 지 6개월 안이면 예전 기록이 이어지고, 예전 색을 다른 멤버가 쓰면 남은 색 중 랜덤
         - 투표가 시작된 뒤 들어오면 다음 회차부터 참여한다.
       parameters:
@@ -1176,7 +1167,7 @@ paths:
                 ROOM_006:
                   $ref: '#/components/examples/ROOM_006'
         '409':
-          description: ROOM_001 / ROOM_003 / ROOM_004
+          description: ROOM_001 / ROOM_003
           content:
             application/json:
               schema:
@@ -1186,8 +1177,6 @@ paths:
                   $ref: '#/components/examples/ROOM_001'
                 ROOM_003:
                   $ref: '#/components/examples/ROOM_003'
-                ROOM_004:
-                  $ref: '#/components/examples/ROOM_004'
   /api/store:
     get:
       tags:
@@ -2673,10 +2662,10 @@ components:
           example: false
         code:
           type: string
-          example: ROOM_004
+          example: COMMON_002
         message:
           type: string
-          example: 이미 쓰는 닉네임이에요.
+          example: 요청 값이 올바르지 않아요.
         field:
           type: string
           description: 입력값 오류일 때만 보낸다.
@@ -4445,13 +4434,6 @@ components:
         success: false
         code: ROOM_003
         message: 방이 가득 찼습니다.
-    ROOM_004:
-      summary: ROOM_004 (409)
-      value:
-        success: false
-        code: ROOM_004
-        message: 이미 쓰는 닉네임입니다.
-        field: nickname
     ROOM_005:
       summary: ROOM_005 (404)
       value:

@@ -87,7 +87,7 @@ public class RoomService {
 
     @Transactional
     public void updateNickname(Long userId, Long roomId, RoomNicknameUpdateRequest request) {
-        Room room = roomRepository.findWithLockById(roomId)
+        Room room = roomRepository.findById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
         RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
@@ -97,7 +97,6 @@ public class RoomService {
         if (me.getNickname().equals(nickname)) {
             return;
         }
-        checkNicknameAvailable(room.getId(), nickname, me.getId());
         me.changeNickname(nickname);
     }
 
@@ -235,13 +234,6 @@ public class RoomService {
         }
         voteStartService.startIfAllCertified(room.getId(), now);
         voteCloseService.closeIfAllVoted(room.getId(), now);
-    }
-
-    /** 방 행 락을 잡은 뒤 부른다. 현재 멤버의 닉네임만 대소문자 없이 비교해 막는다. 나간 멤버(떠난 보살)의 닉네임은 쓸 수 있다 (정책서). */
-    void checkNicknameAvailable(Long roomId, String nickname, Long excludeMemberId) {
-        if (roomMemberRepository.existsCurrentSameNickname(roomId, nickname, excludeMemberId)) {
-            throw BaseException.withField(BaseErrorCode.NICKNAME_DUPLICATED, "nickname");
-        }
     }
 
     /** 앞뒤 띄어쓰기를 지운 뒤 검사해야 해서 요청 DTO가 아니라 여기서 확인한다. */

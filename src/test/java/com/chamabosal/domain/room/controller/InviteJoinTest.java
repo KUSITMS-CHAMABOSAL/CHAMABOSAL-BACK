@@ -118,13 +118,12 @@ class InviteJoinTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_03_6_대소문자만_다른_닉네임이면_ROOM_004를_돌려준다() throws Exception {
-        join(userD, "jisu")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ROOM_004"))
-                .andExpect(jsonPath("$.field").value("nickname"));
+    void INVITE_03_6_현재_멤버와_같은_닉네임으로_들어올_수_있다() throws Exception {
+        join(userD, "Jisu")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.nickname").value("Jisu"));
 
-        assertThat(currentMemberOf(userD)).isEmpty();
+        assertThat(currentMemberOf(userD)).isPresent();
     }
 
     @Test
@@ -291,23 +290,14 @@ class InviteJoinTest extends RoomTestSupport {
     }
 
     @Test
-    void INVITE_03_18_나간_멤버의_닉네임으로_들어올_수_있다() throws Exception {
-        addLeftMember(room, newUser(), "하린", BosalColor.MINT, NOW.minusMonths(1), LeaveType.LEFT);
+    void INVITE_03_19_다시_들어올_때_예전_닉네임을_다른_멤버가_써도_들어온다() throws Exception {
+        // D가 Jisu로 나간 뒤 B가 Jisu로 들어와 있다.
+        RoomMember previous = addLeftMember(room, userD, "Jisu", BosalColor.MINT, NOW.minusMonths(1), LeaveType.LEFT);
 
-        join(userD, "하린").andExpect(status().isCreated()).andExpect(jsonPath("$.data.nickname").value("하린"));
-    }
-
-    @Test
-    void INVITE_03_19_다시_들어올_때_예전_닉네임을_다른_멤버가_쓰면_ROOM_004다() throws Exception {
-        // D가 jisu로 나간 뒤 B가 Jisu로 들어와 있다 (나간 멤버의 닉네임은 다른 사람이 쓸 수 있다).
-        RoomMember previous = addLeftMember(room, userD, "jisu", BosalColor.MINT, NOW.minusMonths(1), LeaveType.LEFT);
-
-        join(userD, "jisu")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ROOM_004"))
-                .andExpect(jsonPath("$.field").value("nickname"));
-
-        assertThat(roomMemberRepository.findById(previous.getId()).orElseThrow().isCurrent()).isFalse();
+        join(userD, "Jisu")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.memberId").value(previous.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("Jisu"));
     }
 
     @Test

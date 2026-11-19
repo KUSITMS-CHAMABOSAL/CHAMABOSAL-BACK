@@ -39,7 +39,6 @@ public class InviteService {
     private final KickBlockRepository kickBlockRepository;
     private final UserRepository userRepository;
     private final RoundRepository roundRepository;
-    private final RoomService roomService;
     private final BosalColorPicker bosalColorPicker;
     private final InviteTokenGenerator inviteTokenGenerator;
     private final Clock clock;
@@ -75,11 +74,8 @@ public class InviteService {
 
         int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(room.getId());
         String inviterNickname = inviter.isCurrent() ? inviter.getNickname() : null;
-        // 예전 닉네임을 지금 다른 멤버가 쓰고 있으면 비워서, 화면이 닉네임을 다시 받게 한다 (정책서, INVITE-02 7번).
         String previousNickname = status == InviteStatus.ALREADY_MEMBER ? null
                 : findRejoinableMember(room.getId(), userId)
-                        .filter(previous -> !roomMemberRepository.existsCurrentSameNickname(
-                                room.getId(), previous.getNickname(), previous.getId()))
                         .map(RoomMember::getNickname)
                         .orElse(null);
         return new InvitePreviewResponse(status, RoomSummary.from(room, memberCount), inviterNickname, previousNickname);
@@ -147,7 +143,6 @@ public class InviteService {
     /** 나간 지 6개월이 안 됐으면 예전 행을 다시 쓰고, 아니면 새 행을 만든다. */
     private RoomMember enter(Room room, User user, String nickname) {
         Optional<RoomMember> previous = findRejoinableMember(room.getId(), user.getId());
-        roomService.checkNicknameAvailable(room.getId(), nickname, previous.map(RoomMember::getId).orElse(null));
 
         List<BosalColor> usedColors = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId()).stream()
                 .map(RoomMember::getColor)

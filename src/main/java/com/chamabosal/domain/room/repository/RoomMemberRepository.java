@@ -95,18 +95,6 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
     int raiseSeenResultRoundDate(Long memberId, LocalDate roundDate, LocalDateTime now);
 
     /**
-     * 같은 방의 현재 멤버가 같은 닉네임(대소문자 무시)을 쓰는지. 나간 멤버(떠난 보살)의 닉네임은 다른 사람이 쓸 수 있어 보지 않는다 (정책서).
-     * excludeMemberId가 있으면 그 행은 뺀다.
-     */
-    @Query("""
-            select count(m) > 0 from RoomMember m
-            where m.room.id = :roomId and m.leftAt is null
-              and (:excludeMemberId is null or m.id <> :excludeMemberId)
-              and lower(m.nickname) = lower(:nickname)
-            """)
-    boolean existsCurrentSameNickname(Long roomId, String nickname, Long excludeMemberId);
-
-    /**
      * 내보내기가 대상 사용자 행 락을 방 락보다 먼저 잡으려고, 엔티티 없이 대상의 사용자 ID만 구한다 (RICE-03 8번).
      * 대상 멤버 행이 이 방 것인지만 본다. 요청자의 멤버·방장 여부나 대상의 현재 멤버 여부를 조건에 넣으면 이 조회와 방 락 사이에
      * 그 상태가 바뀌어 락 없이 차감할 수 있어서다. 대상 행의 사용자는 바뀌지 않는다. 권한과 대상 확인은 방 락 뒤에 기존대로 한다.

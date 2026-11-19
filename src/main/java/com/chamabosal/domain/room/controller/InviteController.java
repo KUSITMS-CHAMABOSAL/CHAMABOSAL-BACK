@@ -108,7 +108,7 @@ public class InviteController {
     @Operation(summary = "초대로 입장 (INVITE-03)",
             description = """
                     초대 링크로 방에 들어옵니다(201). 이미 멤버면 새로 만들지 않고 기존 멤버 정보를 돌려줍니다(200).
-                    나간 지 6개월이 안 됐으면 예전 멤버 행을 다시 써서 기록이 이어집니다. 예전 닉네임을 지금 다른 멤버가 쓰고 있으면 ROOM_004이니 닉네임을 다시 받아 주세요.
+                    나간 지 6개월이 안 됐으면 예전 멤버 행을 다시 써서 기록이 이어집니다. 닉네임은 다른 멤버와 같아도 됩니다.
                     예전 색을 다른 멤버가 쓰고 있으면 남은 색 중 랜덤으로 정합니다.
                     """)
     @ApiResponses({
@@ -140,7 +140,7 @@ public class InviteController {
             ),
             @ApiResponse(
                     responseCode = "409",
-                    description = "ROOM_001 참여 중인 방이 2개 / ROOM_003 방이 가득 참 / ROOM_004 이미 쓰는 닉네임 (field: nickname)",
+                    description = "ROOM_001 참여 중인 방이 2개 / ROOM_003 방이 가득 참",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)
