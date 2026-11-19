@@ -1,6 +1,5 @@
 package com.chamabosal.domain.certification.service;
 
-import com.chamabosal.domain.certification.photo.CertificationPhotoService;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.room.entity.RoomMember;
 import java.time.Clock;
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LeftMemberCleanupScheduler {
 
     private final CertificationRepository certificationRepository;
-    private final CertificationPhotoService certificationPhotoService;
+    private final LeftMemberRecordCleaner leftMemberRecordCleaner;
     private final Clock clock;
 
     @Scheduled(cron = "0 10 4 * * *", zone = "Asia/Seoul")
@@ -38,10 +37,7 @@ public class LeftMemberCleanupScheduler {
         if (memberIds.isEmpty()) {
             return;
         }
-        int cleared = certificationRepository.clearRecordsOfMembers(memberIds, now);
-        List<String> photoKeys = certificationRepository.findImageKeysOfMembers(memberIds);
-        int photos = photoKeys.isEmpty() ? 0 : certificationRepository.markImagesDeleted(photoKeys, now);
-        photoKeys.forEach(certificationPhotoService::deleteAfterCommit);
-        log.info("떠난 보살 인증 기록 {}건, 사진 {}장 정리", cleared, photos);
+        LeftMemberRecordCleaner.Result result = leftMemberRecordCleaner.clear(memberIds, now);
+        log.info("떠난 보살 인증 기록 {}건, 사진 {}장 정리", result.cleared(), result.photos());
     }
 }

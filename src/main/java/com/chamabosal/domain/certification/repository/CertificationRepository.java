@@ -53,8 +53,11 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
             """)
     List<RoomMember> findMembersWithRecordsLeftBefore(LocalDateTime leftBefore);
 
-    /** 일괄 update는 JPA 감사를 거치지 않아 updatedAt을 직접 쓴다. 후보를 고른 뒤 다시 들어온 멤버는 건드리지 않도록 나간 상태를 다시 본다. */
-    @Modifying(clearAutomatically = true)
+    /**
+     * 일괄 update는 JPA 감사를 거치지 않아 updatedAt을 직접 쓴다. 후보를 고른 뒤 다시 들어온 멤버는 건드리지 않도록 나간 상태를 다시 본다.
+     * 같은 트랜잭션에서 방금 나간 멤버(방 닫기)도 보도록 실행 전에 flush한다.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update Certification c set c.memo = null, c.spentAmount = null, c.updatedAt = :now
             where c.member.id in :memberIds and c.member.leftAt is not null
