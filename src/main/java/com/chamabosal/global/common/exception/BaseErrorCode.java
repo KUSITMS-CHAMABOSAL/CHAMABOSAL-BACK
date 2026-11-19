@@ -30,6 +30,7 @@ public enum BaseErrorCode implements ErrorCode {
     ROOM_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "ROOM_001", "참여 중인 방이 2개예요."),
     NOT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "ROOM_002", "이 방의 멤버가 아니에요."),
     ROOM_FULL(HttpStatus.CONFLICT, "ROOM_003", "방이 가득 찼어요."),
+    // 닉네임 중복 허용으로 쓰지 않음 (#161). 정해진 code라 남겨 둠
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "ROOM_004", "이미 쓰는 닉네임이에요."),
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_005", "없거나 삭제된 방이에요."),
     ROOM_UNAVAILABLE(HttpStatus.FORBIDDEN, "ROOM_006", "들어갈 수 없는 방이에요."),
