@@ -305,6 +305,24 @@ class InviteJoinTest extends RoomTestSupport {
         join(userD, " 도윤 ").andExpect(status().isCreated()).andExpect(jsonPath("$.data.nickname").value("도윤"));
     }
 
+    @Test
+    void INVITE_03_21_함께할_인원이_3명인_방에_3명이어도_들어올_수_있다() throws Exception {
+        Room small = createRoom(3);
+        RoomMember inviter = RoomMember.create(small, newUser(), "하린", unusedColor(small), NOW.minusDays(1));
+        inviter.issueInviteToken("token-small");
+        roomMemberRepository.save(inviter);
+        addMember(small, newUser(), "서연");
+        joinOtherRooms(userD, 1);
+
+        mockMvc.perform(post("/api/invites/{token}/join", "token-small")
+                        .header("Authorization", bearer(userD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"도윤\"}"))
+                .andExpect(status().isCreated());
+
+        assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(small.getId())).hasSize(4);
+    }
+
     private ResultActions join(User user, String nickname) throws Exception {
         return mockMvc.perform(post("/api/invites/{token}/join", TOKEN_A)
                 .header("Authorization", bearer(user))

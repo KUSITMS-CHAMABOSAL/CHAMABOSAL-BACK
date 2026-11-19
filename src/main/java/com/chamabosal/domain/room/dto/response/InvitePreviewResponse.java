@@ -35,14 +35,12 @@ public record InvitePreviewResponse(
             @Schema(description = "절약 목표별 설명. 줄바꿈은 \\n", example = "배달 대신 집밥 먹고\n공양미 한 솥까지 함께 가요")
             String goalDescription,
 
-            int memberCount,
-            int memberLimit
+            int memberCount
     ) {
 
         public static RoomSummary from(Room room, int memberCount) {
             RoomGoal goal = room.getGoal();
-            return new RoomSummary(room.getId(), room.getName(), goal, goal.title(), goal.description(),
-                    memberCount, room.getMemberLimit());
+            return new RoomSummary(room.getId(), room.getName(), goal, goal.title(), goal.description(), memberCount);
         }
     }
 }

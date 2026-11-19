@@ -125,7 +125,7 @@ public class InviteService {
                 >= RoomService.MAX_JOINED_ROOMS) {
             return InviteStatus.ROOM_LIMIT;
         }
-        if (roomMemberRepository.countByRoom_IdAndLeftAtIsNull(room.getId()) >= room.getMemberLimit()) {
+        if (roomMemberRepository.countByRoom_IdAndLeftAtIsNull(room.getId()) >= Room.MAX_MEMBERS) {
             return InviteStatus.ROOM_FULL;
         }
         return InviteStatus.JOINABLE;
