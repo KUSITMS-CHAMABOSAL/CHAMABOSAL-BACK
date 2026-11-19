@@ -20,6 +20,7 @@ import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
@@ -46,6 +47,7 @@ public class CertificationService {
     private static final String SPENT_AMOUNT_MESSAGE = "못 참았으면 쓴 금액을 1~999,999원으로 입력해 주세요.";
 
     private final RoomRepository roomRepository;
+    private final UserRepository userRepository;
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
@@ -129,6 +131,8 @@ public class CertificationService {
     /** 삭제하면 그 인증으로 받은 공양미를 회수한다 (CERT-02 5번, RICE-02). 이미 삭제한 내 인증이면 잠금과 상관없이 성공이다 (CERT-02 12번). */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public CertificationDeleteResponse delete(Long userId, Long certificationId) {
+        // 회수가 사용자 전체 잔액을 읽어 0석에서 멈추므로, 구매·나가기와 같은 순서(사용자 → 방)로 사용자 행 락을 먼저 잡는다 (RICE-02 5번).
+        userRepository.findWithLockById(userId);
         Certification certification = findWithLock(certificationId);
         checkMine(userId, certification);
         if (certification.isDeleted()) {
