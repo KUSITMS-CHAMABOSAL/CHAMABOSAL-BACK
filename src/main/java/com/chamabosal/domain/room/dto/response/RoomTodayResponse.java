@@ -18,14 +18,14 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
 
     public record Room(
             Long roomId, String name, RoomGoal goal, int memberCount, int memberLimit, boolean isOwner,
-            @Schema(description = "한 솥을 다 채운 횟수 (쌀가마 배지)") int potCompletedCount,
+            @Schema(description = "한 솥을 다 채운 횟수. 안 본 축하 판단에 씀") int potCompletedCount,
             @Schema(description = "이 방에 투표 중인 회차가 있음 (어제 회차 포함). 내보내기 버튼 상태") boolean hasVotingRound,
             @Schema(description = "두 번째 멤버가 들어온 회차 날짜가 1일째. 혼자인 동안은 0") int daysTogether
     ) {
     }
 
     public record Pot(
-            @Schema(description = "지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. 목표를 채운 뒤 연장 전까지는 목표보다 클 수 있음") int amount,
+            @Schema(description = "지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. 목표를 채우면 넘친 석으로 다음 솥이 바로 시작됨") int amount,
             @Schema(description = "목표 석") int goalAmount
     ) {
     }
