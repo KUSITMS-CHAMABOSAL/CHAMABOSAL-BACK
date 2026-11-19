@@ -28,8 +28,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 투표 탭 상태 (VOTE-05). 방 인원 3명 미만을 가장 먼저 확인하고(투표 중 3명 미만이 되는 경우는 Q-34, 미정),
- * 그다음 투표 중인 회차가 있는지, 없으면 가장 최근 발표 회차가 있는지로 나머지 상태를 가른다.
+ * 투표 탭 상태 (VOTE-05). 투표 중인 회차를 가장 먼저 확인하고(시작한 투표는 3명 미만이 돼도 유지, Q-34),
+ * 그다음 방 인원 3명 미만, 가장 최근 발표 회차가 있는지로 나머지 상태를 가른다.
  */
 @Service
 @RequiredArgsConstructor
@@ -54,15 +54,15 @@ public class VoteTabStatusService {
         RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
 
-        int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId);
-        if (memberCount < MIN_VOTERS) {
-            return VoteTabStatusResponse.underThree(memberCount, room.getMemberLimit());
-        }
-
+        // 시작한 투표는 나가서 3명 미만이 돼도 유지하므로 인원보다 먼저 본다 (VOTE-05 3번, Q-34).
         Optional<Round> votingRound = roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
                 roomId, RoundStatus.VOTING);
         if (votingRound.isPresent()) {
             return votingStatus(votingRound.get(), me);
+        }
+        int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId);
+        if (memberCount < MIN_VOTERS) {
+            return VoteTabStatusResponse.underThree(memberCount, room.getMemberLimit());
         }
         Optional<Round> announced = roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
                 roomId, RoundStatus.ANNOUNCED);
