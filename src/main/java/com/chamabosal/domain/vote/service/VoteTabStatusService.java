@@ -62,7 +62,7 @@ public class VoteTabStatusService {
         }
         int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId);
         if (memberCount < MIN_VOTERS) {
-            return VoteTabStatusResponse.underThree(memberCount, room.getMemberLimit());
+            return VoteTabStatusResponse.underThree(memberCount);
         }
         Optional<Round> announced = roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(
                 roomId, RoundStatus.ANNOUNCED);

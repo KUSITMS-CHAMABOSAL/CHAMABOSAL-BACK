@@ -1852,7 +1852,7 @@ paths:
 
         | status | 조건 | 채우는 필드 |
         |---|---|---|
-        | `UNDER_THREE` | 방 인원 3명 미만 | `memberCount`, `memberLimit` |
+        | `UNDER_THREE` | 방 인원 3명 미만 | `memberCount` |
         | `BEFORE_FIRST_VOTE` | 지난 결과가 없고 투표 전 | `uncertifiedCount`, `firstUncertifiedMember` |
         | `NOT_IN_LIST` | 투표 시작 후 들어와 명단에 없음 | `roundId`, `roundDate`, `closesAt` |
         | `NO_VOTING_RIGHT` | 명단에 있지만 인증하지 않아 투표권이 없음 | `roundId`, `roundDate`, `closesAt`, `candidates` |
@@ -1906,7 +1906,6 @@ paths:
                           imageUrl: null
                           certifiedAt: '2026-11-04T19:24:00'
                       memberCount: null
-                      memberLimit: null
                       uncertifiedCount: null
                       firstUncertifiedMember: null
                 BEFORE_FIRST_VOTE:
@@ -1929,7 +1928,6 @@ paths:
                       voterCount: null
                       candidates: null
                       memberCount: null
-                      memberLimit: null
                 UNDER_THREE:
                   summary: 3명 미만
                   value:
@@ -1939,7 +1937,6 @@ paths:
                     data:
                       status: UNDER_THREE
                       memberCount: 2
-                      memberLimit: 4
                       roundId: null
                       roundDate: null
                       closesAt: null
@@ -1963,7 +1960,6 @@ paths:
                       voterCount: null
                       candidates: null
                       memberCount: null
-                      memberLimit: null
                       uncertifiedCount: null
                       firstUncertifiedMember: null
         '401':
@@ -3072,11 +3068,6 @@ components:
           example: 2
           nullable: true
           format: int32
-        memberLimit:
-          type: integer
-          example: 4
-          nullable: true
-          format: int32
         uncertifiedCount:
           type: integer
           description: 나를 뺀 미인증 멤버 수
@@ -3752,7 +3743,6 @@ components:
       - name
       - goal
       - memberCount
-      - memberLimit
       - isOwner
       - potCompletedCount
       - hasVotingRound
@@ -3768,10 +3758,6 @@ components:
         goal:
           $ref: '#/components/schemas/RoomGoal'
         memberCount:
-          type: integer
-          example: 4
-          format: int32
-        memberLimit:
           type: integer
           example: 4
           format: int32
