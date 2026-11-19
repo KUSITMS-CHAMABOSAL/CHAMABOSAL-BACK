@@ -1,7 +1,9 @@
 package com.chamabosal.domain.room.controller;
 
 import static org.hamcrest.Matchers.contains;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -266,12 +268,49 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
-    void ROOM_02_15_같이_참은_일수는_만든_날_0일부터_센다() throws Exception {
-        clock.set(CREATED_AT.plusHours(5));
-        today(userA).andExpect(jsonPath("$.data.room.daysTogether").value(0));
+    void ROOM_02_15_같이_참은_일수는_두_번째_멤버가_들어온_날이_1일째다() throws Exception {
+        User owner = newUser();
+        Room together = createRoomOf(owner);
+        joinByInvite(together, newUser(), LocalDateTime.of(2026, 11, 3, 12, 0));
+
+        clock.set(LocalDateTime.of(2026, 11, 3, 18, 0));
+        todayOf(together, owner).andExpect(jsonPath("$.data.room.daysTogether").value(1));
 
         clock.set(LocalDateTime.of(2026, 11, 8, 12, 0));
-        today(userA).andExpect(jsonPath("$.data.room.daysTogether").value(7));
+        todayOf(together, owner).andExpect(jsonPath("$.data.room.daysTogether").value(6));
+    }
+
+    @Test
+    void ROOM_02_17_혼자인_방은_0일째다() throws Exception {
+        User owner = newUser();
+        Room alone = createRoomOf(owner);
+
+        clock.set(LocalDateTime.of(2026, 11, 8, 12, 0));
+        todayOf(alone, owner).andExpect(jsonPath("$.data.room.daysTogether").value(0));
+    }
+
+    @Test
+    void ROOM_02_18_혼자_남으면_0일째다() throws Exception {
+        User owner = newUser();
+        User second = newUser();
+        Room together = createRoomOf(owner);
+        joinByInvite(together, second, LocalDateTime.of(2026, 11, 3, 12, 0));
+        clock.set(LocalDateTime.of(2026, 11, 5, 12, 0));
+        mockMvc.perform(delete("/api/rooms/{roomId}/members/me", together.getId()).header("Authorization", bearer(second)))
+                .andExpect(status().isOk());
+
+        clock.set(LocalDateTime.of(2026, 11, 8, 12, 0));
+        todayOf(together, owner).andExpect(jsonPath("$.data.room.daysTogether").value(0));
+    }
+
+    @Test
+    void ROOM_02_19_새벽_3시_전에_들어오면_전날_회차가_1일째다() throws Exception {
+        User owner = newUser();
+        Room together = createRoomOf(owner);
+        joinByInvite(together, newUser(), LocalDateTime.of(2026, 11, 4, 2, 0));
+
+        clock.set(LocalDateTime.of(2026, 11, 4, 12, 0));
+        todayOf(together, owner).andExpect(jsonPath("$.data.room.daysTogether").value(2));
     }
 
     @Test
@@ -450,6 +489,32 @@ class RoomTodayTest extends RoomTestSupport {
     private Certification certify(Round round, RoomMember member, LocalDateTime certifiedAt) {
         return certificationRepository.save(Certification.create(
                 round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, certifiedAt));
+    }
+
+    /** 11/1에 owner 혼자 있는 방을 만든다. 초대 토큰은 방마다 달라야 해서 방 ID로 만든다. */
+    private Room createRoomOf(User owner) {
+        clock.set(CREATED_AT);
+        Long roomId = roomService.create(owner.getId(),
+                new RoomCreateRequest("같이 참는 방", RoomGoal.DELIVERY, 4, 300, "방장", BosalColor.PINK)).roomId();
+        RoomMember ownerMember = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, owner.getId())
+                .orElseThrow();
+        ownerMember.issueInviteToken("token-" + roomId);
+        roomMemberRepository.save(ownerMember);
+        return roomRepository.findById(roomId).orElseThrow();
+    }
+
+    /** 실제 입장 API로 들어와야 두 번째 멤버 입장일이 기록된다. */
+    private void joinByInvite(Room target, User user, LocalDateTime at) throws Exception {
+        clock.set(at);
+        mockMvc.perform(post("/api/invites/{token}/join", "token-" + target.getId())
+                        .header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"도윤\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    private ResultActions todayOf(Room target, User user) throws Exception {
+        return mockMvc.perform(get("/api/rooms/{roomId}/today", target.getId()).header("Authorization", bearer(user)));
     }
 
     private ResultActions today(User user) throws Exception {

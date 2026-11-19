@@ -3786,7 +3786,7 @@ components:
           example: true
         daysTogether:
           type: integer
-          description: 방을 만든 회차 날짜부터 지난 일수. 만든 날은 0
+          description: 두 번째 멤버가 들어온 회차 날짜가 1일째. 혼자인 동안은 0
           example: 7
           format: int32
     TodayPot:

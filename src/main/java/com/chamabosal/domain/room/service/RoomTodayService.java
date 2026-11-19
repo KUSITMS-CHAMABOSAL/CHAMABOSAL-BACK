@@ -109,7 +109,9 @@ public class RoomTodayService {
         // 03:00이 지났는데 배치가 아직 투표를 열지 않은 어제 회차도 내보내기(ROOM-08)와 같이 투표 중으로 본다 (18번).
         boolean hasVotingRound = roundRepository.existsVotingTime(room.getId(), roundDate,
                 RoundStatus.VOTING, RoundStatus.CERTIFYING);
-        int daysTogether = (int) ChronoUnit.DAYS.between(Round.dateOf(room.getCreatedAt()), roundDate);
+        // 두 번째 멤버가 들어온 회차가 1일째이고, 혼자인 동안은 0일째다 (19번).
+        int daysTogether = memberCount < 2 || room.getTogetherStartedDate() == null ? 0
+                : (int) ChronoUnit.DAYS.between(room.getTogetherStartedDate(), roundDate) + 1;
         return new RoomTodayResponse.Room(room.getId(), room.getName(), room.getGoal(), memberCount, room.getMemberLimit(),
                 me.getId().equals(room.getOwnerMemberId()), room.getPotCompletedCount(), hasVotingRound, daysTogether);
     }

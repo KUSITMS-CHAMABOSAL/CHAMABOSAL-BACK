@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -49,6 +50,9 @@ public class Room extends BaseEntity {
     @Column(nullable = false)
     private int potCompletedCount;
 
+    /** 현재 멤버가 처음 2명이 된 회차 날짜. 같이 참은 일수의 1일째다 (ROOM-02 19번). */
+    private LocalDate togetherStartedDate;
+
     private LocalDateTime deletedAt;
 
     public static Room create(String name, RoomGoal goal, int memberLimit, int potGoalAmount) {
@@ -67,6 +71,13 @@ public class Room extends BaseEntity {
     /** 한 솥을 다 채울 때마다 쌀가마 배지를 +1 한다 (POT-01 10번). 방 행 락 안에서 부른다. */
     public void completePot() {
         potCompletedCount++;
+    }
+
+    /** 현재 멤버가 2명 이상이 되면 부른다. 처음 한 번만 기록한다 (ROOM-02 20번, Q-105). 방 행 락 안에서 부른다. */
+    public void startTogether(LocalDate roundDate) {
+        if (togetherStartedDate == null) {
+            togetherStartedDate = roundDate;
+        }
     }
 
     public void delete(LocalDateTime deletedAt) {
