@@ -51,7 +51,7 @@
 4. 솥 완성(`PotService.complete`)에서 `room.requestPotDecision(now)`를 부른다. 보상 지급·완성 횟수 +1과 같은 락 안이다.
 5. [방 닫기]는 현재 멤버 전원을 `leftAt = now`, `leaveType = ROOM_CLOSED`로 나가게 하고 방을 삭제한다. 나가기 차감은 하지 않는다 (ROOM-09 7번). 멤버를 현재 상태로 두면 삭제된 방의 행이 현재 멤버로 남아, 6개월 뒤 기록 정리(CLEAN-01)와 내 데이터 삭제(USER-05)의 "참여 중인 방" 처리에서 빠지기 때문이다. "마지막 멤버가 나가 방이 삭제될 때는 현재 멤버가 없다"는 기존 전제도 지켜진다. [구현 결정]
 6. [방 닫기]는 멤버 전원이 나가는 것이라 나가기(ROOM-07 3번, Q-48)와 같이 멤버 전원의 이 방 인증 사진을 바로 지운다. 진행 중 회차는 마지막 멤버가 나가 방이 삭제될 때(ROOM-07 11번)와 같이 마감·판정 없이 둔다. 다른 멤버 알림은 Q-106 답 전까지 보내지 않는다 (예약 알림 NOTI-02도 아직 없음).
-7. `ROOM_011` 하나로 "선택 대기가 아님"과 "동시 요청에서 진 쪽"을 같이 처리한다.
+7. `ROOM_011`은 "선택 대기가 아님"이다. 동시 요청에서 진 쪽은 [더 수행하기]가 먼저였으면 `ROOM_011`, [방 닫기]가 먼저였으면 방이 삭제돼 `ROOM_005`다 (코드리뷰 반영).
 8. 오늘 탭의 선택 대기 여부는 방장에게만 `true`다. 방장이 위임되면 방 상태라 새 방장에게 보인다 (10번).
 
 ## 규칙 점검
@@ -61,14 +61,14 @@
   - 외부 API 호출 없음
 
 ## 할 일
-- [ ] `RoomPot.next`, `PotService.accrue`에서 가득 차면 다음 솥 생성 (주요 결정 1·2·3)
-- [ ] `Room` 선택 대기 필드·메서드, `PotService.complete`에서 선택 대기 표시
-- [ ] `LeaveType.ROOM_CLOSED`, `ROOM_011` 에러 code와 스냅샷
-- [ ] `RoomService.continuePot`, `RoomService.close`(멤버 전원 나감·사진 삭제·방 삭제) + 컨트롤러 2개 (Swagger 포함)
-- [ ] 오늘 탭 `me.isPotDecisionPending`
-- [ ] erd.md, openapi.yaml 갱신
-- [ ] 테스트: POT-01-11~13, ROOM-09-1~11
-- [ ] 상태 갱신: ROOM-09 `구현됨`, ROOM-02 `구현됨`
+- [x] `RoomPot.next`, `PotService.accrue`에서 가득 차면 다음 솥 생성 (주요 결정 1·2·3)
+- [x] `Room` 선택 대기 필드·메서드, `PotService.complete`에서 선택 대기 표시
+- [x] `LeaveType.ROOM_CLOSED`, `ROOM_011` 에러 code와 스냅샷
+- [x] `RoomService.continuePot`, `RoomService.close`(멤버 전원 나감·사진 삭제·방 삭제) + 컨트롤러 2개 (Swagger 포함)
+- [x] 오늘 탭 `me.isPotDecisionPending`
+- [x] erd.md, openapi.yaml 갱신
+- [x] 테스트: POT-01-11~13, ROOM-09-1~11
+- [x] 상태 갱신: ROOM-09 `구현됨`, ROOM-02 `구현됨`
 
 ## 열린 질문
 1. Q-106: [방 닫기] 때 다른 멤버에게 알림을 보낼지. 답 전까지 보내지 않는다.
@@ -76,4 +76,37 @@
 3. Q-89: 다음 솥이 시작된 방에서 나갈 때 차감. 지금 동작(완성 횟수 1 이상이면 차감 없음)을 유지한다.
 
 ## 자기 점검
-`/spec-build`가 구현 후 작성합니다.
+
+### 처리 규칙 · 시나리오 · 테스트
+
+| 처리 규칙 | 시나리오 | 테스트 |
+|---|---|---|
+| POT-01 6번 (다음 솥 자동 시작) | POT-01-11 | `PotTest.POT_01_11_목표를_채우면_넘친_석으로_다음_솥이_시작된다` |
+| POT-01 7번 (이월, 다시 보너스) | POT-01-11, POT-01-13 | `PotTest.POT_01_11_…`, `PotTest.POT_01_13_다음_솥을_채우면_다시_보너스를_준다` |
+| POT-01 8번 (공양미·아이템 유지) | POT-01-12 | `PotTest.POT_01_12_다음_솥이_시작돼도_잔액은_보너스만_더해진다` |
+| POT-01 9번 ([방 닫기] = 방 삭제) | ROOM-09-3 | `RoomPotDecisionTest.ROOM_09_3_방_닫기면_방이_삭제된다` |
+| ROOM-02 21번, ROOM-09 1·3번 | ROOM-09-1 | `RoomPotDecisionTest.ROOM_09_1_솥을_채우면_방장에게만_선택_대기다` |
+| ROOM-09 2번 (선택 대기 중 계속) | ROOM-09-6 | `RoomPotDecisionTest.ROOM_09_6_선택_대기_중에도_인증하면_다음_솥에_쌓인다` |
+| ROOM-09 4번 (방장만) | ROOM-09-4 | `RoomPotDecisionTest.ROOM_09_4_방장이_아니면_ROOM_007이다` |
+| ROOM-09 5번 (더 수행하기) | ROOM-09-2 | `RoomPotDecisionTest.ROOM_09_2_더_수행하기면_선택_대기가_끝나고_방은_그대로다` |
+| ROOM-09 6번 (방 닫기, 사진) | ROOM-09-3, ROOM-09-11 | `RoomPotDecisionTest.ROOM_09_3_…`, `CertificationPhotoTest.ROOM_09_11_방을_닫으면_멤버_전원의_사진이_바로_삭제된다` |
+| ROOM-09 7번 (차감 없음) | ROOM-09-9 | `RoomPotDecisionTest.ROOM_09_9_방_닫기로는_공양미를_차감하지_않는다` |
+| ROOM-09 8번 (`ROOM_011`) | ROOM-09-5 | `RoomPotDecisionTest.ROOM_09_5_선택_대기가_아니면_ROOM_011이다` |
+| ROOM-09 9번 (한 번만 고름) | ROOM-09-8 | `RoomPotDecisionTest.ROOM_09_8_선택_대기_중_솥을_또_채워도_한_번만_고른다` |
+| ROOM-09 10번 (위임 뒤 새 방장) | ROOM-09-7 | `RoomPotDecisionTest.ROOM_09_7_방장이_나가면_위임된_방장이_고른다` |
+| ROOM-09 12번 (동시 선택) | ROOM-09-10 | `RoomPotDecisionTest.ROOM_09_10_동시에_골라도_하나만_처리된다` |
+
+- 기존 테스트 수정: `PotTest.POT_01_1`, `POT_01_2`는 옛 Q-86 동작(넘친 석이 가득 찬 솥에 남음)을 확인하던 부분을 다음 솥 기준으로 바꿨다.
+
+### 테스트가 없는 시나리오
+- 없음
+
+### 시나리오가 없는 처리 규칙
+- ROOM-09 11번 (팝업과 축하 화면 순서): [미정] Q-107이고 서버 동작이 없다.
+- ROOM-09 6번 중 다른 멤버 알림: [미정] Q-106, 보내지 않는다.
+- ROOM-09 6번 중 진행 중 회차를 그대로 두는 부분: 따로 시나리오가 없다. 방 삭제 뒤 투표 시작·마감 배치가 삭제된 방을 건너뛰는 기존 동작(ROOM-07-9)에 기댄다.
+
+### 명세에 없는 규칙을 만든 곳
+- 넘기는 적립의 기여를 나누지 않음 (주요 결정 1). erd.md `room_pots`에 적음.
+- [방 닫기] 때 멤버를 `ROOM_CLOSED`로 나가게 함 (주요 결정 5). ROOM-09 6번 `[구현 결정]`, erd.md `leave_type`에 적음.
+- 위 두 가지 외에는 명세의 `[구현 결정]`(ROOM-09 7·8·9·10·12번)을 따랐다.

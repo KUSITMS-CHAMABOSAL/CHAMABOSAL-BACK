@@ -94,8 +94,8 @@
 | 방 | GET | `/api/rooms/{roomId}/members/me/leave-preview` | RICE-03 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/me` | ROOM-07 | ✅ |
 | 방 | DELETE | `/api/rooms/{roomId}/members/{memberId}` | ROOM-08 | ✅ |
-| 방 | POST | `/api/rooms/{roomId}/pot-decision/continue` | ROOM-09 |  |
-| 방 | DELETE | `/api/rooms/{roomId}` | ROOM-09 |  |
+| 방 | POST | `/api/rooms/{roomId}/pot-decision/continue` | ROOM-09 | ✅ |
+| 방 | DELETE | `/api/rooms/{roomId}` | ROOM-09 | ✅ |
 | 초대 | POST | `/api/rooms/{roomId}/members/me/invite-token` | INVITE-01 | ✅ |
 | 초대 | GET | `/api/invites/{token}` | INVITE-02 | ✅ |
 | 초대 | POST | `/api/invites/{token}/join` | INVITE-03 | ✅ |

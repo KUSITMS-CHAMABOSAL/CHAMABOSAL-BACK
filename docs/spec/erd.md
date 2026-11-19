@@ -116,6 +116,7 @@ erDiagram
 | owner_member_id | BIGINT | NULL | 방장의 `room_members.id`. `rooms`와 `room_members`가 서로를 가리키는 순환을 피하려고 FK 없이 둠. 방과 방장 멤버를 만드는 같은 요청에서 채움 (방을 먼저 저장해야 해서 컬럼은 NULL 허용) |
 | pot_completed_count | INT | NOT NULL, 기본 0 | 쌀가마 배지 (🌾×n) |
 | together_started_date | DATE | NULL | 현재 멤버가 처음 2명이 된 회차 날짜. 같이 참은 일수의 1일째 (ROOM-02 19번). 혼자인 동안은 NULL |
+| pot_decision_requested_at | DATETIME | NULL | 솥을 채운 뒤 방장이 아직 [더 수행하기]·[방 닫기]를 고르지 않았으면 채운 시각. NULL이면 선택 대기 아님 (ROOM-09) |
 | deleted_at | DATETIME | NULL | 마지막 멤버가 나가면 삭제 |
 
 - 방 인원 수는 `room_members`에서 `left_at IS NULL`인 행 수로 계산
@@ -131,7 +132,7 @@ erDiagram
 | color | VARCHAR(20) | NOT NULL | `PINK` / `PURPLE` / `MINT` / `YELLOW`. 들어올 때 방 멤버가 안 쓰는 색 중 랜덤. 방장은 방 만들기 전에 뽑은 색 (ROOM-01). 기본보살은 인증 작성 화면에서만 쓰는 고정 이미지라 저장 안 함 (기획 확정) |
 | joined_at | DATETIME | NOT NULL | 방장 위임 순서("가장 먼저 들어온 멤버") 기준. 다시 들어오면 새로 기록 |
 | left_at | DATETIME | NULL | 나간 시각. NULL이면 현재 멤버 |
-| leave_type | VARCHAR(20) | NULL | `LEFT` / `KICKED` / `DATA_DELETED` |
+| leave_type | VARCHAR(20) | NULL | `LEFT` / `KICKED` / `DATA_DELETED` / `ROOM_CLOSED`(목표 달성 뒤 [방 닫기], ROOM-09) |
 | invite_token | VARCHAR(64) | UK, NULL | 초대 링크 토큰. 처음 공유할 때 만들고 계속 재사용 (공유 전에는 NULL) |
 | seen_result_round_date | DATE | NULL | 결과 발표를 마지막으로 본 회차 날짜 |
 | seen_pot_count | INT | NOT NULL, 기본 0 | 한 솥 축하를 몇 번째 솥까지 봤는지 |
@@ -317,14 +318,15 @@ erDiagram
 | id | BIGINT | PK | |
 | room_id | BIGINT | FK rooms, NOT NULL | |
 | seq | INT | NOT NULL | 몇 번째 솥인지 (1부터) |
-| goal_amount | INT | NOT NULL | 이 솥의 목표 석. 만들 때 방 목표 석을 복사 (연장해도 같은 값) |
-| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0 이상). 목표를 채운 뒤 방장이 고르기 전까지 쌓이는 석(Q-86)도 이 솥에 계속 쌓여 `goal_amount`를 넘을 수 있고, 연장하면 `amount - goal_amount`를 다음 솥 `carried_over`로 넘김 (Q-83) |
+| goal_amount | INT | NOT NULL | 이 솥의 목표 석. 만들 때 방 목표 석을 복사 (다음 솥도 같은 값) |
+| amount | INT | NOT NULL, 기본 0 | 현재 진행도 (0 이상). 목표를 넘기는 적립은 나누지 않고 이 솥에 다 넣어 `goal_amount`를 넘을 수 있고, `amount - goal_amount`를 다음 솥 `carried_over`로 넘김 (POT-01 7번) |
 | carried_over | INT | NOT NULL, 기본 0 | 이전 솥에서 넘어온 석 |
 | completed_at | DATETIME | NULL | 가득 찬 시각. NULL이면 진행 중인 솥 |
 
 - `UNIQUE (room_id, seq)`. 진행 중인 솥은 방마다 1개
 - 첫 솥은 방을 만들 때가 아니라 그 방에 처음 적립할 때 만든다. 솥 행이 없으면 진행도 0석, 목표는 `rooms.pot_goal_amount`로 본다 (POT-01)
-- 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%, 10석 단위 반올림) → `rooms.pot_completed_count` +1 → 방 기간 종료. 방장이 연장하면 다음 솥을 같은 목표, 넘친 석으로 생성 (POT-01)
+- 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%, 10석 단위 반올림) → `rooms.pot_completed_count` +1 → 다음 솥을 같은 목표, 넘친 석으로 바로 생성 → `rooms.pot_decision_requested_at` 기록 (POT-01, ROOM-09)
+- 다음 솥의 이월 석은 누구의 기여(`pot_contributions`)로도 세지 않는다. 한 인증의 기여 행이 하나로 남아 회수 조회가 그대로 동작한다 (ROOM-09 계획서 주요 결정 1)
 
 ### pot_contributions
 
