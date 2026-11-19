@@ -307,6 +307,58 @@ public class RoomController {
         return ResponseEntity.ok(Response.ok(null));
     }
 
+    @PostMapping("/{roomId}/pot-decision/continue")
+    @Operation(summary = "목표 달성 뒤 더 수행하기 (ROOM-09)",
+            description = """
+                    솥을 채운 뒤 방장이 [더 수행하기]를 고릅니다. 선택 대기가 끝나고 솥·회차·멤버는 그대로입니다.
+                    다음 솥은 솥을 채우는 순간 이미 시작돼 있습니다(POT-01). 선택 대기는 오늘 탭 me.isPotDecisionPending입니다.
+                    확인 순서: ROOM_005 → ROOM_002 → ROOM_007 → ROOM_011
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "선택 대기 끝"),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / ROOM_007 방장이 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "ROOM_011 선택 대기가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<Void>> continuePot(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId
+    ) {
+        roomService.continuePot(userId, roomId);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
+    @DeleteMapping("/{roomId}")
+    @Operation(summary = "목표 달성 뒤 방 닫기 (ROOM-09)",
+            description = """
+                    솥을 채운 뒤 방장이 [방 닫기]를 고릅니다. 멤버 전원이 나간 것으로 처리하고 방을 삭제합니다.
+                    목표를 채운 방이라 공양미 차감은 없고, 이 방의 인증 사진은 바로 지웁니다. 선택 대기일 때만 닫을 수 있습니다.
+                    확인 순서: ROOM_005 → ROOM_002 → ROOM_007 → ROOM_011
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "방 삭제"),
+            @ApiResponse(responseCode = "401", description = "COMMON_008 로그인 필요",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / ROOM_007 방장이 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "ROOM_011 선택 대기가 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<Void>> close(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roomId
+    ) {
+        roomService.close(userId, roomId);
+        return ResponseEntity.ok(Response.ok(null));
+    }
+
     @DeleteMapping("/{roomId}/members/{memberId}")
     @Operation(summary = "내보내기 (ROOM-08)",
             description = """

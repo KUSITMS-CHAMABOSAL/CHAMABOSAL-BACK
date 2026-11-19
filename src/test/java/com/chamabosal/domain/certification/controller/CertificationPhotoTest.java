@@ -314,6 +314,28 @@ class CertificationPhotoTest {
     }
 
     @Test
+    void ROOM_09_11_방을_닫으면_멤버_전원의_사진이_바로_삭제된다() throws Exception {
+        Long idA = certifyWithPhoto(userA);
+        Long idB = certifyWithPhoto(userB);
+        String savedA = imageKeyOf(idA);
+        String savedB = imageKeyOf(idB);
+        RoomMember owner = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userA.getId()).orElseThrow();
+        Room loaded = roomRepository.findById(room.getId()).orElseThrow();
+        loaded.assignOwner(owner.getId());
+        loaded.requestPotDecision(T0);
+        roomRepository.save(loaded);
+
+        mockMvc.perform(delete("/api/rooms/{roomId}", room.getId()).header("Authorization", bearer(userA)))
+                .andExpect(status().isOk());
+
+        assertThat(certificationRepository.findById(idA).orElseThrow().hasImage()).isFalse();
+        assertThat(certificationRepository.findById(idB).orElseThrow().hasImage()).isFalse();
+        assertThat(storage().contains(savedA)).isFalse();
+        assertThat(storage().contains(savedB)).isFalse();
+        assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())).isEmpty();
+    }
+
+    @Test
     void ROOM_08_11_내보내면_사진이_바로_삭제된다() throws Exception {
         Long id = certifyWithPhoto(userB);
         String saved = imageKeyOf(id);

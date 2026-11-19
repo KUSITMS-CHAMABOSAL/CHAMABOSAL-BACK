@@ -74,7 +74,7 @@ public class RiceService {
      * 목표를 채우기 전에 나가면 이번에 들어온 뒤 그 방에서 모은 공양미를 뺀다 (RICE-03). 잔액이 0석 아래로 내려가지 않게 줄이고,
      * 이미 0석 이하면 빼지 않는다 (Q-88). 다시 들어오면 같은 멤버 행이라 원인 없이 기록한다 (RICE-03 7번).
      * 사용자 전체 잔액을 읽고 빼므로, 같은 사람이 두 방을 동시에 나가지 않게 사용자 행 락을 잡은 트랜잭션에서 부른다.
-     * 연장이 아직 없어 한 솥을 한 번이라도 채운 방은 목표를 채운 방이라 빼지 않는다 (RICE-03 1번). 뺀 석, 빼지 않았으면 0.
+     * 다음 솥이 자동으로 시작돼도 한 솥을 한 번이라도 채운 방은 목표를 채운 방이라 빼지 않는다 (RICE-03 1번, Q-89). 뺀 석, 빼지 않았으면 0.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public int deductOnLeave(Room room, RoomMember member) {
