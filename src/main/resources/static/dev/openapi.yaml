@@ -2113,9 +2113,10 @@ paths:
         - `isTapExpired`: `PICKED` 결과인데 투표 마감 후 5시간이 지나 톡톡 시간이 지남. 화면은 `톡톡 시간이 지났어요`를 안내한다.
         - `tappedMemberCount`: 나를 뺀, 그 회차 톡톡을 끝낸 멤버 수
         - `picked`: `PICKED`, `DEFENDED`일 때만. 나머지는 `null`
-        - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null` (SHIELD-02).
+        - `defenseUsableUntil`: 내가 지목된 `PICKED` 결과이고 처음 연 시각이 톡톡 마감 전일 때만, 처음 연 시각 + 2분. 나머지는 `null`. 이 조회가 처음이면 서버가 처음 연 시각을 기록한다 (SHIELD-02).
         - `defenseTicketCount`: 내가 지목된 `PICKED`·`DEFENDED` 결과일 때만, 보유한 미사용 방어권 개수 ("보유 방어권 n개" 표시, 보유 개수 제한 없음). 나머지는 `null`
-        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 그 회차에 인증함, 결과 발표 뒤 2분 안, 방어권 1개 이상 보유)
+        - `canUseDefense`: 지금 방어권을 쓰면 성공함 (지목된 본인, 그 회차에 인증함, 처음 연 지 2분 안, 방어권 1개 이상 보유)
+        - `isDefensePending`: 모든 멤버에게. 지목된 사람이 아직 방어권을 쓸 수 있으면 true (`방어권 고민 중`). `PICKED`이고 톡톡 마감 전이며, 지목된 사람이 아직 결과를 열지 않았거나 처음 연 지 2분이 안 지났을 때. 표시용이라 `canTap`과 상관없다.
       parameters:
       - *id004
       responses:
@@ -2168,6 +2169,45 @@ paths:
               examples:
                 RESULT_001:
                   $ref: '#/components/examples/RESULT_001'
+  /api/rounds/{roundId}/taps/start:
+    post:
+      tags:
+      - '[TAP] 톡톡'
+      operationId: startTap
+      summary: 톡톡 시작
+      description: |-
+        톡톡 화면에 들어갈 때 한 번 보낸다. 방어 전에 시작했다는 기록이라, 지목된 사람이 그사이 방어해도 끝까지 보낼 수 있다 (RESULT-03 10번).
+
+        - 보내기와 같은 조건을 확인한다 (`PICKED`, 투표한 사람, 지목된 본인 아님, 아직 보내지 않음, 톡톡 마감 전)
+        - 다시 보내도 성공한다 (재시도해도 안전)
+        - `TAP_001`: `PICKED`가 아님 (이미 방어된 결과 포함), 또는 지목된 사람이 방을 나감
+      parameters:
+      - *id004
+      responses:
+        '200':
+          description: 성공 (data 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: ROOM_002 / TAP_002 / TAP_006
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: ROUND_001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: TAP_001 / TAP_003 / TAP_004
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/rounds/{roundId}/taps:
     post:
       tags:
@@ -2179,7 +2219,8 @@ paths:
 
         - `count`: 0 이상, 상한 없음
         - 그 회차에 투표한 사람만 보낼 수 있다 (투표하지 않았으면 `TAP_006`)
-        - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 무효다.
+        - 지목된 사람이 방어 시간(2분) 중이어도 바로 보낼 수 있다. 방어되면 보낸 톡톡은 전달하지 않고 +5석은 유지한다.
+        - 방어된 뒤에는 방어 전에 `taps/start`를 보낸 사람만 보낼 수 있다 (그 외 `TAP_001`).
         - `riceEarned`, `potEarned`: `count`가 1 이상이면 5, 0(건너뛰기)이면 0. 방 인원이 1명이면 0 (RICE-01)
         - `TAP_001`: 처음부터 톡톡이 없는 회차. 결과가 `PICKED`가 아님 (방어된 결과 포함), 또는 지목된 사람이 방을 나감
         - `TAP_003`: 이미 톡톡함. 저장된 횟수는 그대로다.
@@ -2477,9 +2518,10 @@ paths:
       operationId: useDefense
       summary: 방어권 사용
       description: |-
-        지목된 사람이 결과 발표 직후 2분 안에 그 회차에 방어권을 쓴다. 그 회차에 인증하지 않았으면 쓸 수 없다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀐다. 차순위로 넘기지 않는다.
+        지목된 사람이 결과 발표 뒤 그 결과를 처음 연 순간부터 2분 안에(톡톡 마감 전에 열었을 때만) 그 회차에 방어권을 쓴다. 그 회차에 인증하지 않았으면 쓸 수 없다. 쓰는 순간 소모되고 결과가 `DEFENDED`로 바뀐다. 차순위로 넘기지 않는다.
 
         - 결과 화면(`GET /api/rounds/{roundId}/result`)의 `defenseUsableUntil`, `canUseDefense`로 버튼과 남은 시간을 표시한다.
+        - 결과를 조회하지 않고 바로 쓰면 이 요청 시각을 처음 연 시각으로 기록한다.
         - 방어하면 그 회차에 이미 보낸 톡톡은 무효가 되어 재생하지 않는다.
         - 이미 이 회차에 방어한 본인이 다시 보내면 방어권을 더 쓰지 않고 성공한다 (재시도해도 안전).
         - 사용 횟수 제한이 없다. 방어하면 그 회차 번뇌 완료 보상(10석)은 받지 않는다.
@@ -3201,6 +3243,7 @@ components:
       - canTap
       - isTapExpired
       - tappedMemberCount
+      - isDefensePending
       properties:
         roundId:
           type: integer
@@ -3233,8 +3276,8 @@ components:
           example: false
         defenseUsableUntil:
           type: string
-          description: 내가 지목된 `PICKED` 결과일 때만, 결과 발표(투표 마감) 시각 + 2분. 나머지는 `null`
-          example: '2026-11-04T15:02:00'
+          description: 내가 지목된 `PICKED` 결과이고 처음 연 시각이 톡톡 마감 전일 때만, 처음 연 시각 + 2분. 나머지는 `null`
+          example: '2026-11-04T16:02:00'
           format: date-time
           nullable: true
         defenseTicketCount:
@@ -3258,6 +3301,10 @@ components:
           description: 나를 뺀, 톡톡을 끝낸 멤버 수
           example: 2
           format: int32
+        isDefensePending:
+          type: boolean
+          description: 지목된 사람이 아직 방어권을 쓸 수 있는지 (방어권 고민 중 표시). 표시용이라 canTap과 상관없음
+          example: true
     TapCreateResponse:
       type: object
       required:
