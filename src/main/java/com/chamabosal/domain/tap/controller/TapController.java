@@ -45,7 +45,8 @@ public class TapController {
                     보내기와 같은 조건을 확인하고, 다시 보내도 성공합니다. 이미 방어된 결과면 TAP_001입니다.
                     """)
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "시작 성공"),
+            @ApiResponse(responseCode = "201", description = "시작을 처음 남김"),
+            @ApiResponse(responseCode = "200", description = "이미 시작함 (재요청)"),
             @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차에 투표하지 않음",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
@@ -58,8 +59,10 @@ public class TapController {
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
             @PathVariable Long roundId
     ) {
-        tapService.start(userId, roundId);
-        return ResponseEntity.ok(Response.ok("톡톡을 시작했어요.", null));
+        if (tapService.start(userId, roundId)) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("톡톡을 시작했어요.", null));
+        }
+        return ResponseEntity.ok(Response.ok("이미 톡톡을 시작했어요.", null));
     }
 
     @PostMapping("/rounds/{roundId}/taps")

@@ -20,7 +20,7 @@ public record RoundResultResponse(
         List<VoteCount> voteCounts,
         @Schema(description = "지목이 없을 때만 \"오늘은 모두 보살\" 득표 수. 지목이 있으면 null") Integer allBosalCount,
         boolean isMePicked,
-        @Schema(description = "내가 지목된 PICKED 결과일 때만, 결과 발표 + 2분") LocalDateTime defenseUsableUntil,
+        @Schema(description = "내가 지목된 PICKED 결과이고 처음 연 시각이 톡톡 마감 전일 때만, 처음 연 시각 + 2분") LocalDateTime defenseUsableUntil,
         @Schema(description = "내가 지목된 PICKED·DEFENDED 결과일 때만, 보유한 방어권 개수") Integer defenseTicketCount,
         boolean canUseDefense,
         boolean canTap,

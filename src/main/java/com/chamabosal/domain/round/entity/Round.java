@@ -149,13 +149,6 @@ public class Round extends BaseEntity {
         return voteStartedAt != null && member.getJoinedAt().isAfter(voteStartedAt);
     }
 
-    /** 지목된 사람이 결과를 보지 않고 바로 방어권을 쓰면 그 시각을 처음 연 시각으로 남긴다 (SHIELD-02 3번). */
-    public void markPickedSeenIfAbsent(LocalDateTime seenAt) {
-        if (pickedSeenAt == null) {
-            pickedSeenAt = seenAt;
-        }
-    }
-
     /**
      * 방어권은 지목된 사람이 결과를 처음 연 순간부터 2분 안에 쓴다. 아직 열지 않았거나, 톡톡 마감 뒤에 처음 열었으면
      * 쓸 수 있는 시각이 없어 null이다 (SHIELD-02 3번, Q-75·Q-77).

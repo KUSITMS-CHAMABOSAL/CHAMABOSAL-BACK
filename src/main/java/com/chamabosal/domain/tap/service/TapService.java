@@ -51,10 +51,10 @@ public class TapService {
 
     /**
      * 톡톡 화면에 들어갈 때 시작을 남긴다 (RESULT-03 10번). 방어와 같은 방 행 락 안에서 `PICKED`인지 확인해서,
-     * 시작 기록이 있으면 방어 전에 시작한 것이다. 이미 시작했으면 다시 확인하지 않고 성공한다.
+     * 시작 기록이 있으면 방어 전에 시작한 것이다. 이미 시작했으면 다시 확인하지 않고 성공한다. 새로 남겼으면 true.
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void start(Long userId, Long roundId) {
+    public boolean start(Long userId, Long roundId) {
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
         roomRepository.findWithLockById(roomId).orElseThrow();
@@ -63,10 +63,11 @@ public class TapService {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
         if (tapStartRepository.existsByRound_IdAndMember_Id(roundId, me.getId())) {
-            return;
+            return false;
         }
         checkCanTap(round, me, false);
         tapStartRepository.save(TapStart.create(round, me));
+        return true;
     }
 
     /**

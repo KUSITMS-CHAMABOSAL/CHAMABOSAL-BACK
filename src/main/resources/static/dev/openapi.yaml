@@ -2184,8 +2184,14 @@ paths:
       parameters:
       - *id004
       responses:
+        '201':
+          description: 시작을 처음 남김 (data 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '200':
-          description: 성공 (data 없음)
+          description: 이미 시작함, 재요청 (data 없음)
           content:
             application/json:
               schema:

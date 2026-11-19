@@ -284,6 +284,34 @@ class DefenseMoktakTest {
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_002"));
     }
 
+    /** 결과를 열지 않고 방어를 눌러 미인증으로 거절돼도 그 시각은 처음 연 시각으로 남아, 2분 뒤에는 고민 중이 아니다 (코드리뷰 반영). */
+    @Test
+    void 미인증으로_거절된_방어_요청도_처음_연_시각을_남긴다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = announced(party, NOV_4, false);
+
+        clock.set(NOV_5.atTime(16, 0));
+        defend(userA, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("DEFENSE_011"));
+
+        assertThat(reload(round).getPickedSeenAt()).isEqualTo(NOV_5.atTime(16, 0));
+        clock.set(NOV_5.atTime(16, 3));
+        result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(false));
+    }
+
+    /** 방어 요청은 이미 남은 처음 연 시각을 덮어쓰지 않는다 (코드리뷰 반영). */
+    @Test
+    void 방어_요청은_먼저_남은_처음_연_시각을_바꾸지_않는다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        clock.set(NOV_5.atTime(16, 0));
+        result(userA, round);
+
+        clock.set(NOV_5.atTime(16, 1));
+        defend(userA, round).andExpect(status().isCreated());
+
+        assertThat(reload(round).getPickedSeenAt()).isEqualTo(NOV_5.atTime(16, 0));
+    }
+
     @Test
     void SHIELD_02_6_인증하지_않은_지목자는_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
@@ -431,6 +459,7 @@ class DefenseMoktakTest {
     void RESULT_03_20_방어_전에_시작한_톡톡은_방어_뒤에도_보내고_5석을_받지만_전달하지_않는다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
+        tapStart(userB, round).andExpect(status().isCreated());
         tapStart(userB, round).andExpect(status().isOk());
         defend(userA, round).andExpect(status().isCreated());
 

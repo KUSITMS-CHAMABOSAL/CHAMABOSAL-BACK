@@ -81,6 +81,13 @@ public class DefenseService {
         if (!isMePicked || round.getResultType() != RoundResultType.PICKED) {
             throw new BaseException(BaseErrorCode.NOT_PICKED_FOR_DEFENSE);
         }
+        // 결과를 보지 않고 바로 쓰면 이 시각을 처음 연 시각으로 남긴다. 결과 조회와 같은 조건부 UPDATE라 먼저 남은 시각을
+        // 덮어쓰지 않고, 아래에서 거부돼도(미인증 포함) 남는다. UPDATE가 영속성 컨텍스트를 비워 회차를 다시 읽는다 (코드리뷰 반영).
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (round.getPickedSeenAt() == null) {
+            roundRepository.markPickedSeen(roundId, now);
+            round = roundRepository.findById(roundId).orElseThrow();
+        }
         if (!hasCertified(round)) {
             throw new BaseException(BaseErrorCode.DEFENSE_NOT_CERTIFIED);
         }
@@ -89,8 +96,6 @@ public class DefenseService {
             throw new BaseException(BaseErrorCode.DEFENSE_AFTER_MOKTAK);
         }
 
-        LocalDateTime now = LocalDateTime.now(clock);
-        round.markPickedSeenIfAbsent(now);
         if (isExpired(round, now)) {
             throw new BaseException(BaseErrorCode.DEFENSE_EXPIRED);
         }
