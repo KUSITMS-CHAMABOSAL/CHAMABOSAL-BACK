@@ -1,10 +1,8 @@
 package com.chamabosal.domain.tap.repository;
 
 import com.chamabosal.domain.tap.entity.Tap;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface TapRepository extends JpaRepository<Tap, Long> {
@@ -28,9 +26,4 @@ public interface TapRepository extends JpaRepository<Tap, Long> {
             order by t.id
             """)
     List<Tap> findReceivedWithSender(Long roundId);
-
-    /** 그때까지 받은 미재생 톡톡을 모두 재생됨으로 바꾼다 (RESULT-03 6번). 재시도해도 바뀌는 게 없다. */
-    @Modifying(clearAutomatically = true)
-    @Query("update Tap t set t.playedAt = :now, t.updatedAt = :now where t.round.id = :roundId and t.playedAt is null")
-    int markPlayed(Long roundId, LocalDateTime now);
 }

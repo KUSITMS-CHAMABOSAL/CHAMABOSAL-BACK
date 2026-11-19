@@ -417,6 +417,24 @@ class VoteTabStatusTest {
         tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("TAP"));
     }
 
+    @Test
+    void 종료하기로_목탁_수행을_끝내면_투표_탭은_결과_확인_후다() throws Exception {
+        Round round = pickedB();
+        seeResult(userB, round);
+        sendTap(userA, round, 5);
+        sendTap(userC, round, 3);
+        clock.set(LocalDateTime.of(2026, 11, 6, 20, 0));
+
+        mockMvc.perform(post("/api/rounds/{roundId}/moktak", round.getId())
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(userB.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"count\": 3}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.riceEarned").value(0));
+
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+    }
+
     /** 혼자 남은 방은 공양미가 쌓이지 않아 목탁 수행을 띄우지 않는다. 띄우면 마쳐도 완료 기록이 남지 않아 계속 남는다 (코드리뷰 반영). */
     @Test
     void 혼자_남은_방에서는_목탁_수행을_띄우지_않는다() throws Exception {

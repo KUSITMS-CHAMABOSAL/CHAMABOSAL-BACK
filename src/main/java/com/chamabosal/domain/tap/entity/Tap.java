@@ -13,7 +13,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,9 +41,6 @@ public class Tap extends BaseEntity {
     /** 0이면 건너뛰기. 0번 행도 다시 못 치게 남긴다. */
     @Column(nullable = false)
     private int count;
-
-    /** NULL이면 지목된 사람이 아직 재생하지 않았다. */
-    private LocalDateTime playedAt;
 
     public static Tap create(Round round, RoomMember fromMember, int count) {
         Tap tap = new Tap();

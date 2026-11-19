@@ -4,7 +4,6 @@ import com.chamabosal.domain.pot.entity.PotReason;
 import com.chamabosal.domain.pot.service.PotService;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
-import com.chamabosal.domain.rice.repository.RiceHistoryRepository;
 import com.chamabosal.domain.rice.service.RiceService;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
@@ -43,9 +42,9 @@ public class TapService {
     private final RoundRepository roundRepository;
     private final TapRepository tapRepository;
     private final TapStartRepository tapStartRepository;
+    private final MoktakService moktakService;
     private final VoteRepository voteRepository;
     private final RiceService riceService;
-    private final RiceHistoryRepository riceHistoryRepository;
     private final PotService potService;
     private final Clock clock;
 
@@ -145,23 +144,8 @@ public class TapService {
         // 전달 전이거나 방어돼 무효가 된 톡톡은 보여주지 않는다 (RESULT-03 6·7번).
         List<Tap> taps = isDelivered && round.getResultType() == RoundResultType.PICKED
                 ? tapRepository.findReceivedWithSender(roundId) : List.of();
-        boolean isMoktakDone = riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
-                userId, RiceReason.BEONNOE, RiceRefType.ROUND, roundId);
+        boolean isMoktakDone = moktakService.isEnded(userId, round);
         return ReceivedTapsResponse.of(isDelivered, round.getTapClosesAt(), isMoktakDone, taps);
-    }
-
-    /**
-     * 그때까지 받은 톡톡을 모두 재생됨으로 바꾼다. 재시도해도 성공이다.
-     * 전달 전이거나 방어된 회차는 바꾸지 않고 성공한다. 미리 바꾸면 전달 뒤 재생할 톡톡이 사라진다 (RESULT-03 6번).
-     */
-    @Transactional
-    public void markPlayed(Long userId, Long roundId) {
-        Round round = findMinePicked(userId, roundId);
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (round.getResultType() != RoundResultType.PICKED || round.isTapOpen(now)) {
-            return;
-        }
-        tapRepository.markPlayed(roundId, now);
     }
 
     /** 받은 톡톡은 그 회차에 지목된 본인만 볼 수 있다 (TAP_005). */
