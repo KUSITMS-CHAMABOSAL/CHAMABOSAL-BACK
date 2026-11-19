@@ -3332,7 +3332,7 @@ components:
           example: '2026-11-05T20:00:00'
         totalCount:
           type: integer
-          format: int32
+          format: int64
           description: 받은 톡톡 합계. 목탁 수행에서 두드려야 하는 횟수. 전달 전이거나 방어된 회차는 0
           example: 14
         isMoktakDone:
@@ -3351,7 +3351,7 @@ components:
       properties:
         count:
           type: integer
-          format: int32
+          format: int64
           minimum: 0
           description: 두드린 횟수
           example: 14

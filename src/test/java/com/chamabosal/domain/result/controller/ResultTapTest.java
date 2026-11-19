@@ -350,6 +350,19 @@ class ResultTapTest {
         assertThat(tapRepository.findAll()).isEmpty();
     }
 
+    /** 투표한 뒤 나갔다가 투표 시작 뒤 다시 들어오면 표가 남아 있어도 그 회차 명단 밖이라 톡톡할 수 없다 (코드리뷰 반영). */
+    @Test
+    void 투표_뒤_나갔다가_다시_들어오면_톡톡할_수_없다() throws Exception {
+        Round round = pickedA();
+        // 다시 들어오면 같은 멤버 행의 입장 시각만 바뀐다 (RoomMember.rejoin).
+        RoomMember rejoined = reload(memberC);
+        ReflectionTestUtils.setField(rejoined, "joinedAt", AFTER_CLOSE.minusHours(1));
+        roomMemberRepository.save(rejoined);
+
+        result(userC, round).andExpect(jsonPath("$.data.canTap").value(false));
+        tap(userC, round, 5).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_006"));
+    }
+
     @Test
     void RESULT_03_7_5시간이_지나면_받은_톡톡이_한_번에_전달된다() throws Exception {
         Round round = pickedA();

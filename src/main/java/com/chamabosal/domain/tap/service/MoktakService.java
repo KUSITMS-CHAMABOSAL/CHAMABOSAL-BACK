@@ -45,7 +45,7 @@ public class MoktakService {
 
     /** 확인 순서: 없는 회차 → 방 멤버 아님 → 지목된 사람 아님 → 보상 없는 결과 → 이미 완료(성공) → 전달 전 → 받은 톡톡 없음 → 기한 지남 → 덜 두드림. */
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public MoktakCompleteResponse complete(Long userId, Long roundId, int count) {
+    public MoktakCompleteResponse complete(Long userId, Long roundId, long count) {
         Long roomId = roundRepository.findRoomIdByRoundId(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
         Room room = roomRepository.findWithLockById(roomId).orElseThrow();
