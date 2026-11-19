@@ -179,6 +179,7 @@ erDiagram
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
 | picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준, 톡톡 마감 뒤면 방어 불가 (SHIELD-02) |
+| moktak_ended_at | DATETIME | NULL | 지목된 사람이 목탁 수행을 끝낸 시각(완료 또는 [종료하기]). 있으면 다시 수행할 수 없음 (RESULT-03 9번) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
 - `UNIQUE (room_id, round_date)`
@@ -278,7 +279,6 @@ erDiagram
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NOT NULL | 두드린 사람 |
 | count | INT | NOT NULL | 0 이상, 상한 없음 |
-| played_at | DATETIME | NULL | 전달 뒤 받은 사람이 재생 완료를 보낸 시각. NULL이면 아직 안 본 톡톡. 앱을 열 때는 띄우지 않음 (Q-107), 재생 여부 판단 위치는 [미정] Q-108 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트
 - `count`가 1 이상이면 보낸 사람에게 톡톡 완료 보상(`rice_histories.reason = TAP`, 한 솥 +5) 적립 (RICE-01 4번)

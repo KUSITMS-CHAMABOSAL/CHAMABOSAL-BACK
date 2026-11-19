@@ -115,7 +115,6 @@
 | 톡톡 | POST | `/api/rounds/{roundId}/taps/start` | RESULT-03 |  |
 | 톡톡 | POST | `/api/rounds/{roundId}/taps` | RESULT-03 |  |
 | 톡톡 | GET | `/api/rounds/{roundId}/taps/received` | RESULT-03 |  |
-| 톡톡 | PUT | `/api/rounds/{roundId}/taps/received/played` | RESULT-03 |  |
 | 톡톡 | POST | `/api/rounds/{roundId}/moktak` | RESULT-03, RICE-01 |  |
 | 한 솥 | GET | `/api/rooms/{roomId}/pots/{seq}` | POT-01 |  |
 | 방어권 | POST | `/api/defense-tickets` | SHIELD-01 |  |
@@ -875,22 +874,14 @@ RESULT-03. 지목된 사람이 받은 톡톡입니다. 투표 마감 후 5시간
 - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
 - `isDelivered`, `deliveredAt`: 전달 여부와 전달 시각(투표 마감 + 5시간). 전달 전에는 `taps`가 빈 목록이고 `totalCount`는 0
 - `totalCount`: 받은 톡톡 합계. 목탁 수행에서 두드려야 하는 횟수
-- `isMoktakDone`: 그 회차 목탁 수행을 마쳐 번뇌 완료 보상을 받았는지
+- `isMoktakDone`: 그 회차 목탁 수행을 끝냈는지 (끝까지 했거나 [종료하기]로 나감)
 - 방어된 회차(`DEFENDED`)는 빈 목록, `totalCount` 0
-- 전달 뒤에는 재생 완료를 저장해도 받은 톡톡 전체가 그대로 나옴. 목탁 수행은 다음 투표 전까지 다시 들어올 수 있음
+- 받은 톡톡은 투표 탭 목탁 수행 화면에서 보여줌. 재생 완료는 따로 저장하지 않음 (Q-108)
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람이 아님)
-
-### PUT /api/rounds/{roundId}/taps/received/played
-
-RESULT-03. 받은 톡톡 재생 완료를 저장합니다. 이마 톡톡은 앱을 열 때 띄우지 않아서(Q-107), 재생 여부를 어디서 판단할지는 [미정] Q-108입니다.
-
-- 이미 재생한 톡톡이면 바꾸지 않고 성공 (재시도해도 안전)
-- 전달 전(투표 마감 후 5시간 전)이거나 방어된 회차면 아무것도 바꾸지 않고 성공. 전달 뒤 재생할 톡톡이 미리 재생됨으로 바뀌지 않게 하기 위함
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403)
 
 ### POST /api/rounds/{roundId}/moktak
 
-RESULT-03 9번, RICE-01 6번. 지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보냅니다. 번뇌 완료 보상(개인 +10석)을 줍니다. 중간에 포기하면 보내지 않습니다.
+RESULT-03 9번, RICE-01 6번. 지목된 사람이 목탁 수행을 끝까지 했을 때나 [종료하기]로 나갈 때 두드린 횟수와 함께 한 번 보냅니다. 서버가 그 회차 목탁 수행을 끝난 것으로 기록합니다. 받은 톡톡 합계 이상이면 번뇌 완료 보상(개인 +10석)을 주고, 적으면 부분 보상 없이 끝납니다.
 
 ```json
 // request
@@ -900,11 +891,12 @@ RESULT-03 9번, RICE-01 6번. 지목된 사람이 받은 톡톡만큼 목탁을 
 { "riceEarned": 10 }
 ```
 
-- `count`: 두드린 횟수 (0 이상). 그 회차에 받은 톡톡 합계(받은 톡톡 조회의 `totalCount`)보다 적으면 `MOKTAK_004`
-- 이미 완료한 회차면 보상 없이 `riceEarned: 0`으로 성공 (재시도해도 안전)
+- `count`: 두드린 횟수 (0 이상). 그 회차에 받은 톡톡 합계(받은 톡톡 조회의 `totalCount`)보다 적으면 `riceEarned: 0`으로 끝남
+- 이미 끝낸 회차면 보상 없이 `riceEarned: 0`으로 성공 (재시도해도 안전)
+- 끝낸 회차는 투표 탭에 `MOKTAK`이 더 나오지 않음. 앱을 그냥 꺼서 보내지 않으면 다시 들어와 이어서 할 수 있음
 - 방 인원이 1명이면 `riceEarned` 0 (RICE-01)
-- 확인 순서: `ROUND_001` → `ROOM_002` → `TAP_005` → `MOKTAK_001` → 이미 완료(성공) → `MOKTAK_005` → `MOKTAK_002` → `MOKTAK_003` → `MOKTAK_004`
-- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람 아님), `MOKTAK_001` (409, 번뇌 보상이 없는 결과: `PICKED` 아님, 방어됨 포함), `MOKTAK_002` (409, 받은 톡톡 없음), `MOKTAK_003` (409, 다음 투표가 열려 기한 지남), `MOKTAK_004` (409, 받은 톡톡보다 적게 두드림), `MOKTAK_005` (409, 톡톡이 아직 전달되지 않음), `COMMON_002` (400, `count` 없음·음수)
+- 확인 순서: `ROUND_001` → `ROOM_002` → `TAP_005` → `MOKTAK_001` → 이미 끝냄(성공) → `MOKTAK_005` → `MOKTAK_002` → `MOKTAK_003`
+- 에러: `ROUND_001` (404), `ROOM_002` (403), `TAP_005` (403, 지목된 사람 아님), `MOKTAK_001` (409, 번뇌 보상이 없는 결과: `PICKED` 아님, 방어됨 포함), `MOKTAK_002` (409, 받은 톡톡 없음), `MOKTAK_003` (409, 다음 투표가 열려 기한 지남), `MOKTAK_005` (409, 톡톡이 아직 전달되지 않음), `COMMON_002` (400, `count` 없음·음수)
 - 톡톡이 전달된 뒤부터 다음 투표가 열리기 전까지 보낼 수 있음 (Q-92)
 
 ## 11. 한 솥
