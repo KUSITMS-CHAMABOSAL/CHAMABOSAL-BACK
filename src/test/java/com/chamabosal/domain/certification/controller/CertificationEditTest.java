@@ -419,15 +419,14 @@ class CertificationEditTest {
     }
 
     @Test
-    void RICE_02_5_회수하면_잔액이_음수가_될_수_있다() throws Exception {
+    void RICE_02_5_회수해도_잔액은_0석에서_멈춘다() throws Exception {
         Long id = certify(userA, room, endured("집밥 해먹었어요"));
         riceHistoryRepository.save(RiceHistory.create(userA, null, -5, RiceReason.PURCHASE, RiceRefType.ITEM, 1L));
         assertThat(riceHistoryRepository.sumDeltaByUserId(userA.getId())).isEqualTo(5);
 
-        remove(userA, id).andExpect(status().isOk());
+        remove(userA, id).andExpect(status().isOk()).andExpect(jsonPath("$.data.riceRecalled").value(5));
 
-        assertThat(riceHistoryRepository.sumDeltaByUserId(userA.getId())).isEqualTo(-5);
-        assertThat(riceService.getDisplayBalance(userA.getId())).isZero();
+        assertThat(riceHistoryRepository.sumDeltaByUserId(userA.getId())).isZero();
     }
 
     @Test

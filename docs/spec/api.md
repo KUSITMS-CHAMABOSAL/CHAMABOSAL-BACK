@@ -572,7 +572,7 @@ CERT-01. 인증을 등록합니다. 회차는 서버가 요청을 받은 시각�
 }
 ```
 
-- `memo`: 1~40자 (글자 수 기준은 [미정] Q-29)
+- `memo`: 1~50자 (글자 수 기준은 [미정] Q-29)
 - `spentAmount`: `FAILED`면 필수 1~999,999, `ENDURED`면 보내지 않음
 - `imageKey`: 선택. 업로드 URL로 받은 키만 쓸 수 있음
 - `riceEarned`, `potEarned`: 방 인원이 1명이면 0 (RICE-01)
@@ -695,7 +695,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
   "votedCount": 2, "voterCount": 4,
   "candidates": [
     {
-      "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [], "badCount": 2,
+      "memberId": 12, "nickname": "지수", "color": "MINT", "equippedItemCodes": [],
       "certification": { "result": "FAILED", "memo": "치킨 시켰어요", "spentAmount": 23000, "imageUrl": null, "certifiedAt": "2026-11-04T19:24:00" }
     }
   ]
@@ -738,7 +738,6 @@ status마다 아래 필드만 채우고 나머지는 `null`입니다. (VOTE-05 4
 - `closesAt`: 늦어도 닫히는 시각 (회차 날짜 다음 날 15:00). 그 전에 투표권 있는 명단 전원이 투표하면 그때 닫힘
 - `voterCount`: 투표권 있는 인원 (명단 중 인증한 멤버)
 - `candidates`: `certification`이 `null`이면 인증 안 함. 투표권이 없는 사람(`NO_VOTING_RIGHT`)도 후보로 들어감 (CERT-05). 투표 중에 나간 사람도 후보로 남음 (Q-27)
-- `candidates[].badCount`: 투표 시작 시점에 그 인증이 받은 배드(아쉬워요) 수. 투표 중에는 바뀌지 않고 동점 판정에 씀 (Q-79). 화면에 표시할지는 디자인을 따름 (최신 디자인에는 없음)
 - `certification.certifiedAt`: 후보 카드의 인증 시각 표시
 - 투표 중 득표 수는 보내지 않음
 - 투표 중 3명 미만이 될 때 상태는 [미정] Q-34
@@ -890,7 +889,7 @@ POT-01. 다 채운 솥의 축하 화면입니다. `seq`는 몇 번째 솥인지�
 ```
 
 - `goalAmount`: 이 솥의 목표 석 (방 목표 석)
-- `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 그대로, 350석이면 35석. Q-81)
+- `rewardAmount`: 멤버 전원이 받은 개인 공양미 (목표의 10%를 10석 단위로 반올림, 350석이면 40석. Q-81)
 - `contributions`: 그 솥에 넣은 석(인증·투표·톡톡 완료·리액션)이 많은 순. 인증 삭제로 회수한 석은 뺌
 - 같은 석이면 같은 순위(예: 1, 1, 3). 같은 순위 안에서는 그 솥에 먼저 넣은 멤버가 앞
 - 그 솥에 넣은 기록이 있는 현재 멤버만 넣음. 나간 멤버와 넣은 기록이 없는 멤버는 뺌

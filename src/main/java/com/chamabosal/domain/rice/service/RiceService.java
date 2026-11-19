@@ -46,7 +46,11 @@ public class RiceService {
         return amount;
     }
 
-    /** 그 인증으로 지급한 만큼 회수한다. 지급 기록이 없거나 이미 회수했으면 0 (RICE-02 1·6번). */
+    /**
+     * 그 인증으로 지급한 만큼 회수한다. 지급 기록이 없거나 이미 회수했으면 0 (RICE-02 1·6번).
+     * 잔액이 0석 아래로 내려가지 않게 줄이고, 이미 0석 이하면 회수하지 않는다 (RICE-02 5번, Q-87).
+     * 사용자 전체 잔액을 읽으므로, 같은 사람의 구매·나가기와 겹치지 않게 사용자 행 락을 잡은 트랜잭션에서 부른다.
+     */
     @Transactional(propagation = Propagation.MANDATORY)
     public int recallCertification(RoomMember member, Long certificationId) {
         Long userId = member.getUser().getId();
@@ -55,9 +59,13 @@ public class RiceService {
                 .filter(paid -> !riceHistoryRepository.existsByUser_IdAndReasonAndRefTypeAndRefId(
                         userId, RiceReason.RECALL, RiceRefType.CERTIFICATION, certificationId))
                 .map(paid -> {
-                    riceHistoryRepository.save(RiceHistory.create(paid.getUser(), paid.getRoom(), -paid.getDelta(),
+                    int amount = (int) Math.min(paid.getDelta(), Math.max(0, riceHistoryRepository.sumDeltaByUserId(userId)));
+                    if (amount <= 0) {
+                        return 0;
+                    }
+                    riceHistoryRepository.save(RiceHistory.create(paid.getUser(), paid.getRoom(), -amount,
                             RiceReason.RECALL, RiceRefType.CERTIFICATION, certificationId));
-                    return paid.getDelta();
+                    return amount;
                 })
                 .orElse(0);
     }

@@ -1,9 +1,6 @@
 package com.chamabosal.domain.vote.service;
 
 import com.chamabosal.domain.room.service.RoomService;
-import com.chamabosal.domain.reaction.repository.ReactionRepository;
-import com.chamabosal.domain.reaction.entity.ReactionType;
-import com.chamabosal.domain.reaction.entity.Reaction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -133,7 +130,6 @@ class VoteTabStatusTest {
     }
 
     @Autowired ItemRepository itemRepository;
-    @Autowired ReactionRepository reactionRepository;
     @Autowired RoomService roomService;
     @Autowired UserItemRepository userItemRepository;
 
@@ -142,7 +138,6 @@ class VoteTabStatusTest {
         userItemRepository.deleteAll();
         // 시작 때 넣은 카탈로그는 남기고 테스트가 만든 아이템만 지운다.
         itemRepository.findByCode("EQUIP_HAT").ifPresent(itemRepository::delete);
-        reactionRepository.deleteAll();
         riceHistoryRepository.deleteAll();
         voteRepository.deleteAll();
         roundParticipantRepository.deleteAll();
@@ -332,25 +327,6 @@ class VoteTabStatusTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"targetType\": \"ALL_BOSAL\"}"))
                 .andExpect(status().isCreated());
-    }
-
-    @Test
-    void VOTE_02_9_후보마다_투표_시작_시점의_배드_수가_나온다() throws Exception {
-        Round round = roundRepository.save(Round.create(room, NOV_5));
-        for (RoomMember member : java.util.List.of(memberA, memberB, memberC, memberD)) {
-            certificationRepository.save(Certification.create(
-                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, CERTIFIED_AT));
-        }
-        Certification certB = certificationRepository.findByRound_IdAndMember_IdAndDeletedAtIsNull(
-                round.getId(), memberB.getId()).orElseThrow();
-        reactionRepository.save(Reaction.create(certB, memberC, ReactionType.BAD));
-        reactionRepository.save(Reaction.create(certB, memberD, ReactionType.BAD));
-        reactionRepository.save(Reaction.create(certB, memberA, ReactionType.GOOD));
-        voteStartService.startAtDeadline(room.getId(), round.getId(), VOTE_STARTED_AT);
-
-        tab(room.getId(), userA)
-                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberB.getId() + ")].badCount").value(2))
-                .andExpect(jsonPath("$.data.candidates[?(@.memberId == " + memberC.getId() + ")].badCount").value(0));
     }
 
     @Test

@@ -199,7 +199,7 @@ erDiagram
 | member_id | BIGINT | FK room_members, NOT NULL | |
 | is_candidate | BOOLEAN | NOT NULL | 후보 여부 (그날 들어와서 인증 안 함이면 false) |
 | can_vote | BOOLEAN | NOT NULL | 투표권. 투표 시작 시점까지 인증했으면 true (11/8 회의) |
-| bad_count | INT | NOT NULL | 투표 시작 시점에 그 멤버의 인증이 받은 배드(아쉬워요) 수. 후보 카드와 동점 판정용 (VOTE-01 5번, RESULT-01 3번) |
+| bad_count | INT | NOT NULL | 투표 시작 시점에 그 멤버의 인증이 받은 배드(아쉬워요) 수. 동점 판정용, 응답에는 내보내지 않음 (VOTE-01 5번, RESULT-01 3번) |
 
 - `UNIQUE (round_id, member_id)`
 - 명단 3명 미만이면 행을 만들지 않고 `rounds.status = NO_VOTE`
@@ -212,7 +212,7 @@ erDiagram
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | member_id | BIGINT | FK room_members, NOT NULL | |
 | result | VARCHAR(20) | NOT NULL | `ENDURED`(참았어요) / `FAILED`(못 참았어요) |
-| memo | VARCHAR(40) | NULL | 한 줄 기록. 6개월 정리 때 NULL |
+| memo | VARCHAR(50) | NULL | 한 줄 기록. 6개월 정리 때 NULL |
 | spent_amount | INT | NULL | 쓴 금액, `FAILED`일 때 필수 (1~999,999) |
 | image_key | VARCHAR(255) | NULL | 인증 사진 S3 객체 키. presigned PUT URL로 업로드 후 키만 저장, 조회는 응답할 때마다 presigned GET URL 생성 (URL은 만료되므로 저장 안 함) |
 | image_deleted_at | DATETIME | NULL | 사진 삭제 시각 (투표 끝나고 7일 뒤 · 나가기·내보내기·내 데이터 삭제 즉시) |
@@ -324,7 +324,7 @@ erDiagram
 
 - `UNIQUE (room_id, seq)`. 진행 중인 솥은 방마다 1개
 - 첫 솥은 방을 만들 때가 아니라 그 방에 처음 적립할 때 만든다. 솥 행이 없으면 진행도 0석, 목표는 `rooms.pot_goal_amount`로 본다 (POT-01)
-- 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%) → `rooms.pot_completed_count` +1 → 방 기간 종료. 방장이 연장하면 다음 솥을 같은 목표, 넘친 석으로 생성 (POT-01)
+- 목표를 채우면 `completed_at` 기록 → 멤버 전원 `rice_histories`에 `POT` +(목표의 10%, 10석 단위 반올림) → `rooms.pot_completed_count` +1 → 방 기간 종료. 방장이 연장하면 다음 솥을 같은 목표, 넘친 석으로 생성 (POT-01)
 
 ### pot_contributions
 

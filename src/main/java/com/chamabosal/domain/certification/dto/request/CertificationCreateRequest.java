@@ -10,7 +10,7 @@ public record CertificationCreateRequest(
         @NotNull(message = "결과를 골라 주세요.")
         CertificationResult result,
 
-        @Schema(description = "한 줄 기록 1~40자. 띄어쓰기만 있으면 안 됨", example = "치킨 시켰어요")
+        @Schema(description = "한 줄 기록 1~50자. 띄어쓰기만 있으면 안 됨", example = "치킨 시켰어요")
         @NotNull(message = "한 줄 기록을 입력해 주세요.")
         String memo,
 
