@@ -215,12 +215,7 @@ public class RoomService {
         if (leaveType == LeaveType.LEFT || leaveType == LeaveType.KICKED) {
             riceService.deductOnLeave(room, member);
         }
-        // 나가면 나간 유형과 상관없이 이 방의 사진을 바로 지운다 (ROOM-07 3번, ROOM-08 9번, Q-48). 일괄 update는 영속성 컨텍스트를
-        // 비워 방장 위임·방 삭제 변경을 잃으므로 엔티티로 표시하고, 저장소에서는 커밋 뒤에 지운다. 내 데이터 삭제(USER-05)는 이어서
-        // 예전에 나간 방의 남은 사진만 지운다.
-        certificationRepository.findByMember_IdAndImageKeyIsNotNullAndImageDeletedAtIsNull(member.getId()).stream()
-                .map(certification -> certification.removeImage(now))
-                .forEach(certificationPhotoService::deleteAfterCommit);
+        deletePhotos(member, now);
         // 나가기를 저장하기 전에 찾아야 flush 시점과 상관없이 나가는 사람이 빠진다.
         Optional<RoomMember> successor = roomMemberRepository
                 .findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(room.getId(), member.getId());
@@ -234,6 +229,60 @@ public class RoomService {
         }
         voteStartService.startIfAllCertified(room.getId(), now);
         voteCloseService.closeIfAllVoted(room.getId(), now);
+    }
+
+    /** 목표 달성 뒤 [더 수행하기] (ROOM-09 5번). 선택 대기를 끝내고 방은 그대로 둔다. */
+    @Transactional
+    public void continuePot(Long userId, Long roomId) {
+        Room room = lockPotDecision(userId, roomId);
+        room.continuePot();
+    }
+
+    /**
+     * 목표 달성 뒤 [방 닫기] (ROOM-09 6·7번). 현재 멤버 전원을 나가게 하고 방을 삭제한다. 목표를 채운 방이라 나가기 차감은 없다.
+     * 멤버를 남겨 두면 삭제된 방에 현재 멤버가 남아 기록 정리(CLEAN-01)와 내 데이터 삭제(USER-05)에서 빠져서 나간 것으로 처리한다.
+     * 진행 중 회차는 마지막 멤버가 나가 삭제될 때(ROOM-07 11번)처럼 그대로 두고, 사진은 나가기처럼 바로 지운다.
+     * 참여 방 수를 줄이기만 해서 멤버의 사용자 행은 잠그지 않는다.
+     */
+    @Transactional
+    public void close(Long userId, Long roomId) {
+        Room room = lockPotDecision(userId, roomId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        for (RoomMember member : roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())) {
+            deletePhotos(member, now);
+            member.leave(now, LeaveType.ROOM_CLOSED);
+        }
+        room.delete(now);
+    }
+
+    /**
+     * 방 행 락을 잡고 방장인지, 선택 대기인지 본다. 동시 요청은 먼저 처리된 쪽만 성공한다. 나중 요청은 [더 수행하기]가 먼저였으면
+     * 선택 대기가 끝나 ROOM_011, [방 닫기]가 먼저였으면 방이 삭제돼 ROOM_005다 (ROOM-09 12번).
+     */
+    private Room lockPotDecision(Long userId, Long roomId) {
+        Room room = roomRepository.findWithLockById(roomId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        if (!me.getId().equals(room.getOwnerMemberId())) {
+            throw new BaseException(BaseErrorCode.NOT_ROOM_OWNER);
+        }
+        if (!room.isPotDecisionPending()) {
+            throw new BaseException(BaseErrorCode.POT_DECISION_NOT_PENDING);
+        }
+        return room;
+    }
+
+    /**
+     * 나가면 나간 유형과 상관없이 이 방의 사진을 바로 지운다 (ROOM-07 3번, ROOM-08 9번, ROOM-09 6번, Q-48). 일괄 update는 영속성 컨텍스트를
+     * 비워 방장 위임·방 삭제 변경을 잃으므로 엔티티로 표시하고, 저장소에서는 커밋 뒤에 지운다. 내 데이터 삭제(USER-05)는 이어서
+     * 예전에 나간 방의 남은 사진만 지운다.
+     */
+    private void deletePhotos(RoomMember member, LocalDateTime now) {
+        certificationRepository.findByMember_IdAndImageKeyIsNotNullAndImageDeletedAtIsNull(member.getId()).stream()
+                .map(certification -> certification.removeImage(now))
+                .forEach(certificationPhotoService::deleteAfterCommit);
     }
 
     /** 앞뒤 띄어쓰기를 지운 뒤 검사해야 해서 요청 DTO가 아니라 여기서 확인한다. */

@@ -1040,6 +1040,123 @@ paths:
               examples:
                 ROOM_005:
                   $ref: '#/components/examples/ROOM_005'
+  /api/rooms/{roomId}/pot-decision/continue:
+    post:
+      tags:
+      - '[ROOM] 방'
+      operationId: continuePot
+      summary: 목표 달성 뒤 더 수행하기
+      description: |-
+        ROOM-09. 솥을 채운 뒤 방장이 [더 수행하기]를 고른다. 선택 대기가 끝나고 솥·회차·멤버는 그대로다.
+
+        - 다음 솥은 솥을 채우는 순간 이미 시작돼 있다 (POT-01).
+        - 확인 순서: `ROOM_005` → `ROOM_002` → `ROOM_007` → `ROOM_011`
+      parameters:
+      - *id001
+      responses:
+        '200':
+          description: 성공 (data 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: COMMON_008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                COMMON_008:
+                  $ref: '#/components/examples/COMMON_008'
+        '403':
+          description: ROOM_002 / ROOM_007
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_002:
+                  $ref: '#/components/examples/ROOM_002'
+                ROOM_007:
+                  $ref: '#/components/examples/ROOM_007'
+        '404':
+          description: ROOM_005
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_005:
+                  $ref: '#/components/examples/ROOM_005'
+        '409':
+          description: ROOM_011
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_011:
+                  $ref: '#/components/examples/ROOM_011'
+  /api/rooms/{roomId}:
+    delete:
+      tags:
+      - '[ROOM] 방'
+      operationId: closeRoom
+      summary: 목표 달성 뒤 방 닫기
+      description: |-
+        ROOM-09. 솥을 채운 뒤 방장이 [방 닫기]를 고른다. 멤버 전원이 나간 것으로 처리하고 방을 삭제한다.
+
+        - 선택 대기일 때만 닫을 수 있다.
+        - 목표를 채운 방이라 공양미 차감은 없고, 이 방의 인증 사진은 바로 지운다.
+        - 확인 순서: `ROOM_005` → `ROOM_002` → `ROOM_007` → `ROOM_011`
+      parameters:
+      - *id001
+      responses:
+        '200':
+          description: 성공 (data 없음)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: COMMON_008
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                COMMON_008:
+                  $ref: '#/components/examples/COMMON_008'
+        '403':
+          description: ROOM_002 / ROOM_007
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_002:
+                  $ref: '#/components/examples/ROOM_002'
+                ROOM_007:
+                  $ref: '#/components/examples/ROOM_007'
+        '404':
+          description: ROOM_005
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_005:
+                  $ref: '#/components/examples/ROOM_005'
+        '409':
+          description: ROOM_011
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_011:
+                  $ref: '#/components/examples/ROOM_011'
   /api/invites/{token}:
     get:
       tags:
@@ -3939,6 +4056,7 @@ components:
       required:
       - isLastCertifier
       - receivedPokeCount
+      - isPotDecisionPending
       properties:
         isLastCertifier:
           type: boolean
@@ -3949,6 +4067,10 @@ components:
           description: 이번 회차에 받은 콕 수
           example: 2
           format: int32
+        isPotDecisionPending:
+          type: boolean
+          description: 솥을 채운 뒤 방장이 아직 [더 수행하기]·[방 닫기]를 고르지 않음. 방장에게만 true. true면 방에 들어올 때마다 선택 팝업 (ROOM-09)
+          example: false
     TodayEntry:
       type: object
       description: 홈보다 먼저 띄울 화면
@@ -4470,6 +4592,12 @@ components:
         success: false
         code: ROOM_010
         message: 방장 본인은 내보낼 수 없습니다.
+    ROOM_011:
+      summary: ROOM_011 (409)
+      value:
+        success: false
+        code: ROOM_011
+        message: 목표 달성 뒤 선택할 차례가 아니에요.
     ROUND_001:
       summary: ROUND_001 (404)
       value:
