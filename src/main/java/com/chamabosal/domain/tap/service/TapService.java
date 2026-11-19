@@ -17,7 +17,9 @@ import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.tap.dto.response.ReceivedTapsResponse;
 import com.chamabosal.domain.tap.dto.response.TapSendResponse;
 import com.chamabosal.domain.tap.entity.Tap;
+import com.chamabosal.domain.tap.entity.TapStart;
 import com.chamabosal.domain.tap.repository.TapRepository;
+import com.chamabosal.domain.tap.repository.TapStartRepository;
 import com.chamabosal.domain.vote.repository.VoteRepository;
 import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
@@ -40,6 +42,7 @@ public class TapService {
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final TapRepository tapRepository;
+    private final TapStartRepository tapStartRepository;
     private final VoteRepository voteRepository;
     private final RiceService riceService;
     private final RiceHistoryRepository riceHistoryRepository;
@@ -47,8 +50,30 @@ public class TapService {
     private final Clock clock;
 
     /**
+     * 톡톡 화면에 들어갈 때 시작을 남긴다 (RESULT-03 10번). 방어와 같은 방 행 락 안에서 `PICKED`인지 확인해서,
+     * 시작 기록이 있으면 방어 전에 시작한 것이다. 이미 시작했으면 다시 확인하지 않고 성공한다. 새로 남겼으면 true.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public boolean start(Long userId, Long roundId) {
+        Long roomId = roundRepository.findRoomIdByRoundId(roundId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
+        roomRepository.findWithLockById(roomId).orElseThrow();
+        RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(roomId, userId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
+        Round round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
+        if (tapStartRepository.existsByRound_IdAndMember_Id(roundId, me.getId())) {
+            return false;
+        }
+        checkCanTap(round, me, false);
+        tapStartRepository.save(TapStart.create(round, me));
+        return true;
+    }
+
+    /**
      * 결과(`PICKED`·`DEFENDED`)를 방어와 같은 방 행 락 안에서 확인한다. roundId만 받아서 방 ID만 먼저 읽고
      * 락을 잡은 뒤 READ COMMITTED로 회차를 읽는다 (VoteSubmitService와 같은 이유). 같은 사람의 중복 전송은 UNIQUE도 막는다.
+     * 방어된 회차는 방어 전에 시작한 사람만 보낼 수 있고, 톡톡은 전달하지 않지만 +5석은 준다 (RESULT-03 7·10번).
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TapSendResponse send(Long userId, Long roundId, int count) {
@@ -59,8 +84,24 @@ public class TapService {
                 .orElseThrow(() -> new BaseException(BaseErrorCode.NOT_ROOM_MEMBER));
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
+        checkCanTap(round, me, tapStartRepository.existsByRound_IdAndMember_Id(roundId, me.getId()));
 
-        if (round.getStatus() != RoundStatus.ANNOUNCED || round.getResultType() != RoundResultType.PICKED) {
+        Tap tap = tapRepository.save(Tap.create(round, me, count));
+        int riceEarned = count > 0
+                ? riceService.accrue(room, me, RiceReason.TAP, RiceRefType.TAP, tap.getId(), TAP_REWARD)
+                : 0;
+        int potEarned = potService.accrue(room, me, PotReason.TAP, tap.getId(), riceEarned);
+        return new TapSendResponse(riceEarned, potEarned);
+    }
+
+    /**
+     * 톡톡 시작·보내기 공통 확인. 확인 순서: 톡톡 없는 결과 → 지목된 사람이 나감 → 본인 → 투표 안 함 → 이미 보냄 → 톡톡 마감.
+     * isStartedBeforeDefense가 참이면 방어된(`DEFENDED`) 결과도 허용한다.
+     */
+    private void checkCanTap(Round round, RoomMember me, boolean isStartedBeforeDefense) {
+        boolean isPicked = round.getResultType() == RoundResultType.PICKED;
+        boolean isDefendedAfterStart = round.getResultType() == RoundResultType.DEFENDED && isStartedBeforeDefense;
+        if (round.getStatus() != RoundStatus.ANNOUNCED || !(isPicked || isDefendedAfterStart)) {
             throw new BaseException(BaseErrorCode.TAP_NOT_AVAILABLE);
         }
         // 지목된 사람이 방을 나갔으면 이마 톡톡이 없다 (RESULT-03 예외, Q-27).
@@ -71,24 +112,17 @@ public class TapService {
             throw new BaseException(BaseErrorCode.TAP_SELF);
         }
         // 그 회차에 투표한 사람만 보낸다 (RESULT-02 4번). 투표한 뒤 나갔다가 투표 시작 뒤 다시 들어오면 같은 멤버 행이라
-        // 표가 남아 있지만, 투표 제출·마감(Q-36)처럼 그 회차 명단 밖으로 보고 막는다 (코드리뷰 반영).
+        // 표가 남아 있지만, 투표 제출·마감(Q-36)처럼 그 회차 명단 밖으로 보고 막는다.
         if (round.isJoinedAfterVoteStart(me)
-                || !voteRepository.existsByRound_IdAndVoterMember_Id(roundId, me.getId())) {
+                || !voteRepository.existsByRound_IdAndVoterMember_Id(round.getId(), me.getId())) {
             throw new BaseException(BaseErrorCode.TAP_NOT_VOTED);
         }
-        if (tapRepository.existsByRound_IdAndFromMember_Id(roundId, me.getId())) {
+        if (tapRepository.existsByRound_IdAndFromMember_Id(round.getId(), me.getId())) {
             throw new BaseException(BaseErrorCode.ALREADY_TAPPED);
         }
         if (!round.isTapOpen(LocalDateTime.now(clock))) {
             throw new BaseException(BaseErrorCode.TAP_EXPIRED);
         }
-
-        Tap tap = tapRepository.save(Tap.create(round, me, count));
-        int riceEarned = count > 0
-                ? riceService.accrue(room, me, RiceReason.TAP, RiceRefType.TAP, tap.getId(), TAP_REWARD)
-                : 0;
-        int potEarned = potService.accrue(room, me, PotReason.TAP, tap.getId(), riceEarned);
-        return new TapSendResponse(riceEarned, potEarned);
     }
 
     @Transactional(readOnly = true)

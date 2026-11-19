@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -46,7 +47,11 @@ public class RoundResultService {
     private final StoreService storeService;
     private final Clock clock;
 
-    @Transactional(readOnly = true)
+    /**
+     * 지목된 사람이 처음 열면 그 시각을 남겨서 읽기 전용이 아니다 (RESULT-02 6번). 동시에 처음 열면 뒤 요청의 조건부 UPDATE는 0건이 된다.
+     * REPEATABLE READ면 다시 읽어도 첫 조회의 스냅샷(비어 있는 처음 연 시각)을 보므로, 먼저 커밋된 시각을 읽도록 READ COMMITTED로 읽는다.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RoundResultResponse getResult(Long userId, Long roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -62,6 +67,15 @@ public class RoundResultService {
         boolean isMePicked = picked != null && picked.getId().equals(me.getId());
         boolean isPicked = resultType == RoundResultType.PICKED;
         LocalDateTime now = LocalDateTime.now(clock);
+        if (isMePicked && isPicked && round.getPickedSeenAt() == null) {
+            roundRepository.markPickedSeen(roundId, now);
+            // 동시에 연 다른 요청이 먼저 남겼으면 그 값을 쓴다. 조건부 UPDATE가 영속성 컨텍스트를 비워 DB에서 다시 읽는다.
+            // 그사이 방어가 커밋됐으면 DEFENDED로 바뀌어 있다.
+            round = roundRepository.findById(roundId).orElseThrow();
+            picked = round.getPickedMember();
+            resultType = round.getResultType();
+            isPicked = resultType == RoundResultType.PICKED;
+        }
 
         boolean isTapExpired = isPicked && !round.isTapOpen(now);
         // 지목된 사람이 방을 나갔으면 톡톡이 없다 (RESULT-02 4번, Q-27).
@@ -91,7 +105,8 @@ public class RoundResultService {
                         && defenseService.hasCertified(round) && !defenseService.isMoktakDone(userId, roundId),
                 canTap,
                 isTapExpired,
-                (int) tapRepository.countByRound_IdAndCountGreaterThanAndFromMember_IdNot(roundId, 0, me.getId()));
+                (int) tapRepository.countByRound_IdAndCountGreaterThanAndFromMember_IdNot(roundId, 0, me.getId()),
+                round.isDefensePending(now));
     }
 
     /** 표를 받은 멤버만, 득표 수가 많은 순. 같으면 멤버 ID 순이다. */

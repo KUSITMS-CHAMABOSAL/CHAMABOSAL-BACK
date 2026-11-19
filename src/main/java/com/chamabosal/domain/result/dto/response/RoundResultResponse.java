@@ -20,12 +20,13 @@ public record RoundResultResponse(
         List<VoteCount> voteCounts,
         @Schema(description = "지목이 없을 때만 \"오늘은 모두 보살\" 득표 수. 지목이 있으면 null") Integer allBosalCount,
         boolean isMePicked,
-        @Schema(description = "내가 지목된 PICKED 결과일 때만, 결과 발표 + 2분") LocalDateTime defenseUsableUntil,
+        @Schema(description = "내가 지목된 PICKED 결과이고 처음 연 시각이 톡톡 마감 전일 때만, 처음 연 시각 + 2분") LocalDateTime defenseUsableUntil,
         @Schema(description = "내가 지목된 PICKED·DEFENDED 결과일 때만, 보유한 방어권 개수") Integer defenseTicketCount,
         boolean canUseDefense,
         boolean canTap,
         @Schema(description = "PICKED인데 그 뒤 다음 투표가 열려 톡톡 시간이 지남") boolean isTapExpired,
-        @Schema(description = "나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수") int tappedMemberCount
+        @Schema(description = "나를 뺀, 그 회차에 1번 이상 톡톡한 멤버 수") int tappedMemberCount,
+        @Schema(description = "지목된 사람이 아직 방어권을 쓸 수 있는지 (방어권 고민 중 표시). 표시용이라 canTap과 상관없음") boolean isDefensePending
 ) {
 
     public record Picked(

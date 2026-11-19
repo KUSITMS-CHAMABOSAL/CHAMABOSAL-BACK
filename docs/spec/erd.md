@@ -178,6 +178,7 @@ erDiagram
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
+| picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준, 톡톡 마감 뒤면 방어 불가 (SHIELD-02) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
 - `UNIQUE (room_id, round_date)`
@@ -284,6 +285,17 @@ erDiagram
 - 받는 사람(지목된 사람)은 `rounds.picked_member_id`라 따로 저장하지 않음
 - 톡톡이 끝날 때(다 침·건너뛰기·나가기) 프론트가 최종 횟수를 **한 번만** 보냄 → 행이 생겼다는 것 자체가 끝났다는 뜻 (UNIQUE라 두 번째 요청은 거절)
   - "친구 n명이 톡톡했어요" = 그 회차에서 count가 1 이상인 행 개수 (나 제외). 0번 건너뛰기도 행은 만듦 (다시 못 치게)
+
+### tap_starts (이마 톡톡 시작)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| round_id | BIGINT | FK rounds, NOT NULL | |
+| member_id | BIGINT | FK room_members, NOT NULL | 톡톡을 시작한 사람 |
+
+- `UNIQUE (round_id, member_id)` → 1인 회차당 한 번
+- 톡톡 화면에 들어갈 때 남김. `PICKED`일 때만 만들 수 있어서, 행이 있으면 방어 전에 시작한 것이다. 방어로 `DEFENDED`가 된 뒤에는 이 행이 있는 사람만 톡톡을 보낼 수 있다 (RESULT-03 10번)
   - 톡톡 도중 앱이 강제로 꺼지면 전송을 못 해서 그 사람의 톡톡은 전달 안 됨 (벌칙 연출이라 감수)
 - ⚠️ 프론트 협의 필요: 칠 때마다 보내지 말고 끝날 때 `{ count: n }` 한 번만 전송. 화면을 나갈 때(`pagehide` 등)도 친 만큼 전송
 

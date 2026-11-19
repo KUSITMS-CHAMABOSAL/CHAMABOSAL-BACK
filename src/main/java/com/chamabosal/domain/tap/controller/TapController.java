@@ -38,12 +38,39 @@ public class TapController {
     private final TapService tapService;
     private final MoktakService moktakService;
 
+    @PostMapping("/rounds/{roundId}/taps/start")
+    @Operation(summary = "이마 톡톡 시작 (RESULT-03)",
+            description = """
+                    톡톡 화면에 들어갈 때 한 번 보냅니다. 방어 전에 시작했다는 기록이라, 지목된 사람이 그사이 방어해도 끝까지 보낼 수 있습니다.
+                    보내기와 같은 조건을 확인하고, 다시 보내도 성공합니다. 이미 방어된 결과면 TAP_001입니다.
+                    """)
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "시작을 처음 남김"),
+            @ApiResponse(responseCode = "200", description = "이미 시작함 (재요청)"),
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차에 투표하지 않음",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409",
+                    description = "TAP_001 톡톡이 없는 결과(PICKED 아님, 방어됨, 지목된 사람이 나감 포함) / TAP_003 이미 톡톡함 / TAP_004 톡톡 시간 지남",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Response<Void>> start(
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @PathVariable Long roundId
+    ) {
+        if (tapService.start(userId, roundId)) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(Response.created("톡톡을 시작했어요.", null));
+        }
+        return ResponseEntity.ok(Response.ok("이미 톡톡을 시작했어요.", null));
+    }
+
     @PostMapping("/rounds/{roundId}/taps")
     @Operation(summary = "이마 톡톡 보내기 (RESULT-03)",
             description = """
                     톡톡을 끝낼 때(다 침·건너뛰기·화면 나가기) 친 횟수를 한 번만 보냅니다. 0번(건너뛰기)도 보냅니다. 횟수 상한은 없습니다.
                     그 회차에 투표한 사람만 보낼 수 있습니다.
-                    지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받고 한 솥에도 5석(potEarned)이 들어갑니다.
+                    지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 방어된 뒤에는 방어 전에 taps/start를 보낸 사람만 보낼 수 있고, 톡톡은 전달되지 않지만 공양미는 받습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받고 한 솥에도 5석(potEarned)이 들어갑니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "저장 성공"),
