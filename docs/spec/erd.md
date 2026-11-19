@@ -278,7 +278,7 @@ erDiagram
 | round_id | BIGINT | FK rounds, NOT NULL | |
 | from_member_id | BIGINT | FK room_members, NOT NULL | 두드린 사람 |
 | count | INT | NOT NULL | 0 이상, 상한 없음 |
-| played_at | DATETIME | NULL | 전달 뒤 받은 사람이 투표 탭에서 재생한 시각. NULL이면 아직 안 본 톡톡 (앱을 열 때는 띄우지 않음, Q-107) |
+| played_at | DATETIME | NULL | 전달 뒤 받은 사람이 재생 완료를 보낸 시각. NULL이면 아직 안 본 톡톡. 앱을 열 때는 띄우지 않음 (Q-107), 재생 여부 판단 위치는 [미정] Q-108 |
 
 - `UNIQUE (round_id, from_member_id)` → 1인 회차당 1세트
 - `count`가 1 이상이면 보낸 사람에게 톡톡 완료 보상(`rice_histories.reason = TAP`, 한 솥 +5) 적립 (RICE-01 4번)
