@@ -2777,7 +2777,7 @@ components:
           $ref: '#/components/schemas/CertificationResult'
         memo:
           type: string
-          description: 한 줄 기록 1~40자
+          description: 한 줄 기록 1~50자
           example: 치킨 시켰어요
           minLength: 1
           maxLength: 40
@@ -2846,7 +2846,7 @@ components:
           $ref: '#/components/schemas/CertificationResult'
         memo:
           type: string
-          description: 1~40자
+          description: 1~50자
           example: 치킨 반 마리만 시켰어요
           minLength: 1
           maxLength: 40
@@ -3011,7 +3011,6 @@ components:
       - nickname
       - color
       - equippedItemCodes
-      - badCount
       - certification
       properties:
         memberId:
@@ -3030,10 +3029,6 @@ components:
           description: 착용 아이템 코드, 상점 노출 순서. 없으면 빈 배열
           example:
           - SANTA_HAT
-        badCount:
-          type: integer
-          example: 2
-          description: 투표 시작 시점에 그 인증이 받은 배드(아쉬워요) 수. 투표 중에는 바뀌지 않고 동점 판정에 쓴다 (Q-79). 화면에 표시할지는 디자인을 따른다
         certification:
           allOf:
           - $ref: '#/components/schemas/VoteCandidateCertification'
