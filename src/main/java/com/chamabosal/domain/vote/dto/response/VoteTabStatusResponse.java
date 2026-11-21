@@ -77,6 +77,11 @@ public record VoteTabStatusResponse(
                 roundId, roundDate, null, null, null, null, null, moktakCount);
     }
 
+    public static VoteTabStatusResponse noVote(Long roundId, LocalDate roundDate) {
+        return new VoteTabStatusResponse(VoteTabStatus.NO_VOTE, null, null, null, null,
+                roundId, roundDate, null, null, null, null, null, null);
+    }
+
     public record MemberSummary(Long memberId, String nickname, BosalColor color) {
 
         public static MemberSummary from(RoomMember member) {
