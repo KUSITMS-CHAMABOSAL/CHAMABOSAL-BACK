@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chamabosal-app
+spec:
+  selector:
+    app.kubernetes.io/name: chamabosal-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
