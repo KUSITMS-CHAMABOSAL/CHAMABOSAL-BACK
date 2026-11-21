@@ -1,0 +1,18 @@
+# TLS는 Gateway chamabosal-gateway의 https 리스너에서 끝낸다 (k8s/gateway).
+# api.chamabosal.com은 DNS를 옮기는 날(Phase 5) 추가한다. 그 전에 넣으면 인증서 발급(HTTP-01)이 실패하고 지금 서버와 트래픽이 섞일 수 있다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: chamabosal-app
+spec:
+  parentRefs:
+    - name: chamabosal-gateway
+      namespace: chamabosal
+      sectionName: https
+  hostnames:
+    # 전환 전 리허설용 도메인
+    - api-k8s.chamabosal.com
+  rules:
+    - backendRefs:
+        - name: chamabosal-app
+          port: 8080
