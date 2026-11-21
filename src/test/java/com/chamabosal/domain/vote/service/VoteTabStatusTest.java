@@ -38,6 +38,7 @@ import com.chamabosal.global.security.jwt.JwtProvider;
 import com.chamabosal.support.MutableClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -319,7 +320,7 @@ class VoteTabStatusTest {
         roomMemberRepository.save(RoomMember.create(room, newUser(), "새봄", BosalColor.YELLOW, CERTIFIED_AT));
         memberC.leave(CERTIFIED_AT, LeaveType.LEFT);
         memberD.leave(CERTIFIED_AT, LeaveType.LEFT);
-        roomMemberRepository.saveAll(java.util.List.of(memberC, memberD));
+        roomMemberRepository.saveAll(List.of(memberC, memberD));
         Round round = startVotingRound(memberA, memberB);
 
         tab(room.getId(), userA)
@@ -447,6 +448,127 @@ class VoteTabStatusTest {
 
         clock.set(LocalDateTime.of(2026, 11, 6, 20, 0));
         tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("UNDER_THREE"));
+    }
+
+    // ---------- 투표 없음 (VOTE-05 6번) ----------
+
+    @Test
+    void VOTE_05_16_투표_없음으로_확정된_다음_날은_투표_없음이다() throws Exception {
+        Round picked = pickedB();
+        seeResult(userA, picked);
+        sendTap(userA, picked, 3);
+        // 11/6 회차는 콕만 있어 행이 생겼고, 인증 0명이라 11/7 03:00에 투표 없음으로 확정된다.
+        Round noVote = roundRepository.save(Round.create(room, NOV_5.plusDays(1)));
+        voteStartService.startAtDeadline(room.getId(), noVote.getId(), LocalDateTime.of(2026, 11, 7, 3, 0));
+
+        clock.set(LocalDateTime.of(2026, 11, 7, 10, 0));
+        tab(room.getId(), userA)
+                .andExpect(jsonPath("$.data.status").value("NO_VOTE"))
+                .andExpect(jsonPath("$.data.roundId").value(noVote.getId()))
+                .andExpect(jsonPath("$.data.roundDate").value("2026-11-06"));
+    }
+
+    @Test
+    void VOTE_05_17_인증도_콕도_없던_다음_날은_회차_ID_없이_투표_없음이다() throws Exception {
+        Round picked = pickedB();
+        seeResult(userA, picked);
+        sendTap(userA, picked, 3);
+        // 11/6에는 인증도 콕도 없어 회차 행이 없다.
+
+        clock.set(LocalDateTime.of(2026, 11, 7, 10, 0));
+        tab(room.getId(), userA)
+                .andExpect(jsonPath("$.data.status").value("NO_VOTE"))
+                .andExpect(jsonPath("$.data.roundId").doesNotExist())
+                .andExpect(jsonPath("$.data.roundDate").value("2026-11-06"));
+    }
+
+    @Test
+    void VOTE_05_18_들어온_날은_전날_투표_없음을_보지_않는다() throws Exception {
+        // 11/5에는 인증도 콕도 없었다. A는 10/26부터 있었다 (setUp).
+        User userE = newUser();
+        roomMemberRepository.save(RoomMember.create(room, userE, "은우", BosalColor.PINK, LocalDateTime.of(2026, 11, 6, 9, 0)));
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 10, 0));
+        tab(room.getId(), userA).andExpect(jsonPath("$.data.status").value("NO_VOTE"))
+                .andExpect(jsonPath("$.data.roundDate").value("2026-11-05"));
+        tab(room.getId(), userE).andExpect(jsonPath("$.data.status").value("BEFORE_FIRST_VOTE"));
+    }
+
+    @Test
+    void VOTE_05_19_남은_목탁_수행은_투표_없음보다_먼저다() throws Exception {
+        Round picked = pickedB();
+        seeResult(userB, picked);
+        sendTap(userA, picked, 5);
+        // 11/6에는 인증이 없었다.
+
+        clock.set(LocalDateTime.of(2026, 11, 7, 10, 0));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("MOKTAK"));
+    }
+
+    @Test
+    void VOTE_05_20_오늘_회차가_이미_투표_없음이면_투표_없음이다() throws Exception {
+        Room pairRoom = roomRepository.save(Room.create("둘 방", RoomGoal.DELIVERY, 4, 300));
+        User userX = newUser();
+        RoomMember memberX = roomMemberRepository.save(
+                RoomMember.create(pairRoom, userX, "가온", BosalColor.PINK, NOV_5.minusDays(10).atStartOfDay()));
+        RoomMember memberY = roomMemberRepository.save(
+                RoomMember.create(pairRoom, newUser(), "나래", BosalColor.MINT, NOV_5.minusDays(10).atStartOfDay()));
+        Round round = roundRepository.save(Round.create(pairRoom, NOV_5));
+        for (RoomMember member : List.of(memberX, memberY)) {
+            certificationRepository.save(Certification.create(
+                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, CERTIFIED_AT));
+        }
+        // 둘뿐이라 전원 인증해도 투표 없이 투표 없음이 된다.
+        voteStartService.startAtDeadline(pairRoom.getId(), round.getId(), CERTIFIED_AT);
+        roomMemberRepository.save(RoomMember.create(pairRoom, newUser(), "다온", BosalColor.YELLOW, NOV_5.atTime(20, 30)));
+
+        clock.set(NOV_5.atTime(21, 0));
+        tab(pairRoom.getId(), userX)
+                .andExpect(jsonPath("$.data.status").value("NO_VOTE"))
+                .andExpect(jsonPath("$.data.roundId").value(round.getId()))
+                .andExpect(jsonPath("$.data.roundDate").value("2026-11-05"));
+    }
+
+    @Test
+    void VOTE_05_21_03시_배치_전에는_투표_없음이_아니다() throws Exception {
+        Round round = roundRepository.save(Round.create(room, NOV_5));
+        certificationRepository.save(Certification.create(
+                round, memberA, CertificationResult.ENDURED, "집밥 해먹었어요", null, CERTIFIED_AT));
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 3, 0, 30));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("BEFORE_FIRST_VOTE"));
+    }
+
+    @Test
+    void VOTE_05_22_오늘_회차가_발표됐으면_전날_투표_없음을_보지_않는다() throws Exception {
+        // 11/5에는 인증이 없었다. 11/6 회차는 전원 인증으로 21:00에 열려 21:30에 B가 지목됐다.
+        LocalDate nov6 = NOV_5.plusDays(1);
+        Round round = roundRepository.save(Round.create(room, nov6));
+        for (RoomMember member : List.of(memberA, memberB, memberC, memberD)) {
+            certificationRepository.save(Certification.create(
+                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, nov6.atTime(20, 0)));
+        }
+        voteStartService.startAtDeadline(room.getId(), round.getId(), nov6.atTime(21, 0));
+        vote(round, memberA, memberB);
+        vote(round, memberC, memberB);
+        vote(round, memberD, memberB);
+        vote(round, memberB, memberA);
+        voteCloseService.closeIfAllVoted(room.getId(), nov6.atTime(21, 30));
+        seeResult(userB, round);
+
+        clock.set(nov6.atTime(22, 0));
+        tab(room.getId(), userB).andExpect(jsonPath("$.data.status").value("RESULT_SEEN"));
+    }
+
+    @Test
+    void VOTE_05_23_03시_전에_들어오면_그_회차부터_본다() throws Exception {
+        // 11/5에는 인증도 콕도 없었다. E는 11/6 01:30에 들어와 11/5 회차에 속한다.
+        User userE = newUser();
+        roomMemberRepository.save(RoomMember.create(room, userE, "은우", BosalColor.PINK, LocalDateTime.of(2026, 11, 6, 1, 30)));
+
+        clock.set(LocalDateTime.of(2026, 11, 6, 10, 0));
+        tab(room.getId(), userE).andExpect(jsonPath("$.data.status").value("NO_VOTE"))
+                .andExpect(jsonPath("$.data.roundDate").value("2026-11-05"));
     }
 
     /** A·C·D가 B를, B가 A를 골라 11/6 15:00에 B가 지목된 11/5 회차. 지금은 11/6 16:00이다. */
