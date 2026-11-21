@@ -10,5 +10,6 @@ public enum VoteTabStatus {
     RESULT_UNSEEN,
     TAP,
     MOKTAK,
-    RESULT_SEEN
+    RESULT_SEEN,
+    NO_VOTE
 }
