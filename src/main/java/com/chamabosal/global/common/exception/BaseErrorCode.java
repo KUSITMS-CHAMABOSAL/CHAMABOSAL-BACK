@@ -90,6 +90,8 @@ public enum BaseErrorCode implements ErrorCode {
 
     // Poke
     POKE_SELF(HttpStatus.BAD_REQUEST, "POKE_001", "나를 찌를 수 없어요."),
+    POKE_NOT_CERTIFYING(HttpStatus.CONFLICT, "POKE_002", "지금은 인증 시간이 아니라 콕을 찌를 수 없어요."),
+    POKE_ALREADY_CERTIFIED(HttpStatus.CONFLICT, "POKE_003", "이미 인증한 보살은 찌를 수 없어요."),
 
     // Pot
     POT_NOT_FOUND(HttpStatus.NOT_FOUND, "POT_001", "다 채운 솥이 없어요."),

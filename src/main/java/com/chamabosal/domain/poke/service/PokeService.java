@@ -1,5 +1,7 @@
 package com.chamabosal.domain.poke.service;
 
+import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.poke.dto.request.PokeSendRequest;
 import com.chamabosal.domain.poke.entity.Poke;
 import com.chamabosal.domain.poke.repository.PokeRepository;
@@ -14,6 +16,7 @@ import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +33,14 @@ public class PokeService {
     private final RoomMemberRepository roomMemberRepository;
     private final RoundRepository roundRepository;
     private final PokeRepository pokeRepository;
+    private final CertificationService certificationService;
+    private final CertificationRepository certificationRepository;
     private final Clock clock;
 
-    /** 확인 순서: 없는 방 → 보내는 사람이 방 멤버 아님 → 본인 → 받는 사람이 이 방 현재 멤버 아님 (POKE-01 10번). */
+    /**
+     * 확인 순서: 없는 방 → 보내는 사람이 방 멤버 아님 → 본인 → 받는 사람이 이 방 현재 멤버 아님 → 인증 시간 아님 → 받는 사람이 이미 인증함
+     * (POKE-01 10번).
+     */
     @Transactional
     public void send(Long userId, Long roomId, PokeSendRequest request) {
         // 회차는 요청을 받은 시각으로 정한다. 락을 기다리다 03:00을 넘겨도 회차가 바뀌지 않게 락보다 먼저 읽는다.
@@ -49,10 +57,18 @@ public class PokeService {
                 .filter(found -> found.getRoom().getId().equals(roomId) && found.isCurrent())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.MEMBER_NOT_FOUND));
 
-        // 회차 상태와 상관없이 오늘 회차에 쌓고, 행이 없으면 만든다 (POKE-01 3·4번).
+        // 받는 사람이 지금 인증할 수 있을 때만 찌른다. 인증 등록이 열리는 기준을 그대로 쓴다 (POKE-01 2·3번).
         LocalDate roundDate = Round.dateOf(now);
-        Round round = roundRepository.findByRoom_IdAndRoundDate(roomId, roundDate)
-                .orElseGet(() -> roundRepository.save(Round.create(room, roundDate)));
+        Optional<Round> found = roundRepository.findByRoom_IdAndRoundDate(roomId, roundDate);
+        if (!certificationService.isOpen(roomId, roundDate, found, to.getId())) {
+            throw new BaseException(BaseErrorCode.POKE_NOT_CERTIFYING);
+        }
+        if (found.isPresent()
+                && certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNull(found.get().getId(), to.getId())) {
+            throw new BaseException(BaseErrorCode.POKE_ALREADY_CERTIFIED);
+        }
+        // 오늘 회차에 쌓고, 행이 없으면 만든다 (POKE-01 4번).
+        Round round = found.orElseGet(() -> roundRepository.save(Round.create(room, roundDate)));
         pokeRepository.findByRound_IdAndFromMember_IdAndToMember_Id(round.getId(), me.getId(), to.getId()).ifPresentOrElse(
                 poke -> poke.add(request.count()),
                 () -> pokeRepository.save(Poke.create(round, me, to, request.count())));

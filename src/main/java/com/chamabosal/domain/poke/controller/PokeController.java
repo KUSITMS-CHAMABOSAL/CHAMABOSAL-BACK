@@ -33,9 +33,9 @@ public class PokeController {
     @PostMapping("/{roomId}/pokes")
     @Operation(summary = "콕 찌르기 (POKE-01)",
             description = """
-                    같은 방 멤버를 콕 찌릅니다. 인증 여부와 회차 상태에 상관없이 언제나 보낼 수 있고, 오늘 회차에 쌓입니다.
+                    인증 시간에 아직 인증하지 않은 같은 방 멤버를 콕 찌릅니다. 오늘 회차에 쌓입니다. 투표 중이거나 결과 뒤 다음 회차 인증 전이면 POKE_002, 받는 사람이 이미 인증했으면 POKE_003입니다.
                     연타는 화면에서 1~2초 모아 count(1~30)로 보내면 서버가 더합니다. 콕 푸시는 아직 보내지 않습니다(POKE-02).
-                    확인 순서: COMMON_002 → ROOM_005 → ROOM_002 → POKE_001 → ROOM_009
+                    확인 순서: COMMON_002 → ROOM_005 → ROOM_002 → POKE_001 → ROOM_009 → POKE_002 → POKE_003
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "저장 성공"),
@@ -66,6 +66,14 @@ public class PokeController {
             @ApiResponse(
                     responseCode = "404",
                     description = "ROOM_005 없거나 삭제된 방 / ROOM_009 받는 사람이 이 방 현재 멤버가 아님",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "POKE_002 인증 시간이 아님 / POKE_003 받는 사람이 이미 인증함",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)

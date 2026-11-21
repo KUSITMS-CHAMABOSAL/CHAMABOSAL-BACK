@@ -18,7 +18,7 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
-import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.entity.RoundResultType;
 import com.chamabosal.domain.round.repository.RoundParticipantRepository;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
@@ -108,12 +108,12 @@ class PokeTest {
     }
 
     @Test
-    void POKE_01_2_인증한_멤버에게도_찌를_수_있다() throws Exception {
+    void POKE_01_2_인증한_멤버는_찌를_수_없다() throws Exception {
         certify(userB);
 
-        poke(userA, memberB, 1).andExpect(status().isCreated());
+        poke(userA, memberB, 1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("POKE_003"));
 
-        assertThat(receivedCount(memberB)).isEqualTo(1);
+        assertThat(pokeRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -129,11 +129,23 @@ class PokeTest {
     }
 
     @Test
-    void POKE_01_5_투표_중에도_찌를_수_있다() throws Exception {
-        certify(userA);
-        certify(userB);
-        certify(userC);
-        assertThat(todayRound().getStatus()).isEqualTo(RoundStatus.VOTING);
+    void POKE_01_5_투표_중에는_찌를_수_없다() throws Exception {
+        // 어제(11/30) 회차가 아직 투표 중이라 오늘 회차 인증이 열리지 않았다.
+        Round yesterday = Round.create(room, DEC_1.minusDays(1));
+        yesterday.startVote(DEC_1.atTime(3, 0));
+        roundRepository.save(yesterday);
+
+        poke(userA, memberB, 1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("POKE_002"));
+
+        assertThat(pokeRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void POKE_01_8_투표가_마감되면_다시_찌를_수_있다() throws Exception {
+        Round yesterday = Round.create(room, DEC_1.minusDays(1));
+        yesterday.startVote(DEC_1.atTime(3, 0));
+        yesterday.announce(DEC_1.atTime(15, 0), RoundResultType.ALL_SAFE, null);
+        roundRepository.save(yesterday);
 
         poke(userA, memberB, 1).andExpect(status().isCreated());
 
