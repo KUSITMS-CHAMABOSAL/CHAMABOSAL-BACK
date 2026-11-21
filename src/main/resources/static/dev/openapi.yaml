@@ -1901,7 +1901,8 @@ paths:
         같은 방 멤버를 콕 찌른다. 인증 여부와 회차 상태에 상관없이 언제나 보낼 수 있다. 연타는 화면에서 1~2초 모아 횟수로 보내고, 서버는 받은 횟수를 더한다.
 
         - `count`: 요청 한 번에 1~30. 앱 안 누적 횟수에는 제한이 없다.
-        - 확인 순서: `COMMON_002` → `ROOM_005` → `ROOM_002` → `POKE_001` → `ROOM_009`
+        - 받는 사람이 지금 인증할 수 있을 때만 보낸다. 투표 중이거나 결과 뒤 다음 회차 인증 전이면 `POKE_002`, 받는 사람이 이미 인증했으면 `POKE_003`
+        - 확인 순서: `COMMON_002` → `ROOM_005` → `ROOM_002` → `POKE_001` → `ROOM_009` → `POKE_002` → `POKE_003`
       parameters:
       - *id001
       requestBody:
@@ -1957,6 +1958,17 @@ paths:
                   $ref: '#/components/examples/ROOM_005'
                 ROOM_009:
                   $ref: '#/components/examples/ROOM_009'
+        '409':
+          description: POKE_002 / POKE_003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                POKE_002:
+                  $ref: '#/components/examples/POKE_002'
+                POKE_003:
+                  $ref: '#/components/examples/POKE_003'
   /api/rooms/{roomId}/vote:
     get:
       tags:
@@ -4534,6 +4546,18 @@ components:
         success: false
         code: POKE_001
         message: 나를 찌를 수 없어요.
+    POKE_002:
+      summary: POKE_002 (409)
+      value:
+        success: false
+        code: POKE_002
+        message: 지금은 인증 시간이 아니라 콕을 찌를 수 없어요.
+    POKE_003:
+      summary: POKE_003 (409)
+      value:
+        success: false
+        code: POKE_003
+        message: 이미 인증한 보살은 찌를 수 없어요.
     POT_001:
       summary: POT_001 (404)
       value:
