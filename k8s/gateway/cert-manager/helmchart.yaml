@@ -1,0 +1,20 @@
+# k3s의 Helm 컨트롤러가 설치한다. 로컬에 helm이 없어도 kubectl apply로 설치·업그레이드할 수 있다.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: cert-manager
+  namespace: kube-system
+spec:
+  repo: https://charts.jetstack.io
+  chart: cert-manager
+  version: v1.21.3
+  targetNamespace: cert-manager
+  createNamespace: true
+  valuesContent: |-
+    crds:
+      enabled: true
+    # Gateway의 annotation을 보고 인증서를 만들고, HTTP-01 확인용 HTTPRoute를 만든다.
+    config:
+      apiVersion: controller.config.cert-manager.io/v1alpha1
+      kind: ControllerConfiguration
+      enableGatewayAPI: true

@@ -1,0 +1,41 @@
+# 외부 진입점. 앱 HTTPRoute(k8s/app)는 sectionName: https로 붙는다.
+# 포트는 Traefik entryPoint(web :8000, websecure :8443)에 맞춘다. 밖에서는 80·443으로 들어온다.
+# api.chamabosal.com은 DNS를 옮기는 날 https 리스너를 하나 더 추가한다. 그 전엔 지금 서버를 가리켜 HTTP-01이 실패한다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: chamabosal-gateway
+  namespace: chamabosal
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8000
+    - name: https
+      protocol: HTTPS
+      port: 8443
+      hostname: api-k8s.chamabosal.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: chamabosal-tls
+---
+# http로 온 요청은 https로 보낸다. 인증서 확인 경로는 cert-manager가 더 구체적인 경로로 붙여서 이 규칙보다 먼저 맞는다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: https-redirect
+  namespace: chamabosal
+spec:
+  parentRefs:
+    - name: chamabosal-gateway
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

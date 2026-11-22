@@ -1,0 +1,7 @@
+# 클러스터 진입점. 적용 순서: k8s/gateway/cert-manager → k8s/gateway → k8s/mysql, k8s/app (README)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - cluster-issuer.yaml
+  - gateway.yaml
