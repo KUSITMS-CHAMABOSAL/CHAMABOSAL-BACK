@@ -1,0 +1,8 @@
+# k3s 기본 local-path는 PVC를 지우면 서버 디스크의 데이터도 지운다(Delete). DB는 PVC를 실수로 지워도 데이터가 남게 Retain으로 둔다.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-retain
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
