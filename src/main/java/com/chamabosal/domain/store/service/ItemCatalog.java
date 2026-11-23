@@ -15,17 +15,15 @@ public final class ItemCatalog {
             new Entry("HEADSET", "헤드셋", 100, ItemSlot.HAT, 2),
             new Entry("RUDOLPH_HEADBAND", "루돌프 머리띠", 100, ItemSlot.HAT, 3),
             new Entry("GYARU_HAIRPIN", "갸루 머리핀", 100, ItemSlot.HAT, 4),
-            new Entry("RUDOLPH_SET", "루돌프 세트", 100, ItemSlot.HAT, 5),
-            new Entry("SANTA_SET", "산타 세트", 100, ItemSlot.HAT, 6),
-            new Entry("SUNGLASSES", "선글라스", 100, ItemSlot.FACE, 7),
-            new Entry("EYEBROW_PIERCING", "눈썹 피어싱", 100, ItemSlot.FACE, 8),
-            new Entry("LEOPARD_GLASSES", "호피 안경", 100, ItemSlot.FACE, 9),
-            new Entry("SANTA_BEARD", "산타 수염", 100, ItemSlot.FACE, 10),
-            new Entry("RUDOLPH_NOSE", "루돌프 코", 100, ItemSlot.FACE, 11),
-            new Entry("DUCK_LIPS", "오리 입", 100, ItemSlot.FACE, 12),
-            new Entry("BEAD_EARRING", "염주 귀걸이", 100, ItemSlot.FACE, 13),
-            new Entry("JADE_RING", "옥반지", 100, ItemSlot.ACCESSORY, 14),
-            new Entry("ENERGY_WAVE", "에너지파", 100, ItemSlot.ACCESSORY, 15)
+            new Entry("SUNGLASSES", "선글라스", 100, ItemSlot.FACE, 5),
+            new Entry("EYEBROW_PIERCING", "눈썹 피어싱", 100, ItemSlot.FACE, 6),
+            new Entry("LEOPARD_GLASSES", "호피 안경", 100, ItemSlot.FACE, 7),
+            new Entry("SANTA_BEARD", "산타 수염", 100, ItemSlot.FACE, 8),
+            new Entry("RUDOLPH_NOSE", "루돌프 코", 100, ItemSlot.FACE, 9),
+            new Entry("DUCK_LIPS", "오리 입", 100, ItemSlot.FACE, 10),
+            new Entry("BEAD_EARRING", "염주 귀걸이", 100, ItemSlot.FACE, 11),
+            new Entry("JADE_RING", "옥반지", 100, ItemSlot.ACCESSORY, 12),
+            new Entry("ENERGY_WAVE", "에너지파", 100, ItemSlot.ACCESSORY, 13)
     );
 
     private ItemCatalog() {
