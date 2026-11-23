@@ -14,7 +14,10 @@
 ## 적용 순서
 
 ```bash
-kubectl apply -k k8s/gateway/cert-manager   # CRD가 생길 때까지 1분쯤 기다림
+kubectl apply -k k8s/gateway/cert-manager
+# Helm 설치가 끝나 CRD가 생기고 webhook이 준비될 때까지 기다린다. 준비 전에 ClusterIssuer를 만들면 실패한다.
+kubectl wait --for condition=established crd/clusterissuers.cert-manager.io --timeout=5m
+kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=5m
 kubectl apply -k k8s/gateway
 kubectl apply -k k8s/mysql
 kubectl apply -k k8s/app

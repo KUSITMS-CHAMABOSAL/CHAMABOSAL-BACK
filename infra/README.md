@@ -24,17 +24,19 @@
 1. 로컬에 Ansible 설치: `brew install ansible`
 2. Tailscale 관리 화면 Settings → Keys에서 auth key 발급 (Reusable 끔, Ephemeral 끔)
 3. 보안그룹 22를 내 IP `/32`로 열기
+4. 새 서버에는 아직 Tailscale이 없으므로 `inventory.ini`의 `ansible_host`를 서버 공인 IP로 바꾸기
 
-실행 (레포 루트에서)
+실행 (레포 루트에서). auth key가 셸 기록에 남지 않게 `read -s`로 받습니다.
 
 ```bash
-TS_AUTHKEY=tskey-auth-... ansible-playbook -i infra/ansible/inventory.ini infra/ansible/playbook.yml --private-key ~/.ssh/<서버 키>.pem
+read -s "TS_AUTHKEY?Tailscale auth key: " && export TS_AUTHKEY && echo
+ansible-playbook -i infra/ansible/inventory.ini infra/ansible/playbook.yml --private-key ~/.ssh/<서버 키>.pem
 ```
 
 하는 일
 
 - Tailscale 설치 후 `chamabosal-k3s`라는 이름으로 tailnet에 붙임
-- k3s 설치 (`v1.36` 채널). API 서버 인증서에 공인 IP·Tailscale 이름·Tailscale IP를 넣음
+- k3s 설치 (`v1.36` 채널). API 서버 인증서에 Tailscale 이름·IP를 넣음 (6443은 공인망에서 막혀 있음)
 - k3s 기본 Traefik에서 Gateway API provider를 켬. Gateway API CRD는 k3s에 들어 있어 따로 설치하지 않음
 - kubeconfig를 `~/.kube/chamabosal-k3s.yaml`로 내려받고 주소를 Tailscale IP로 바꿈
 

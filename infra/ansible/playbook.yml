@@ -35,10 +35,11 @@
             --hostname={{ tailscale_hostname }}
           no_log: true
 
-        - name: Tailscale IP 다시 읽기
-          ansible.builtin.command: tailscale ip -4
-          register: tailscale_ip
-          changed_when: false
+    # 블록이 건너뛰어지면 그 안의 register가 tailscale_ip를 skipped 결과로 덮어쓰므로 블록 밖에서 항상 읽는다.
+    - name: Tailscale IP 읽기
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
 
     - name: k3s 설정 폴더
       ansible.builtin.file:
@@ -50,13 +51,13 @@
         - /var/lib/rancher/k3s/server/manifests
 
     # kubeconfig를 Tailscale IP로 쓰려면 API 서버 인증서에 그 주소가 들어 있어야 한다.
+    # 6443은 공인망에서 막혀 있어 공인 IP는 넣지 않는다 (ansible_host는 인벤토리에 따라 바뀌어 매번 재시작을 부른다).
     - name: k3s 설정
       ansible.builtin.copy:
         dest: /etc/rancher/k3s/config.yaml
         mode: "0600"
         content: |
           tls-san:
-            - {{ ansible_host }}
             - {{ tailscale_hostname }}
             - {{ tailscale_ip.stdout }}
       notify: k3s 재시작

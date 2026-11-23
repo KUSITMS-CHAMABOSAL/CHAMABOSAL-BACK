@@ -20,6 +20,7 @@
 | `MYSQL_USER`, `MYSQL_PASSWORD` | 앱 계정. `chamabosal-app-env`의 `DB_USERNAME`, `DB_PASSWORD`와 같은 값 |
 
 ```bash
+kubectl apply -f k8s/gateway/namespace.yaml   # 네임스페이스가 먼저 있어야 함
 kubectl -n chamabosal create secret generic mysql-auth \
   --from-literal=MYSQL_ROOT_PASSWORD=... \
   --from-literal=MYSQL_USER=... \
@@ -31,7 +32,6 @@ kubectl -n chamabosal create secret generic mysql-auth \
 ## 적용과 확인
 
 ```bash
-kubectl apply -k k8s/gateway   # 네임스페이스
 kubectl apply -k k8s/mysql
 kubectl -n chamabosal rollout status statefulset/mysql
 kubectl -n chamabosal exec statefulset/mysql -- sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u "$MYSQL_USER" chamabosal -e "SELECT 1"'
