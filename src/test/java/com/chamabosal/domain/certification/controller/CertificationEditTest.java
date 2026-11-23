@@ -445,27 +445,21 @@ class CertificationEditTest {
     }
 
     @Test
-    void CERT_01_16_투표_없음_회차에서_삭제한_멤버는_03시까지_다시_인증한다() throws Exception {
-        Room pairRoom = newRoom();
+    void CERT_01_16_3명_미만_방은_전원_인증_뒤_들어온_멤버도_그_회차에_인증한다() throws Exception {
+        Room soloRoom = newRoom();
         User first = newUser();
         User second = newUser();
-        addMember(pairRoom, first, "하나", BosalColor.PINK);
-        addMember(pairRoom, second, "둘", BosalColor.MINT);
-        Long id = certify(first, pairRoom, endured("하나"));
-        certify(second, pairRoom, endured("둘"));
-        assertThat(onlyRound(pairRoom).getStatus()).isEqualTo(RoundStatus.NO_VOTE);
+        addMember(soloRoom, first, "하나", BosalColor.PINK);
+        certify(first, soloRoom, endured("하나"));
 
-        clock.set(T0.plusMinutes(5));
-        remove(first, id).andExpect(status().isOk());
-
+        clock.set(T0.plusMinutes(30));
+        addMember(soloRoom, second, "둘", BosalColor.MINT);
         clock.set(T0.plusHours(1));
-        post(first, pairRoom, endured("다시 하나"))
+        post(second, soloRoom, endured("둘"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.roundDate").value("2026-12-01"))
-                .andExpect(jsonPath("$.data.riceEarned").value(10));
-        post(second, pairRoom, endured("또 둘"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("CERT_001"));
+                .andExpect(jsonPath("$.data.roundDate").value("2026-12-01"));
+
+        assertThat(onlyRound(soloRoom).getStatus()).isEqualTo(RoundStatus.CERTIFYING);
     }
 
     /** A 뒤로 B, C, D가 1분 간격으로 인증해 D의 인증으로 투표가 시작된다. 시각은 원래대로 돌려 둔다. */

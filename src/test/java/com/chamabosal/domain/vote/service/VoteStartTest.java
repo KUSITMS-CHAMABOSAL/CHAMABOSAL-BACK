@@ -177,6 +177,32 @@ class VoteStartTest {
     }
 
     @Test
+    void VOTE_01_10_3명_미만_방은_전원_인증해도_투표를_시작하지_않는다() throws Exception {
+        RoomMember a = addMember("민지");
+        RoomMember b = addMember("지수");
+        certify(a);
+
+        certify(b).andExpect(jsonPath("$.data.isVoteStarted").value(false));
+
+        assertThat(nov5().getStatus()).isEqualTo(RoundStatus.CERTIFYING);
+    }
+
+    @Test
+    void VOTE_01_11_인증_시간_중_3명이_되어_전원_인증하면_바로_시작한다() throws Exception {
+        RoomMember a = addMember("민지");
+        RoomMember b = addMember("지수");
+        certify(a);
+        certify(b);
+        RoomMember c = addMember("하린");
+
+        certify(c).andExpect(jsonPath("$.data.isVoteStarted").value(true));
+
+        Round round = nov5();
+        assertThat(round.getStatus()).isEqualTo(RoundStatus.VOTING);
+        assertThat(participants(round)).hasSize(3);
+    }
+
+    @Test
     void VOTE_01_5_마지막_인증과_03시_배치가_동시에_실행돼도_투표는_하나다() {
         List<RoomMember> members = List.of(addMember("민지"), addMember("지수"), addMember("하린"), addMember("도윤"));
         members.subList(0, 3).forEach(this::certifyQuietly);

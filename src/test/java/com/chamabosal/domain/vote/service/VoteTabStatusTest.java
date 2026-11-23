@@ -506,30 +506,6 @@ class VoteTabStatusTest {
     }
 
     @Test
-    void VOTE_05_20_오늘_회차가_이미_투표_없음이면_투표_없음이다() throws Exception {
-        Room pairRoom = roomRepository.save(Room.create("둘 방", RoomGoal.DELIVERY, 4, 300));
-        User userX = newUser();
-        RoomMember memberX = roomMemberRepository.save(
-                RoomMember.create(pairRoom, userX, "가온", BosalColor.PINK, NOV_5.minusDays(10).atStartOfDay()));
-        RoomMember memberY = roomMemberRepository.save(
-                RoomMember.create(pairRoom, newUser(), "나래", BosalColor.MINT, NOV_5.minusDays(10).atStartOfDay()));
-        Round round = roundRepository.save(Round.create(pairRoom, NOV_5));
-        for (RoomMember member : List.of(memberX, memberY)) {
-            certificationRepository.save(Certification.create(
-                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, CERTIFIED_AT));
-        }
-        // 둘뿐이라 전원 인증해도 투표 없이 투표 없음이 된다.
-        voteStartService.startAtDeadline(pairRoom.getId(), round.getId(), CERTIFIED_AT);
-        roomMemberRepository.save(RoomMember.create(pairRoom, newUser(), "다온", BosalColor.YELLOW, NOV_5.atTime(20, 30)));
-
-        clock.set(NOV_5.atTime(21, 0));
-        tab(pairRoom.getId(), userX)
-                .andExpect(jsonPath("$.data.status").value("NO_VOTE"))
-                .andExpect(jsonPath("$.data.roundId").value(round.getId()))
-                .andExpect(jsonPath("$.data.roundDate").value("2026-11-05"));
-    }
-
-    @Test
     void VOTE_05_21_03시_배치_전에는_투표_없음이_아니다() throws Exception {
         Round round = roundRepository.save(Round.create(room, NOV_5));
         certificationRepository.save(Certification.create(
