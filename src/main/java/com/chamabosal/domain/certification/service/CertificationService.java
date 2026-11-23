@@ -22,7 +22,6 @@ import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.domain.round.entity.Round;
-import com.chamabosal.domain.round.entity.RoundStatus;
 import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.vote.service.VoteStartService;
 import com.chamabosal.global.common.exception.BaseErrorCode;
@@ -78,7 +77,7 @@ public class CertificationService {
                 && certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNull(found.get().getId(), me.getId())) {
             throw new BaseException(BaseErrorCode.ALREADY_CERTIFIED);
         }
-        if (!isOpen(roomId, roundDate, found, me.getId())) {
+        if (!isOpen(roomId, roundDate, found)) {
             throw new BaseException(BaseErrorCode.CERTIFICATION_NOT_OPEN);
         }
         // 사진 키는 다른 확인을 모두 통과한 뒤 마지막에 본다 (CERT-01 예외).
@@ -191,14 +190,10 @@ public class CertificationService {
     /**
      * 이전 회차 투표가 끝났거나 이전 회차가 없으면 열린다 (CERT-01 8번).
      * 그 회차가 이미 투표를 시작했으면 투표 시작 뒤 들어온 멤버라 다음 회차를 기다린다.
-     * 투표가 열리지 않은 회차는 그 회차에서 인증을 삭제한 멤버만 다시 인증할 수 있다 (CERT-01 10번).
      * 오늘 탭(ROOM-02 14번)의 인증 열림 여부도 이 기준을 그대로 쓴다.
      */
     @Transactional(readOnly = true)
-    public boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round, Long memberId) {
-        if (round.isPresent() && round.get().getStatus() == RoundStatus.NO_VOTE) {
-            return certificationRepository.existsByRound_IdAndMember_IdAndDeletedAtIsNotNull(round.get().getId(), memberId);
-        }
+    public boolean isOpen(Long roomId, LocalDate roundDate, Optional<Round> round) {
         if (round.isPresent() && !round.get().isCertifying()) {
             return false;
         }

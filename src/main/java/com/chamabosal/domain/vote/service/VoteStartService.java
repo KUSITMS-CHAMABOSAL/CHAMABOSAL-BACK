@@ -41,13 +41,19 @@ public class VoteStartService {
     private final CertificationRepository certificationRepository;
     private final ReactionRepository reactionRepository;
 
-    /** 방 행 락을 잡은 트랜잭션 안에서 부른다. 현재 멤버 전원이 인증했으면 시작하고, 투표가 열렸으면 true. */
+    /**
+     * 방 행 락을 잡은 트랜잭션 안에서 부른다. 현재 멤버 전원이 인증했으면 시작하고, 투표가 열렸으면 true.
+     * 3명 미만 방은 전원 인증해도 03:00까지 인증 중으로 둬서 그 사이 들어온 멤버도 인증할 수 있다 (VOTE-01 1번).
+     */
     @Transactional(propagation = Propagation.MANDATORY)
     public boolean startIfAllCertified(Round round, LocalDateTime now) {
         if (!round.isCertifying()) {
             return false;
         }
         List<RoomMember> members = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(round.getRoom().getId());
+        if (members.size() < MIN_VOTERS) {
+            return false;
+        }
         Set<Long> certified = new HashSet<>(certificationRepository.findCertifiedMemberIds(round.getId()));
         if (!members.stream().allMatch(member -> certified.contains(member.getId()))) {
             return false;

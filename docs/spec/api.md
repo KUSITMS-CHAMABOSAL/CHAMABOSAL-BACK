@@ -732,7 +732,7 @@ VOTE-05. 투표 탭 상태와 화면 데이터입니다.
 | `TAP` | 결과를 봤고 지금 이마 톡톡을 보낼 수 있음 (결과 화면 `canTap`과 같은 기준) |
 | `MOKTAK` | 결과를 봤고 지목된 본인이 지금 목탁 수행을 해야 함 (톡톡 전달 뒤, 받은 톡톡 1번 이상, 아직 안 마침, 방 인원 2명 이상) |
 | `RESULT_SEEN` | 결과를 본 뒤 톡톡·목탁 수행을 끝냈거나 할 것이 없음, 다음 투표 전 |
-| `NO_VOTE` | 오늘 회차가 투표 없음이 됐거나 직전 회차에 투표가 열리지 않음, 다음 투표 전 (VOTE-05 6번) |
+| `NO_VOTE` | 직전 회차에 투표가 열리지 않음, 다음 투표 전 (VOTE-05 6번) |
 
 판단 순서: 투표 중(`NOT_IN_LIST`·`NO_VOTING_RIGHT`·`VOTING`·`VOTED`) → `RESULT_UNSEEN` → `TAP` → `MOKTAK` → `UNDER_THREE` → `NO_VOTE` → `RESULT_SEEN`·`BEFORE_FIRST_VOTE` (VOTE-05 5번)
 

@@ -89,7 +89,7 @@ public class RoomTodayService {
         int certifiedCount = (int) members.stream().filter(member -> certifications.containsKey(member.getId())).count();
         boolean isAllCertified = certifiedCount == members.size();
         // 인증 등록과 같은 기준을 써서 버튼과 실제 등록 결과가 어긋나지 않게 한다 (14번, 코드리뷰 반영).
-        boolean isOpen = certificationService.isOpen(room.getId(), roundDate, round, me.getId());
+        boolean isOpen = certificationService.isOpen(room.getId(), roundDate, round);
 
         RoundSummary roundSummary = new RoundSummary(round.map(Round::getId).orElse(null),
                 round.map(Round::getStatus).orElse(RoundStatus.CERTIFYING), certifiedCount, isAllCertified, isOpen);

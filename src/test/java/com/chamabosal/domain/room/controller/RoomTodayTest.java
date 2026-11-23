@@ -376,18 +376,6 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
-    void 투표_없음_회차에서_인증을_삭제한_멤버만_다시_인증이_열려_있다() throws Exception {
-        Round round = todayRound(RoundStatus.NO_VOTE);
-        Certification deleted = certify(round, memberA, NOW.minusMinutes(5));
-        deleted.delete(NOW.minusMinutes(2));
-        certificationRepository.save(deleted);
-        certify(round, memberB, NOW.minusMinutes(5));
-
-        today(userA).andExpect(jsonPath("$.data.round.isCertificationOpen").value(true));
-        today(userB).andExpect(jsonPath("$.data.round.isCertificationOpen").value(false));
-    }
-
-    @Test
     void 방_정보와_임시_값을_돌려준다() throws Exception {
         today(userA)
                 .andExpect(jsonPath("$.data.room.name").value("배달 끊기 방"))

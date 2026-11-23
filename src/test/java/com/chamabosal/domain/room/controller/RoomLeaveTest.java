@@ -188,6 +188,23 @@ class RoomLeaveTest extends RoomTestSupport {
                 .containsExactlyInAnyOrder(memberA.getId(), memberB.getId(), memberC.getId());
     }
 
+    @Test
+    void ROOM_07_12_나가서_3명_미만이_되면_인증_중으로_남는다() throws Exception {
+        RoomMember memberB = addMember(room, newUser(), "지수");
+        User userC = newUser();
+        addMember(room, userC, "하린");
+        Round round = saveRound(room, NOW.toLocalDate(), RoundStatus.CERTIFYING);
+        for (RoomMember member : List.of(memberA, memberB)) {
+            certificationRepository.save(Certification.create(
+                    round, member, CertificationResult.ENDURED, "집밥 해먹었어요", null, NOW.minusHours(1)));
+        }
+
+        leave(userC).andExpect(status().isOk());
+
+        assertThat(roundRepository.findById(round.getId()).orElseThrow().getStatus()).isEqualTo(RoundStatus.CERTIFYING);
+        assertThat(roundParticipantRepository.findByRound_Id(round.getId())).isEmpty();
+    }
+
     private ResultActions leave(User user) throws Exception {
         return mockMvc.perform(delete("/api/rooms/{roomId}/members/me", room.getId())
                 .header("Authorization", bearer(user)));

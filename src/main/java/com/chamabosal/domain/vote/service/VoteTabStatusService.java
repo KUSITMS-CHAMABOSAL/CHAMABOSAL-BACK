@@ -82,7 +82,7 @@ public class VoteTabStatusService {
         }
         LocalDate today = Round.dateOf(now);
         Optional<Round> todayRound = roundRepository.findByRoom_IdAndRoundDate(roomId, today);
-        Optional<VoteTabStatusResponse> noVote = noVote(room, me, announced, today, todayRound);
+        Optional<VoteTabStatusResponse> noVote = noVote(room, me, announced, today);
         if (noVote.isPresent()) {
             return noVote.get();
         }
@@ -136,15 +136,12 @@ public class VoteTabStatusService {
     }
 
     /**
-     * 투표 없음 (VOTE-05 6번). 오늘 회차가 이미 투표 없음이면 그 회차, 아니면 투표가 열리지 않은 직전 회차를 보여준다.
+     * 투표 없음 (VOTE-05 6번). 투표가 열리지 않은 직전 회차를 보여준다. 투표 없음은 03:00 배치에서만 확정돼 오늘 회차는 볼 필요가 없다.
      * 인증도 콕도 없던 날은 회차 행이 없어 회차 ID를 비운다. 직전 회차가 아직 인증 중이면 03:00 배치 전이라 보지 않고,
      * 방을 만들거나 내가 들어온 회차보다 이른 회차, 더 늦은 회차(오늘 일찍 열린 회차)가 이미 발표됐으면 보지 않는다.
      */
     private Optional<VoteTabStatusResponse> noVote(Room room, RoomMember me, Optional<Round> announced,
-                                                   LocalDate today, Optional<Round> todayRound) {
-        if (todayRound.isPresent() && todayRound.get().getStatus() == RoundStatus.NO_VOTE) {
-            return Optional.of(VoteTabStatusResponse.noVote(todayRound.get().getId(), today));
-        }
+                                                   LocalDate today) {
         LocalDate yesterday = today.minusDays(1);
         if (yesterday.isBefore(Round.dateOf(room.getCreatedAt())) || yesterday.isBefore(Round.dateOf(me.getJoinedAt()))
                 || (announced.isPresent() && announced.get().getRoundDate().isAfter(yesterday))) {
