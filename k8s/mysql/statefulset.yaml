@@ -1,0 +1,73 @@
+# docker-compose.yml의 db 서비스를 옮겼다 (mysql:8.4, TZ, mem 1g, mysqladmin ping 헬스체크).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mysql
+    spec:
+      # InnoDB가 버퍼를 디스크에 다 쓰고 내려가도록 넉넉히 기다린다.
+      terminationGracePeriodSeconds: 60
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          env:
+            - name: TZ
+              value: Asia/Seoul
+            - name: MYSQL_DATABASE
+              value: chamabosal
+          # MYSQL_ROOT_PASSWORD, MYSQL_USER, MYSQL_PASSWORD (README). 백업 복원 명령이 MYSQL_USER·MYSQL_PASSWORD를 쓴다.
+          envFrom:
+            - secretRef:
+                name: mysql-auth
+          ports:
+            - name: mysql
+              containerPort: 3306
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          # 첫 기동은 데이터 폴더 초기화로 오래 걸려서 최대 5분 기다린다. 초기화 중에는 TCP가 닫혀 있어 127.0.0.1로 확인한다.
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "MYSQL_PWD=\"$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "MYSQL_PWD=\"$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "MYSQL_PWD=\"$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        storageClassName: local-path-retain
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi

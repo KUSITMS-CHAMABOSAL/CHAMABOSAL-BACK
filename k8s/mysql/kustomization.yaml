@@ -1,0 +1,8 @@
+# 클러스터 안 MySQL. 앱은 mysql:3306으로 붙는다 (k8s/app/config.env의 DB_URL).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: chamabosal
+resources:
+  - storageclass.yaml
+  - service.yaml
+  - statefulset.yaml
