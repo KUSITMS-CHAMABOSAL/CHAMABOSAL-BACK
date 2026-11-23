@@ -3546,8 +3546,8 @@ components:
       enum:
       - HAT
       - FACE
-      - EXPRESSION
-      description: '`HAT` 모자, `FACE` 얼굴, `EXPRESSION` 표정'
+      - ACCESSORY
+      description: '`HAT` 모자, `FACE` 얼굴, `ACCESSORY` 악세사리'
     DefenseTicketStatus:
       type: string
       enum:

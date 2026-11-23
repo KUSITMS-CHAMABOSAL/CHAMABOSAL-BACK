@@ -4,5 +4,5 @@ package com.chamabosal.domain.store.entity;
 public enum ItemSlot {
     HAT,
     FACE,
-    EXPRESSION
+    ACCESSORY
 }
