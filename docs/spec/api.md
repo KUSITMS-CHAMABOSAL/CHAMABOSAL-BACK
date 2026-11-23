@@ -59,7 +59,7 @@
 | VoteTargetType | `MEMBER` (후보) `ALL_BOSAL` (오늘은 모두 보살) |
 | ResultType | `PICKED` `ALL_BOSAL` `ALL_SAFE` `DEFENDED` |
 | InviteStatus | `JOINABLE` `ALREADY_MEMBER` `ROOM_LIMIT` `ROOM_FULL` `UNAVAILABLE` |
-| ItemSlot | `HAT` (모자) `FACE` (얼굴) `EXPRESSION` (표정) |
+| ItemSlot | `HAT` (모자) `FACE` (얼굴) `ACCESSORY` (악세사리) |
 | DefenseTicketStatus | `NONE` `OWNED` |
 | PushAgreementType | `POKE` (콕 찌르기) `RESULT` (투표 결과) `VOTE_OPENED` (새 투표) `CERT_REMINDER` (인증 마감) |
 | PushAgreementResult | `newAgreement` `alreadyAgreed` `agreementRejected` (앱인토스 값 그대로) |
@@ -543,7 +543,7 @@ STORE-03. 착용할 아이템 목록을 보내면 착용 상태를 통째로 바
 { "itemIds": [1] }
 ```
 
-- `itemIds`: 슬롯마다 하나씩, 0~3개. 슬롯은 `HAT`(모자), `FACE`(얼굴), `EXPRESSION`(표정)
+- `itemIds`: 슬롯마다 하나씩, 0~3개. 슬롯은 `HAT`(모자), `FACE`(얼굴), `ACCESSORY`(악세사리)
 - 곳간에서 끼워 보고 벗어 보는 동안에는 보내지 않고, 마지막 착용 목록을 한 번에 보냄 (구현할 때 Swagger 설명에도 적음)
 - 빈 배열이면 모두 벗음
 - 에러: `COMMON_002` (400, 목록 없음·3개 초과·같은 ID 중복) → `STORE_004` (409, 없거나 보유하지 않은 아이템) → `COMMON_002` (400, 같은 슬롯 중복) 순서로 확인

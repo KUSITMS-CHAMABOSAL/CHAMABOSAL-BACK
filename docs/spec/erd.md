@@ -382,10 +382,10 @@ erDiagram
 | code | VARCHAR(50) | UK, NOT NULL | `RUDOLPH_NOSE` 등, 클라이언트 이미지 매핑 |
 | name | VARCHAR(20) | NOT NULL | |
 | price | INT | NOT NULL | 50 / 100 |
-| slot | VARCHAR(20) | NOT NULL | `HAT` / `FACE` / `EXPRESSION` |
+| slot | VARCHAR(20) | NOT NULL | `HAT` / `FACE` / `ACCESSORY` |
 | display_order | INT | NOT NULL | 상점 노출 순서 |
 
-- 목록과 가격은 디자인 데이터 기준이라 바뀔 수 있어서 enum 대신 테이블. 지금은 산타 모자(모자)·루돌프 코(얼굴) 2종, 모두 100석 (STORE-02 1번, Q-53)
+- 목록과 가격은 디자인 데이터 기준이라 바뀔 수 있어서 enum 대신 테이블. 지금은 모자 6·얼굴 7·악세사리 2로 15종, 가격 확정 전까지 모두 100석 (STORE-02 1번, Q-53)
 - 데이터는 코드의 카탈로그를 앱 시작 때 `code` 기준으로 넣고 고침. 카탈로그에서 빼도 행은 지우지 않아 곳간에 계속 나오고 팔림 (보유 기록이 참조, 판매 중단 규칙은 없음). 슬롯이 바뀐 아이템은 착용을 모두 벗겨 한 슬롯에 둘이 착용되지 않게 함
 
 ### nabal_losses

@@ -165,10 +165,10 @@ class StoreTest {
 
     @Test
     void STORE_02_2_잔액과_가격이_같으면_사고_잔액은_0석이다() throws Exception {
-        Item face = item("SMILE", ItemSlot.EXPRESSION, 50, 1);
+        Item ring = item("JADE_RING", ItemSlot.ACCESSORY, 50, 1);
         earn(userA, 50);
 
-        buy(userA, face).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceBalance").value(0));
+        buy(userA, ring).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceBalance").value(0));
     }
 
     @Test
@@ -204,10 +204,10 @@ class StoreTest {
 
     @Test
     void STORE_02_5_음수_잔액이면_STORE_001이다() throws Exception {
-        Item smile = item("SMILE", ItemSlot.EXPRESSION, 50, 1);
+        Item ring = item("JADE_RING", ItemSlot.ACCESSORY, 50, 1);
         earn(userA, -5);
 
-        buy(userA, smile).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STORE_001"));
+        buy(userA, ring).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STORE_001"));
     }
 
     @Test
