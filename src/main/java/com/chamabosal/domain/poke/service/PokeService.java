@@ -60,7 +60,7 @@ public class PokeService {
         // 받는 사람이 지금 인증할 수 있을 때만 찌른다. 인증 등록이 열리는 기준을 그대로 쓴다 (POKE-01 2·3번).
         LocalDate roundDate = Round.dateOf(now);
         Optional<Round> found = roundRepository.findByRoom_IdAndRoundDate(roomId, roundDate);
-        if (!certificationService.isOpen(roomId, roundDate, found, to.getId())) {
+        if (!certificationService.isOpen(roomId, roundDate, found)) {
             throw new BaseException(BaseErrorCode.POKE_NOT_CERTIFYING);
         }
         if (found.isPresent()
