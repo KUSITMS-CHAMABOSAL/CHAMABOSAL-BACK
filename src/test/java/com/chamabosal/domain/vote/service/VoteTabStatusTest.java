@@ -180,7 +180,7 @@ class VoteTabStatusTest {
 
         tab(smallRoom.getId(), soloUser).andExpect(jsonPath("$.data.status").value("UNDER_THREE"))
                 .andExpect(jsonPath("$.data.memberCount").value(1))
-                .andExpect(jsonPath("$.data.memberLimit").value(4));
+                .andExpect(jsonPath("$.data.memberLimit").doesNotExist());
     }
 
     @Test

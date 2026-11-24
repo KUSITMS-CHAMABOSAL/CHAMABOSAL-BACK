@@ -78,7 +78,7 @@ public class VoteTabStatusService {
         }
         int memberCount = (int) roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId);
         if (memberCount < MIN_VOTERS) {
-            return VoteTabStatusResponse.underThree(memberCount, room.getMemberLimit());
+            return VoteTabStatusResponse.underThree(memberCount);
         }
         LocalDate today = Round.dateOf(now);
         Optional<Round> todayRound = roundRepository.findByRoom_IdAndRoundDate(roomId, today);
