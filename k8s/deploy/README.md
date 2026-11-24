@@ -4,9 +4,11 @@ GitHub Actions가 k3s에 배포할 때 쓰는 계정입니다. (K8s 전환 Phase
 
 | 파일 | 내용 |
 |---|---|
-| `rbac.yaml` | ServiceAccount `github-deployer`, 장기 토큰 Secret, `chamabosal` 네임스페이스의 앱 리소스만 바꾸는 Role |
+| `rbac.yaml` | ServiceAccount `github-deployer`, 장기 토큰 Secret, `chamabosal` 네임스페이스용 Role |
 
 관리자 kubeconfig는 클러스터 전체 권한이라 GitHub에 올리지 않고, 이 계정으로 만든 kubeconfig만 올립니다.
+
+권한 범위: `chamabosal` 네임스페이스 안에서만 ConfigMap·Service·Deployment·HTTPRoute를 만들고 바꿀 수 있고, 다른 네임스페이스와 클러스터 리소스는 못 건드립니다. Secret 조회 권한은 없지만 Deployment를 바꿀 수 있어 Pod에 네임스페이스의 Secret을 마운트할 수 있으므로, 이 kubeconfig가 새면 `chamabosal` 네임스페이스의 Secret도 샌 것으로 봅니다.
 
 ## 배포 흐름
 
@@ -38,8 +40,10 @@ export KUBECONFIG=~/.kube/chamabosal-k3s.yaml
 SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 CA=$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
 TOKEN=$(kubectl -n chamabosal get secret github-deployer-token -o jsonpath='{.data.token}' | base64 -d)
+[ -n "$TOKEN" ] || echo "토큰이 아직 비어 있습니다. 몇 초 뒤 TOKEN 줄부터 다시 실행하세요."
 umask 077
-cat > ~/.kube/chamabosal-deployer.yaml <<EOF
+# 토큰이 비어 있으면 파일을 만들지 않는다.
+[ -n "$TOKEN" ] && cat > ~/.kube/chamabosal-deployer.yaml <<EOF
 apiVersion: v1
 kind: Config
 clusters:
@@ -79,7 +83,7 @@ Tailscale 관리자 화면에서 만듭니다.
 
 ## 수동 재배포
 
-Actions → CD → Run workflow (`dev`). 같은 커밋을 다시 배포합니다.
+Actions → CD → Run workflow (`dev`). `dev`의 **최신 커밋**을 옛 서버와 k3s 둘 다에 배포합니다. 롤백한 뒤에 실행하면 문제 커밋이 다시 올라가니 주의합니다. 특정 커밋을 다시 배포하려면 아래 롤백의 방법을 씁니다.
 
 노트북에서 `kubectl apply -k k8s/app`을 그대로 실행하면 레포의 태그(`latest`)로 덮어써서 배포한 버전이 바뀝니다. 매니페스트만 고쳐 바로 적용해야 하면 지금 이미지 태그를 넣고 적용합니다.
 
@@ -101,7 +105,18 @@ kubectl -n chamabosal rollout undo deployment/chamabosal-app --to-revision=N  # 
 kubectl -n chamabosal rollout status deployment/chamabosal-app
 ```
 
-더 오래된 버전은 Actions에서 그 커밋의 CD 실행을 Re-run 합니다 (GHCR에 최근 10개 이미지 보관). 롤백은 다음 `dev` 머지 때 덮어써지므로, 원인을 고친 커밋을 머지해야 끝납니다.
+더 오래된 버전은 Actions에서 그 커밋의 CD 실행을 열고 **`deploy-k8s` job만** Re-run 합니다. "Re-run all jobs"를 누르면 옛 서버 `deploy`도 그 버전으로 돌아가니 DNS 전환 전에는 누르지 않습니다.
+
+Actions 실행은 30일이 지나면 Re-run 할 수 없습니다. 그때는 GHCR에 남은 이미지(최근 10개)의 커밋 SHA를 직접 넣어 적용합니다.
+
+```bash
+export KUBECONFIG=~/.kube/chamabosal-k3s.yaml
+TAG=<되돌릴 커밋 SHA 40자>
+kubectl kustomize k8s/app | sed "s|chamabosal-back:latest|chamabosal-back:$TAG|" | kubectl apply -f -
+kubectl -n chamabosal rollout status deployment/chamabosal-app
+```
+
+롤백은 다음 `dev` 머지 때 덮어써지므로, 원인을 고친 커밋을 머지해야 끝납니다.
 
 ## 토큰 교체
 
