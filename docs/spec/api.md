@@ -308,7 +308,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
     "roomId": 1, "name": "배달 끊기 방", "goal": "DELIVERY",
     "memberCount": 4, "memberLimit": 4, "isOwner": true, "potCompletedCount": 1, "hasVotingRound": true, "daysTogether": 7
   },
-  "pot": { "amount": 186, "goalAmount": 300 },
+  "pot": { "amount": 186, "goalAmount": 300, "rewardAmount": 30 },
   "round": {
     "roundId": 101, "status": "CERTIFYING",
     "certifiedCount": 3, "isAllCertified": false, "isCertificationOpen": true
@@ -355,6 +355,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `me.isPotDecisionPending`: 솥을 채운 뒤 방장이 아직 [더 수행하기]·[방 닫기]를 고르지 않음. 방장에게만 `true`. `true`면 방에 들어올 때마다 선택 팝업 (ROOM-09)
 - `me.receivedPokeCount`: 이번 회차에 받은 콕 수. 인증하면 0으로 돌아갈지는 [미정] Q-54. 누가 찔렀는지는 보내지 않음
 - `pot.amount`: 지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. `pot.goalAmount`는 그 솥의 목표 석. 목표를 채우면 넘친 석으로 다음 솥이 바로 시작됨 (POT-01 6·7번)
+- `pot.rewardAmount`: 지금 솥을 다 채우면 멤버 전원이 받는 개인 공양미. 한 솥 축하(`GET /api/rooms/{roomId}/pots/{seq}`)의 `rewardAmount`와 같은 값 (목표의 10%를 10석 단위로 반올림, 350석이면 40석. Q-81)
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 미인증 투표 팝업·탈모 → 결과 → 한 솥 축하 → 방장 선택 팝업(`me.isPotDecisionPending`) → 방 홈 순서 (Q-107). 이마 톡톡·목탁은 앱을 열 때 띄우지 않고 투표 탭에서만 진행
   - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
   - `hasUnseenPotCelebration`이 `true`면 `GET /api/rooms/{roomId}/pots/{room.potCompletedCount}` → 본 뒤 `PUT …/seen-pot`

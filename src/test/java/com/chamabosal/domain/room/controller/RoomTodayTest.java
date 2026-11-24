@@ -417,6 +417,24 @@ class RoomTodayTest extends RoomTestSupport {
     }
 
     @Test
+    void ROOM_02_22_한_솥_보상은_첫_적립_전후_모두_목표의_10퍼센트를_10석_단위로_반올림한다() throws Exception {
+        ReflectionTestUtils.setField(room, "potGoalAmount", 350);
+        roomRepository.save(room);
+
+        // 첫 적립 전에는 솥 행이 없어 방 목표 석으로 계산한다 (22번).
+        today(userA).andExpect(jsonPath("$.data.pot.rewardAmount").value(40));
+
+        RoomPot pot = RoomPot.first(room);
+        pot.add(186);
+        roomPotRepository.save(pot);
+
+        // 한 솥 축하(POT-01)와 같은 값이다. 350석의 10%는 35석이지만 10석 단위로 반올림해 40석이다 (Q-81).
+        today(userA)
+                .andExpect(jsonPath("$.data.pot.goalAmount").value(350))
+                .andExpect(jsonPath("$.data.pot.rewardAmount").value(40));
+    }
+
+    @Test
     void 사진이_있는_인증은_사진_URL을_돌려주고_없으면_비운다() throws Exception {
         Round round = todayRound(RoundStatus.CERTIFYING);
         Certification withPhoto = certify(round, memberA, NOW.minusMinutes(5));

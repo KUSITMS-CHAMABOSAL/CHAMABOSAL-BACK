@@ -26,7 +26,8 @@ public record RoomTodayResponse(Room room, Pot pot, RoundSummary round, List<Mem
 
     public record Pot(
             @Schema(description = "지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. 목표를 채우면 넘친 석으로 다음 솥이 바로 시작됨") int amount,
-            @Schema(description = "목표 석") int goalAmount
+            @Schema(description = "목표 석") int goalAmount,
+            @Schema(description = "지금 솥을 다 채우면 멤버 전원이 받는 개인 공양미. 한 솥 축하와 같은 값 (목표의 10%를 10석 단위로 반올림)") int rewardAmount
     ) {
     }
 
