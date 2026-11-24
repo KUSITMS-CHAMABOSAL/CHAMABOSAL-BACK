@@ -32,6 +32,8 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	// 모니터링 앱 지표 (/actuator/prometheus, 관리 포트로만 노출). K8s 설정에서만 켠다 (k8s/app/config.env)
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 	annotationProcessor 'org.projectlombok:lombok'

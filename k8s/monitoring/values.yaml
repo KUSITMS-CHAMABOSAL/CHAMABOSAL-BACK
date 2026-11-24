@@ -1,0 +1,65 @@
+# grafana/k8s-monitoring 차트 값 (K8s 전환 Phase 6). 설치 방법과 Secret은 README를 본다.
+# 노드·Pod 지표, 앱 지표, chamabosal 네임스페이스 로그를 Grafana Cloud로 보낸다.
+cluster:
+  name: chamabosal
+
+# 주소와 인증 값은 모두 Secret grafana-cloud에서 읽는다. 저장소에는 비밀값을 두지 않는다.
+# 쓰지 않는 키(tenantId, TLS 인증서)는 Secret에 없으면 빈 값으로 처리된다.
+destinations:
+  grafanaCloudMetrics:
+    type: prometheus
+    urlFrom: convert.nonsensitive(remote.kubernetes.secret.grafanacloudmetrics.data["prometheus-url"])
+    auth:
+      type: basic
+      usernameKey: prometheus-username
+      passwordKey: token
+    secret:
+      create: false
+      name: grafana-cloud
+  grafanaCloudLogs:
+    type: loki
+    urlFrom: convert.nonsensitive(remote.kubernetes.secret.grafanacloudlogs.data["loki-url"])
+    auth:
+      type: basic
+      usernameKey: loki-username
+      passwordKey: token
+    secret:
+      create: false
+      name: grafana-cloud
+
+# 노드 CPU·메모리, Pod 재시작, MySQL StatefulSet 준비 상태 (kubelet, cAdvisor, kube-state-metrics)
+clusterMetrics:
+  enabled: true
+  collector: alloy-metrics
+
+# 노드 CPU·메모리·디스크 (node-exporter)
+hostMetrics:
+  enabled: true
+  collector: alloy-metrics
+  linuxHosts:
+    enabled: true
+
+# 앱 지표: Pod 애너테이션(k8s.grafana.com/scrape)이 붙은 대상을 수집한다. 앱은 관리 포트 8081을 알린다 (k8s/app/deployment.yaml).
+annotationAutodiscovery:
+  enabled: true
+  collector: alloy-metrics
+
+# 무료 플랜 로그 용량을 아끼려고 서비스 네임스페이스 로그만 보낸다.
+podLogsViaLoki:
+  enabled: true
+  collector: alloy-logs
+  namespaces: [chamabosal]
+
+telemetryServices:
+  kube-state-metrics:
+    deploy: true
+  node-exporter:
+    deploy: true
+
+collectors:
+  # 지표 수집. 노드가 하나라 1개만 뜬다.
+  alloy-metrics:
+    presets: [clustered, statefulset]
+  # 로그 수집. 노드의 컨테이너 로그 파일을 읽어야 해서 노드마다 뜬다.
+  alloy-logs:
+    presets: [filesystem-log-reader, daemonset]

@@ -16,6 +16,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: chamabosal-app
+      # 모니터링 수집기(Alloy)가 관리 포트의 앱 지표를 수집한다 (k8s/monitoring).
+      annotations:
+        k8s.grafana.com/scrape: "true"
+        k8s.grafana.com/job: chamabosal-app
+        k8s.grafana.com/metrics.portName: management
+        k8s.grafana.com/metrics.path: /actuator/prometheus
     spec:
       # Spring graceful shutdown 대기(30초) + preStop(5초)보다 길게 잡는다.
       terminationGracePeriodSeconds: 45
@@ -41,6 +47,9 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+            # actuator 전용 (config.env의 MANAGEMENT_SERVER_PORT). Service에는 넣지 않는다.
+            - name: management
+              containerPort: 8081
           envFrom:
             - configMapRef:
                 name: chamabosal-app-config
@@ -57,19 +66,19 @@ spec:
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: http
+              port: management
             periodSeconds: 5
             failureThreshold: 36
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: http
+              port: management
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: http
+              port: management
             periodSeconds: 5
             failureThreshold: 3
           lifecycle:
