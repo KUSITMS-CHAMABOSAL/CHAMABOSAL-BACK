@@ -1,0 +1,6 @@
+# CI 배포 계정 (K8s 전환 Phase 4). 관리자 kubeconfig로 한 번 적용한다 (README).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: chamabosal
+resources:
+  - rbac.yaml
