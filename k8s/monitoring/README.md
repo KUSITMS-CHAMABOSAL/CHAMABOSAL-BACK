@@ -71,17 +71,24 @@ kubectl -n monitoring get pods   # alloy-logs, alloy-metrics, alloy-operator, ku
 
 ## 대시보드·알림
 
-Grafana Cloud의 Kubernetes Monitoring 앱이 노드·Pod 화면을 기본으로 보여줍니다. 앱 지표와 알림은 아래 쿼리로 만듭니다.
+Grafana Cloud의 Kubernetes Monitoring 앱이 노드·Pod 화면을 기본으로 보여줍니다. 앱 지표 대시보드는 아래 쿼리로 만듭니다.
 
 | 항목 | 쿼리 |
 |---|---|
 | API 요청 수 (초당) | `sum by (uri) (rate(http_server_requests_seconds_count{job="chamabosal-app"}[5m]))` |
 | API 평균 응답 시간 | `sum by (uri) (rate(http_server_requests_seconds_sum{job="chamabosal-app"}[5m])) / sum by (uri) (rate(http_server_requests_seconds_count{job="chamabosal-app"}[5m]))` |
-| API 에러율 (5xx) | `sum(rate(http_server_requests_seconds_count{job="chamabosal-app", status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{job="chamabosal-app"}[5m]))` |
+| API 에러율 (5xx) | `(sum(rate(http_server_requests_seconds_count{job="chamabosal-app", status=~"5.."}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{job="chamabosal-app"}[5m]))` |
 | JVM 힙 | `sum(jvm_memory_used_bytes{job="chamabosal-app", area="heap"})`, 최대 `sum(jvm_memory_max_bytes{job="chamabosal-app", area="heap"})` |
-| 알림: 노드 메모리 80% 이상 | `1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes > 0.8` (5분 지속) |
-| 알림: Pod 재시작 반복 | `increase(kube_pod_container_status_restarts_total{namespace="chamabosal"}[15m]) >= 3` |
-| 알림: MySQL 다운 | `kube_statefulset_status_replicas_ready{namespace="chamabosal", statefulset="mysql"} < 1` (2분 지속) |
+
+에러율 쿼리는 5xx가 한 번도 없을 때 `No data` 대신 0이 나오도록 분자에만 `or vector(0)`를 붙입니다. 분모에는 붙이지 않아 수집이 끊기면 `No data`로 보입니다.
+
+알림은 쿼리에 비교 연산자를 넣지 않고 Grafana 알림 규칙의 조건(Threshold)에서 비교합니다. PromQL의 `< 1` 같은 비교는 값을 걸러낼 뿐이라, MySQL이 내려가면 결과가 0이 되고 Grafana 기본 조건(IS ABOVE 0)으로는 울리지 않습니다.
+
+| 알림 | 쿼리 | 조건 | 지속 |
+|---|---|---|---|
+| 노드 메모리 80% 이상 | `1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes` | IS ABOVE 0.8 | 5분 |
+| Pod 재시작 반복 | `increase(kube_pod_container_status_restarts_total{namespace="chamabosal"}[15m])` | IS ABOVE 2 | 없음 |
+| MySQL 다운 | `kube_statefulset_status_replicas_ready{namespace="chamabosal", statefulset="mysql"}` | IS BELOW 1 | 2분 |
 
 알림은 Grafana Alerting의 연락처(Contact point)에 Discord 웹훅을 넣어 보냅니다.
 
