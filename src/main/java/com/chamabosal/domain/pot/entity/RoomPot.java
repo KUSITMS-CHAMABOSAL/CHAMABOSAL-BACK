@@ -96,6 +96,11 @@ public class RoomPot extends BaseEntity {
 
     /** 목표의 10%를 10석 단위로 반올림해 준다. 350석이면 40석이다 (RICE-01 8번, Q-81). */
     public int getRewardAmount() {
+        return rewardOf(goalAmount);
+    }
+
+    /** 솥 행이 아직 없을 때(첫 적립 전)도 같은 값을 보여주려고 목표 석만으로 계산한다 (ROOM-02 22번). */
+    public static int rewardOf(int goalAmount) {
         return (goalAmount * REWARD_PERCENT + 500) / 1000 * 10;
     }
 }

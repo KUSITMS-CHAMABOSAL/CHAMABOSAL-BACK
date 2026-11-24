@@ -7,6 +7,7 @@ import com.chamabosal.domain.certification.repository.CertificationRepository;
 import com.chamabosal.domain.certification.service.CertificationService;
 import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
+import com.chamabosal.domain.pot.entity.RoomPot;
 import com.chamabosal.domain.pot.repository.RoomPotRepository;
 import com.chamabosal.domain.poke.repository.PokeRepository;
 import com.chamabosal.domain.reaction.entity.Reaction;
@@ -172,8 +173,8 @@ public class RoomTodayService {
     /** 지금 쌓고 있는 솥. 첫 적립 전에는 솥 행이 없어 0석과 방 목표 석으로 돌려준다 (POT-01). */
     private Pot pot(Room room) {
         return roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(room.getId())
-                .map(pot -> new Pot(pot.getAmount(), pot.getGoalAmount()))
-                .orElseGet(() -> new Pot(0, room.getPotGoalAmount()));
+                .map(pot -> new Pot(pot.getAmount(), pot.getGoalAmount(), pot.getRewardAmount()))
+                .orElseGet(() -> new Pot(0, room.getPotGoalAmount(), RoomPot.rewardOf(room.getPotGoalAmount())));
     }
 
     /** 결과 → 한 솥 축하 순서로 클라이언트가 띄운다. 이마 톡톡은 앱을 열 때 띄우지 않고 투표 탭에서만 진행한다 (13번, Q-107). */

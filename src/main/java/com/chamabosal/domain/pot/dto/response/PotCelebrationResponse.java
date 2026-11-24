@@ -7,7 +7,7 @@ import java.util.List;
 public record PotCelebrationResponse(
         @Schema(description = "몇 번째 솥인지 (1부터)") int seq,
         @Schema(description = "이 솥의 목표 석") int goalAmount,
-        @Schema(description = "멤버 전원이 받은 개인 공양미 (목표의 10%)") int rewardAmount,
+        @Schema(description = "멤버 전원이 받은 개인 공양미 (목표의 10%를 10석 단위로 반올림)") int rewardAmount,
         @Schema(description = "그 솥에 넣은 석이 많은 순. 넣은 기록이 있는 현재 멤버만") List<Contribution> contributions
 ) {
 
