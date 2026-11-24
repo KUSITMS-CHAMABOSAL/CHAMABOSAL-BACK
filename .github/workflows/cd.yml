@@ -36,7 +36,7 @@ jobs:
       - name: Test
         run: ./gradlew test
 
-  # 이미지 빌드·push는 k8s 전환 후에도 유지되고, 배포 job만 ArgoCD로 교체된다.
+  # 이미지 빌드·push는 k8s 전환 후에도 유지된다.
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
@@ -73,7 +73,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # k8s 전환 시 이 job만 ArgoCD로 교체한다.
+  # 옛 서버(docker compose) 배포. DNS 전환(Phase 5) 날 지운다.
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -192,6 +192,41 @@ jobs:
             fi
 
             docker image prune -af
+
+  # k3s 배포 (K8s 전환 Phase 4). DNS 전환(Phase 5) 날 위 deploy job을 지우고 이 job만 남긴다.
+  deploy-k8s:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # 6443은 공인망에서 막혀 있어 Tailscale로 붙는다.
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Set kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          umask 077
+          printf '%s' "$KUBECONFIG_DATA" > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      # 태그를 커밋 SHA로 바꿔야 새 이미지로 뜨고 rollout undo로 이전 빌드에 돌아갈 수 있다.
+      - name: Deploy
+        run: |
+          (cd k8s/app && kustomize edit set image "$IMAGE_NAME:$GITHUB_SHA")
+          kubectl apply -k k8s/app
+          if ! kubectl -n chamabosal rollout status deployment/chamabosal-app --timeout=5m; then
+            kubectl -n chamabosal get pods
+            kubectl -n chamabosal logs deployment/chamabosal-app --tail=100 || true
+            exit 1
+          fi
 
   cleanup-images:
     needs: build-and-push

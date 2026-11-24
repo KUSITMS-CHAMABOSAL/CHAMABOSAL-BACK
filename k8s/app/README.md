@@ -17,7 +17,7 @@
 - 종료 순서: preStop 5초 → Spring graceful shutdown 최대 30초 → `terminationGracePeriodSeconds` 45초. Spring 쪽 값은 `KubernetesProbeConfigTest`가 지킵니다 (#185).
 - `SPRING_JPA_HIBERNATE_DDL_AUTO=update`는 출시 전까지만 둡니다. 출시 때 `config.env`에서 지워 prod 기본값 `validate`로 돌립니다. `config.env`를 바꾸면 ConfigMap 이름이 바뀌어 Pod가 새 값으로 다시 뜹니다.
 - `api.chamabosal.com`은 DNS를 옮기는 날(Phase 5) `httproute.yaml`에 추가합니다. 그 전에는 지금 서버를 가리켜서 인증서 발급(HTTP-01)이 실패하고, 넣어 두면 두 서버로 트래픽이 섞일 수 있습니다.
-- 이미지 태그는 `kustomization.yaml`의 `images.newTag`에서 정합니다. 지금은 `latest`라서 다시 apply해도 새 이미지로 뜨지 않고, `kubectl rollout undo`도 이전 빌드로 돌아가지 못합니다. 배포할 때 `kustomize edit set image ghcr.io/kusitms-chamabosal/chamabosal-back:<커밋 SHA>`로 바꿔야 새로 뜨고 롤백도 됩니다 (Phase 4 CI/CD, 이전 버전 3개 보관).
+- 이미지 태그는 `kustomization.yaml`의 `images.newTag`에서 정합니다. 레포에는 `latest`로 두고, CD(`deploy-k8s` job)가 배포할 때 `kustomize edit set image ghcr.io/kusitms-chamabosal/chamabosal-back:<커밋 SHA>`로 바꿔 적용합니다. 그래서 노트북에서 그대로 `kubectl apply -k k8s/app`을 하면 `latest`로 덮어씁니다. 수동 재배포·롤백은 `k8s/deploy/README.md`를 봅니다.
 
 ## Secret 만들기
 
@@ -57,6 +57,8 @@ kubectl -n chamabosal create secret generic chamabosal-toss-mtls \
 ```
 
 ## 적용
+
+평소에는 CD가 배포합니다 (`k8s/deploy/README.md`). 처음 한 번 띄울 때만 직접 적용합니다.
 
 ```bash
 kubectl apply -k k8s/app
