@@ -4,8 +4,8 @@
 
 | 파일 | 내용 |
 |---|---|
-| `deployment.yaml` | 앱 Pod 1개, `Recreate` 배포, probe, 리소스, 보안 설정, 토스 인증서 볼륨 |
-| `service.yaml` | `chamabosal-app:8080` (ClusterIP) |
+| `deployment.yaml` | 앱 Pod 1개, `Recreate` 배포, probe, 리소스, 보안 설정, 토스 인증서 볼륨, 지표 수집 애너테이션 |
+| `service.yaml` | `chamabosal-app:8080` (ClusterIP). 관리 포트 8081은 넣지 않음 |
 | `httproute.yaml` | `api-k8s.chamabosal.com` → 앱. Gateway `chamabosal-gateway`(네임스페이스 `chamabosal`)의 `https` 리스너에 붙음 |
 | `config.env` | 비밀이 아닌 고정값. `configMapGenerator`가 ConfigMap `chamabosal-app-config-<해시>`로 만듦 |
 
@@ -15,6 +15,7 @@
 
 - 스케줄러(`@Scheduled`)가 Pod마다 돌지 않게 replicas 1 + `Recreate`로 둡니다. 배포할 때 옛 Pod가 내려간 뒤 새 Pod가 떠서 잠깐 끊깁니다 (지금 docker compose 배포와 같음). replicas를 늘리려면 ShedLock부터 넣어야 합니다.
 - 종료 순서: preStop 5초 → Spring graceful shutdown 최대 30초 → `terminationGracePeriodSeconds` 45초. Spring 쪽 값은 `KubernetesProbeConfigTest`가 지킵니다 (#185).
+- actuator는 관리 포트 8081에서만 열립니다 (`config.env`의 `MANAGEMENT_SERVER_PORT`). probe와 지표 수집(`/actuator/prometheus`, #205)이 8081을 쓰고, Service·HTTPRoute는 8080만 넘겨 Gateway로는 나가지 않습니다. 지표 노출은 K8s에서만 켜고 docker compose 배포는 그대로 8080의 health만 엽니다. 관리 포트와 앱 포트는 따로 돌아서, 앱 포트만 멈추는 드문 경우는 liveness가 잡지 못합니다.
 - `SPRING_JPA_HIBERNATE_DDL_AUTO=update`는 출시 전까지만 둡니다. 출시 때 `config.env`에서 지워 prod 기본값 `validate`로 돌립니다. `config.env`를 바꾸면 ConfigMap 이름이 바뀌어 Pod가 새 값으로 다시 뜹니다.
 - `api.chamabosal.com`은 DNS를 옮기는 날(Phase 5) `httproute.yaml`에 추가합니다. 그 전에는 지금 서버를 가리켜서 인증서 발급(HTTP-01)이 실패하고, 넣어 두면 두 서버로 트래픽이 섞일 수 있습니다.
 - 이미지 태그는 `kustomization.yaml`의 `images.newTag`에서 정합니다. 레포에는 `latest`로 두고, CD(`deploy-k8s` job)가 배포할 때 `kustomize edit set image ghcr.io/kusitms-chamabosal/chamabosal-back:<커밋 SHA>`로 바꿔 적용합니다. 그래서 노트북에서 그대로 `kubectl apply -k k8s/app`을 하면 `latest`로 덮어씁니다. 수동 재배포·롤백은 `k8s/deploy/README.md`를 봅니다.
@@ -105,10 +106,11 @@ kubectl kustomize k8s/app \
   | kubectl apply -f -
 kubectl -n chamabosal rollout status deployment/chamabosal-app
 
-# 6. probe 확인
-kubectl -n chamabosal port-forward svc/chamabosal-app 8080:8080 &
-curl -s localhost:8080/actuator/health/liveness   # {"status":"UP"}
-curl -s localhost:8080/actuator/health/readiness  # {"status":"UP"}
+# 6. probe·지표 확인 (관리 포트는 Service에 없어 Pod로 직접 붙는다)
+kubectl -n chamabosal port-forward deploy/chamabosal-app 8081:8081 &
+curl -s localhost:8081/actuator/health/liveness   # {"status":"UP"}
+curl -s localhost:8081/actuator/health/readiness  # {"status":"UP"}
+curl -s localhost:8081/actuator/prometheus | head # jvm_... 지표
 
 # 정리
 k3d cluster delete chamabosal

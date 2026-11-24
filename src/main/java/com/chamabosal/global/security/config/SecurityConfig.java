@@ -23,6 +23,8 @@ public class SecurityConfig {
             "/api/auth/login",
             "/api/auth/test-token",
             "/actuator/health/**",
+            // 수집기(Alloy)가 관리 포트에서 읽는다. 앱 포트에는 노출하지 않는다 (k8s/app/config.env).
+            "/actuator/prometheus",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
