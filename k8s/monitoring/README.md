@@ -8,15 +8,16 @@ Grafana 공식 차트 `grafana/k8s-monitoring`을 Helm으로 설치하고, 값�
 |---|---|
 | `values.yaml` | 차트 값. 무엇을 모아 어디로 보낼지 정함. 비밀값은 없음 |
 | `dashboard.json` | API·JVM 대시보드. Grafana에서 import |
+| `discord-template.tmpl` | Discord 알림 메시지 템플릿 |
 
 ## 모으는 것
 
 | 대상 | 수집 방법 | 대시보드·알림에 쓰는 곳 |
 |---|---|---|
-| 노드 CPU·메모리·디스크 | node-exporter | 노드 CPU·메모리, 노드 메모리 80% 알림 |
+| 노드 CPU·메모리·디스크 | node-exporter | 노드 CPU·메모리, 노드 메모리·디스크 80% 알림 |
 | Pod 상태·재시작, StatefulSet 준비 수 | kube-state-metrics | Pod 재시작, MySQL 다운 알림 |
 | 컨테이너 CPU·메모리 | kubelet, cAdvisor | Pod별 사용량 |
-| 앱 지표 (요청 수·응답 시간·에러율, JVM 힙) | 앱 Pod 애너테이션 → `:8081/actuator/prometheus` | API·JVM 대시보드 |
+| 앱 지표 (요청 수·응답 시간·에러율, JVM 힙) | 앱 Pod 애너테이션 → `:8081/actuator/prometheus` | API·JVM 대시보드, 앱 다운 알림 |
 | 로그 | `chamabosal` 네임스페이스 Pod의 컨테이너 로그 (앱, MySQL, 백업 Job) | 장애 때 로그 검색 |
 
 - 앱 지표는 관리 포트 8081에서만 열리고 Service·HTTPRoute에는 없어 밖에서 닿지 않습니다 (`k8s/app` README).
@@ -96,8 +97,21 @@ Grafana Cloud의 Kubernetes Monitoring 앱이 노드·Pod 화면을 기본으로
 | 노드 메모리 80% 이상 | `1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes` | IS ABOVE 0.8 | 5분 |
 | Pod 재시작 반복 | `increase(kube_pod_container_status_restarts_total{namespace="chamabosal"}[15m])` | IS ABOVE 2 | 없음 |
 | MySQL 다운 | `kube_statefulset_status_replicas_ready{namespace="chamabosal", statefulset="mysql"}` | IS BELOW 1 | 2분 |
+| 앱 다운 | `sum(up{job="chamabosal-app"})` | IS BELOW 1 | 2분 |
+| 노드 디스크 80% 이상 | `1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}` | IS ABOVE 0.8 | 5분 |
 
-알림은 Grafana Alerting의 연락처(Contact point)에 Discord 웹훅을 넣어 보냅니다.
+- 앱 다운은 Pod가 응답하지 않아 앱의 5xx 알림도 못 보내는 경우를 잡습니다. 배포 중 Pod가 바뀔 때 줄이 둘로 갈려도 합계로 보도록 `sum`을 씁니다.
+- 규칙은 폴더 `chamabosal`, 평가 그룹 `infra`(1분)에 둡니다.
+- 데이터가 끊기면(수집기 다운 등) Grafana 기본 설정대로 `DatasourceNoData` 알림이 옵니다.
+
+알림은 Grafana Alerting의 연락처(Contact point)에 Discord 웹훅을 넣어 보냅니다. 웹훅은 앱의 5xx 알림(`DISCORD_ERROR_WEBHOOK_URL`)과 같은 채널에 따로 만들어, 한쪽을 바꿔도 다른 쪽에 영향이 없게 합니다.
+
+1. Notification configuration → Templates에 `discord-template.tmpl` 내용으로 템플릿 그룹 `chamabosal`을 만듭니다.
+2. Contact points에 Discord 연락처 `discord-chamabosal`을 만들고 Optional Discord settings를 채웁니다.
+   - Title: `{{ template "chamabosal.title" . }}`
+   - Message Content: `{{ template "chamabosal.message" . }}`
+   - Show Message in Embed: 체크 (본문을 카드 안에 넣음)
+3. Test로 Discord 수신을 확인합니다.
 
 ## 무료 플랜 한도
 
