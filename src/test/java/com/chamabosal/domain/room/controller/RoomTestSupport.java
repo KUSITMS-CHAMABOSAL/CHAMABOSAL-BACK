@@ -13,6 +13,7 @@ import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomGoal;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
+import com.chamabosal.domain.room.repository.RoomMemberStayRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.room.service.InviteService;
 import com.chamabosal.domain.room.service.RoomService;
@@ -64,6 +65,9 @@ abstract class RoomTestSupport {
     InviteService inviteService;
 
     @Autowired
+    RoomMemberStayRepository roomMemberStayRepository;
+
+    @Autowired
     RoomRepository roomRepository;
 
     @Autowired
@@ -112,6 +116,7 @@ abstract class RoomTestSupport {
         roundRepository.deleteAll();
         potContributionRepository.deleteAll();
         roomPotRepository.deleteAll();
+        roomMemberStayRepository.deleteAll();
         roomMemberRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();

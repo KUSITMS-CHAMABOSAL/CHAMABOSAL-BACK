@@ -14,6 +14,7 @@ import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.nabal.service.NabalLossScheduler;
 import com.chamabosal.domain.nabal.service.NabalService;
+import com.chamabosal.domain.room.dto.request.InviteJoinRequest;
 import com.chamabosal.domain.rice.entity.RiceHistory;
 import com.chamabosal.domain.rice.entity.RiceReason;
 import com.chamabosal.domain.rice.entity.RiceRefType;
@@ -42,6 +43,7 @@ import org.springframework.test.web.servlet.ResultActions;
 /**
  * 나발 (NABAL-01~03). 방 준비 코드를 쓰려고 방 테스트 패키지에 둔다.
  * 공통 Given: 11/10 회차를 11/11 03:00에 판정한다. A는 11/1부터 방에 있었다.
+ * 혼자인 방은 세지 않으므로(11번) 방은 11/1에 만들어 방장이 11/1부터 함께하게 하고, 방장은 인증해 나발이 빠지지 않게 한다.
  */
 class NabalTest extends RoomTestSupport {
 
@@ -64,12 +66,14 @@ class NabalTest extends RoomTestSupport {
     private User userA;
     private Room room1;
     private RoomMember memberA1;
+    private RoomMember partner1;
 
     @BeforeEach
     void setUp() {
         userA = newUser();
-        room1 = createRoom(4);
+        room1 = createRoomLongAgo();
         memberA1 = joinLongAgo(room1, userA);
+        partner1 = roomMemberRepository.findById(room1.getOwnerMemberId()).orElseThrow();
     }
 
     @AfterEach
@@ -99,7 +103,7 @@ class NabalTest extends RoomTestSupport {
 
     @Test
     void NABAL_01_3_한_방만_빠뜨리면_1개_빠진다() {
-        joinLongAgo(createRoom(4), userA);
+        joinLongAgo(createRoomLongAgo(), userA);
         certify(memberA1);
 
         judge();
@@ -109,7 +113,7 @@ class NabalTest extends RoomTestSupport {
 
     @Test
     void NABAL_01_4_두_방_다_빠뜨리면_서로_다른_나발이_2개_빠진다() {
-        joinLongAgo(createRoom(4), userA);
+        joinLongAgo(createRoomLongAgo(), userA);
 
         judge();
 
@@ -122,7 +126,8 @@ class NabalTest extends RoomTestSupport {
     @Test
     void NABAL_01_5_그날_들어온_방은_세지_않는다() {
         certify(memberA1);
-        roomMemberRepository.save(RoomMember.create(createRoom(4), userA, "민지", unusedColor(room1),
+        Room room2 = createRoomLongAgo();
+        roomMemberRepository.save(RoomMember.create(room2, userA, "민지", unusedColor(room2),
                 ROUND_DATE.atTime(22, 0)));
 
         judge();
@@ -169,12 +174,62 @@ class NabalTest extends RoomTestSupport {
     }
 
     @Test
-    void NABAL_01_10_혼자인_방은_세지_않는다() {
-        leave(room1.getOwnerMemberId(), ROUND_DATE.atTime(12, 0), LeaveType.LEFT);
+    void NABAL_01_10_회차_내내_혼자였으면_세지_않는다() {
+        leave(partner1.getId(), LONG_AGO.plusDays(1), LeaveType.LEFT);
 
         judge();
 
         assertThat(nabalLossRepository.count()).isZero();
+    }
+
+    @Test
+    void NABAL_01_11_회차_중에_두_번째_멤버가_들어왔으면_세지_않는다() {
+        leave(partner1.getId(), LONG_AGO.plusDays(1), LeaveType.LEFT);
+        joinAt(room1, JUDGED_AT.minusHours(2));
+
+        judge();
+
+        assertThat(nabalLossRepository.count()).isZero();
+    }
+
+    @Test
+    void NABAL_01_12_회차_중에_혼자_남았으면_세지_않는다() {
+        leave(partner1.getId(), JUDGED_AT.minusMinutes(1), LeaveType.LEFT);
+
+        judge();
+
+        assertThat(nabalLossRepository.count()).isZero();
+    }
+
+    @Test
+    void NABAL_01_13_멤버가_바뀌어도_내내_함께였으면_빠진다() {
+        joinAt(room1, ROUND_DATE.atTime(10, 0));
+        leave(partner1.getId(), ROUND_DATE.atTime(12, 0), LeaveType.LEFT);
+
+        judge();
+
+        assertThat(nabalLossRepository.findAll()).singleElement()
+                .satisfies(loss -> assertThat(loss.getUser().getId()).isEqualTo(userA.getId()));
+    }
+
+    @Test
+    void NABAL_01_14_나갔다_다시_들어온_멤버의_이전_시간도_센다() {
+        joinAt(room1, ROUND_DATE.atTime(10, 0));
+        leave(partner1.getId(), ROUND_DATE.atTime(12, 0), LeaveType.LEFT);
+        String token = inviteService.issueToken(userA.getId(), room1.getId()).response().inviteToken();
+        clock.set(ROUND_DATE.atTime(13, 0));
+        inviteService.join(partner1.getUser().getId(), token, new InviteJoinRequest("방장"));
+
+        assertThat(roomMemberStayRepository.findAll()).singleElement().satisfies(stay -> {
+            assertThat(stay.getMember().getId()).isEqualTo(partner1.getId());
+            assertThat(stay.getJoinedAt()).isEqualTo(LONG_AGO);
+            assertThat(stay.getLeftAt()).isEqualTo(ROUND_DATE.atTime(12, 0));
+        });
+
+        judge();
+
+        assertThat(nabalLossRepository.findAll()).singleElement()
+                .satisfies(loss -> assertThat(loss.getUser().getId()).isEqualTo(userA.getId()));
     }
 
     @Test
@@ -352,6 +407,20 @@ class NabalTest extends RoomTestSupport {
 
     private RoomMember joinLongAgo(Room room, User user) {
         return roomMemberRepository.save(RoomMember.create(room, user, "민지", unusedColor(room), LONG_AGO));
+    }
+
+    /** 11/1에 만든 방. 방장이 11/1부터 함께해 회차 내내 혼자가 아니고, 방장은 11/10 회차에 인증해 나발이 빠지지 않는다. */
+    private Room createRoomLongAgo() {
+        clock.set(LONG_AGO);
+        Room room = createRoom(4);
+        clock.set(NOW);
+        certify(roomMemberRepository.findById(room.getOwnerMemberId()).orElseThrow());
+        return room;
+    }
+
+    /** 그 시각에 들어온 멤버. 들어온 회차는 판정하지 않아 나발이 빠지지 않는다 (6번). */
+    private RoomMember joinAt(Room room, LocalDateTime joinedAt) {
+        return roomMemberRepository.save(RoomMember.create(room, newUser(), "지수", unusedColor(room), joinedAt));
     }
 
     private Certification certify(RoomMember member) {
