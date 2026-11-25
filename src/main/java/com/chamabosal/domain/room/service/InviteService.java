@@ -107,8 +107,13 @@ public class InviteService {
             case ROOM_LIMIT -> throw new BaseException(BaseErrorCode.ROOM_LIMIT_EXCEEDED);
             case ROOM_FULL -> throw new BaseException(BaseErrorCode.ROOM_FULL);
             case ALREADY_MEMBER -> new CreationResult<>(InviteJoinResponse.from(
-                    roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId).orElseThrow()), false);
-            case JOINABLE -> new CreationResult<>(InviteJoinResponse.from(enter(room, user, request.nickname())), true);
+                    roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId).orElseThrow(), false),
+                    false);
+            case JOINABLE -> {
+                // 사용자 행 락 안이라 동시 입장에도 첫 등록은 하나만 true다 (INVITE-03 18번).
+                boolean isNewUser = !roomMemberRepository.existsByUser_Id(userId);
+                yield new CreationResult<>(InviteJoinResponse.from(enter(room, user, request.nickname()), isNewUser), true);
+            }
         };
     }
 

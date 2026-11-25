@@ -289,8 +289,10 @@ ROOM-01. 방을 만들고 만든 사람을 방장 멤버로 등록합니다. 색
 { "name": "배달 끊기 방", "goal": "DELIVERY", "memberLimit": 4, "potGoalAmount": 350, "nickname": "민지", "color": "PINK" }
 
 // response 201
-{ "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK" }
+{ "roomId": 1, "memberId": 11, "nickname": "민지", "color": "PINK", "isNewUser": true }
 ```
+
+- `isNewUser`: 처음 보살을 받아 방에 등록했으면 true (가입 완료 지표용). 나간 방을 포함해 방 멤버였던 적이 있으면 false, 내 데이터 삭제 뒤 다시 가입했으면 true (ROOM-01 14번)
 
 - `name`: 1~12자, `memberLimit`: 2~4 (예상 기간 계산용, 입장 제한은 항상 4명), `nickname`: 1~8자, 둘 다 앞뒤 띄어쓰기는 지움 (형식은 `common.md`)
 - `potGoalAmount`: 공양미 한 솥 목표 석. 300~700 중 50 단위 (Q-80)
@@ -496,8 +498,10 @@ INVITE-03. 방에 들어옵니다. 나간 지 6개월 안이면 예전 멤버 �
 { "nickname": "지수" }
 
 // response 201 (들어옴), 200 (이미 멤버)
-{ "roomId": 1, "memberId": 12, "nickname": "지수", "color": "MINT" }
+{ "roomId": 1, "memberId": 12, "nickname": "지수", "color": "MINT", "isNewUser": true }
 ```
+
+- `isNewUser`: 방 만들기와 같은 기준. 이미 멤버(200)면 false (INVITE-03 18번)
 
 - 닉네임 규칙은 닉네임 수정과 같음 (1~8자, 앞뒤 띄어쓰기 지움, 중복 검사 없음)
 - 나간 지 6개월 안이면 예전 기록이 이어지고, 예전 색을 다른 멤버가 쓰면 남은 색 중 랜덤

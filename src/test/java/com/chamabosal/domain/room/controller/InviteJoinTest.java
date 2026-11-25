@@ -132,7 +132,8 @@ class InviteJoinTest extends RoomTestSupport {
 
         join(userD, "지수")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.memberId").value(previous.getId()));
+                .andExpect(jsonPath("$.data.memberId").value(previous.getId()))
+                .andExpect(jsonPath("$.data.isNewUser").value(false));
 
         RoomMember rejoined = roomMemberRepository.findById(previous.getId()).orElseThrow();
         assertThat(rejoined.isCurrent()).isTrue();
@@ -176,7 +177,7 @@ class InviteJoinTest extends RoomTestSupport {
     void INVITE_03_11_6개월이_지나_다시_들어오면_새_행이_생긴다() throws Exception {
         RoomMember previous = addLeftMember(room, userD, "지수", BosalColor.MINT, NOW.minusMonths(7), LeaveType.LEFT);
 
-        join(userD, "지수").andExpect(status().isCreated());
+        join(userD, "지수").andExpect(status().isCreated()).andExpect(jsonPath("$.data.isNewUser").value(false));
 
         RoomMember current = currentMemberOf(userD).orElseThrow();
         assertThat(current.getId()).isNotEqualTo(previous.getId());
@@ -321,6 +322,20 @@ class InviteJoinTest extends RoomTestSupport {
                 .andExpect(status().isCreated());
 
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(small.getId())).hasSize(4);
+    }
+
+    @Test
+    void INVITE_03_22_방_멤버였던_적이_없으면_첫_보살_등록이다() throws Exception {
+        join(userD, "도윤").andExpect(status().isCreated()).andExpect(jsonPath("$.data.isNewUser").value(true));
+        // 이미 멤버여서 새로 들어오지 않으면 첫 등록이 아니다.
+        join(userD, "도윤").andExpect(status().isOk()).andExpect(jsonPath("$.data.isNewUser").value(false));
+    }
+
+    @Test
+    void INVITE_03_23_두_번째_방이면_첫_보살_등록이_아니다() throws Exception {
+        joinOtherRooms(userD, 1);
+
+        join(userD, "도윤").andExpect(status().isCreated()).andExpect(jsonPath("$.data.isNewUser").value(false));
     }
 
     private ResultActions join(User user, String nickname) throws Exception {

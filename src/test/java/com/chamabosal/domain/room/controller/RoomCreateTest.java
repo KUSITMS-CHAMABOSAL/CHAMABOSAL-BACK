@@ -295,6 +295,24 @@ class RoomCreateTest {
         assertThat(roomRepository.count()).isZero();
     }
 
+    @Test
+    void ROOM_01_15_방_멤버였던_적이_없으면_첫_보살_등록이다() throws Exception {
+        create("배달 끊기 방", 4, "민지")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.isNewUser").value(true));
+    }
+
+    @Test
+    void ROOM_01_16_나간_방이_있으면_첫_보살_등록이_아니다() throws Exception {
+        joinRooms(1);
+        Long leftRoomId = roomMemberRepository.findAll().getFirst().getRoom().getId();
+        roomService.leave(user.getId(), leftRoomId);
+
+        create("배달 끊기 방", 4, "민지")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.isNewUser").value(false));
+    }
+
     private ResultActions create(String name, int memberLimit, String nickname) throws Exception {
         return create(name, memberLimit, 300, nickname);
     }

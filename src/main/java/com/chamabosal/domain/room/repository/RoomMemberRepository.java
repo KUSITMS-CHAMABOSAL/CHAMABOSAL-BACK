@@ -80,6 +80,9 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     boolean existsByRoom_IdAndUser_IdAndLeaveType(Long roomId, Long userId, LeaveType leaveType);
 
+    /** 나간 방을 포함해 방 멤버였던 적이 있는지. 내 데이터를 삭제하면 멤버 행의 사용자가 비어 새 사용자는 기록이 없다 (ROOM-01 14번). */
+    boolean existsByUser_Id(Long userId);
+
     /** 이 방에서 가장 최근에 나간 내 행. 6개월 안이면 예전 닉네임을 보여주고 다시 들어올 때 이 행을 쓴다. */
     Optional<RoomMember> findFirstByRoom_IdAndUser_IdAndLeftAtIsNotNullOrderByLeftAtDesc(Long roomId, Long userId);
 
