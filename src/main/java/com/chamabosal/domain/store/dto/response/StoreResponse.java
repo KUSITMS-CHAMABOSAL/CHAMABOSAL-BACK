@@ -15,6 +15,7 @@ public record StoreResponse(
 
     public record DefenseTicketStatus(
             @Schema(description = "미사용 방어권이 있으면 OWNED, 없으면 NONE") Status status,
+            @Schema(description = "보유한 미사용 방어권 개수. 없으면 0") int count,
             @Schema(description = "이번 주(회차 날짜 기준 월~일)에 방어권을 씀") boolean isUsedThisWeek
     ) {
 

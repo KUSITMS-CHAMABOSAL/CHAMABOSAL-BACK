@@ -1300,9 +1300,10 @@ paths:
       operationId: getStore
       summary: 곳간
       description: |-
-        공양미 잔액, 방어권 상태, 꾸미기 아이템 목록이다.
+        공양미 잔액, 방어권 상태·보유 개수, 꾸미기 아이템 목록이다.
 
         - `riceBalance`: 화면 표시 잔액. 실제 잔액이 음수면 0
+        - `defenseTicket.count`: 보유한 미사용 방어권 개수. 없으면 0
         - `isUsedThisWeek`: 이번 주(회차 날짜 기준 월~일)에 방어권을 씀
       responses:
         '200':
@@ -4252,10 +4253,15 @@ components:
       type: object
       required:
       - status
+      - count
       - isUsedThisWeek
       properties:
         status:
           $ref: '#/components/schemas/DefenseTicketStatus'
+        count:
+          type: integer
+          description: 보유한 미사용 방어권 개수. 없으면 0
+          example: 2
         isUsedThisWeek:
           type: boolean
           description: 이번 주에 이미 씀

@@ -12,7 +12,6 @@ public interface DefenseTicketRepository extends JpaRepository<DefenseTicket, Lo
     long countByUser_IdAndUsedAtIsNull(Long userId);
 
     /** 곳간(STORE-01 4번): 미사용 방어권이 있는지. */
-    boolean existsByUser_IdAndUsedAtIsNull(Long userId);
 
     /** 곳간(STORE-01 5번): 이 기간의 회차에 방어권을 썼는지. 기간은 회차 날짜 기준이다. */
     boolean existsByUser_IdAndUsedRound_RoundDateBetween(Long userId, LocalDate from, LocalDate to);

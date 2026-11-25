@@ -63,9 +63,10 @@ public class StoreService {
                 .toList();
         // 이번 주는 지금 회차 날짜가 속한 월요일~일요일이다 (api.md isUsedThisWeek).
         LocalDate monday = Round.dateOf(LocalDateTime.now(clock)).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        int ticketCount = (int) defenseTicketRepository.countByUser_IdAndUsedAtIsNull(userId);
         DefenseTicketStatus defenseTicket = new DefenseTicketStatus(
-                defenseTicketRepository.existsByUser_IdAndUsedAtIsNull(userId)
-                        ? DefenseTicketStatus.Status.OWNED : DefenseTicketStatus.Status.NONE,
+                ticketCount > 0 ? DefenseTicketStatus.Status.OWNED : DefenseTicketStatus.Status.NONE,
+                ticketCount,
                 defenseTicketRepository.existsByUser_IdAndUsedRound_RoundDateBetween(userId, monday, monday.plusDays(6)));
         return new StoreResponse(riceService.getDisplayBalance(userId), defenseTicket, items);
     }
