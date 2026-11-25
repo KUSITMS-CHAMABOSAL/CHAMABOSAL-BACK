@@ -80,11 +80,13 @@ public class RoomService {
             throw new BaseException(BaseErrorCode.ROOM_LIMIT_EXCEEDED);
         }
 
+        // 사용자 행 락 안이라 동시 요청이 와도 첫 등록은 하나만 true다 (ROOM-01 14번).
+        boolean isNewUser = !roomMemberRepository.existsByUser_Id(userId);
         Room room = roomRepository.save(Room.create(name, request.goal(), request.memberLimit(), request.potGoalAmount()));
         RoomMember owner = roomMemberRepository.save(RoomMember.create(
                 room, user, request.nickname(), request.color(), LocalDateTime.now(clock)));
         room.assignOwner(owner.getId());
-        return RoomCreateResponse.from(owner);
+        return RoomCreateResponse.from(owner, isNewUser);
     }
 
     /**

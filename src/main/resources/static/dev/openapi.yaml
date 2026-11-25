@@ -3885,6 +3885,7 @@ components:
       - memberId
       - nickname
       - color
+      - isNewUser
       properties:
         roomId:
           type: integer
@@ -3899,6 +3900,10 @@ components:
           example: 민지
         color:
           $ref: '#/components/schemas/BosalColor'
+        isNewUser:
+          type: boolean
+          description: 처음 보살을 받아 방에 등록했는지 (가입 완료 지표용). 나간 방을 포함해 방 멤버였던 적이 있으면 false, 이미 멤버(200)면 false
+          example: true
     TodayRoom:
       type: object
       required:
