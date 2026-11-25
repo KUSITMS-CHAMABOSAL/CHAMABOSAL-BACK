@@ -3545,7 +3545,7 @@ components:
       enum:
       - NONE
       - OWNED
-      description: '방어권 상태: `NONE` 없음, `OWNED` 미사용 1개 보유'
+      description: '방어권 상태: `NONE` 없음, `OWNED` 미사용 1개 이상 보유'
     PushAgreementType:
       type: string
       enum:
