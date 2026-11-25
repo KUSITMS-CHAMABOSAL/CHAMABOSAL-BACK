@@ -98,6 +98,11 @@ public class Round extends BaseEntity {
         return time.toLocalTime().isBefore(ROUND_START) ? date.minusDays(1) : date;
     }
 
+    /** 그 회차가 시작하는 시각 (그날 03:00). 회차는 다음 날 03:00 전까지다. */
+    public static LocalDateTime startOf(LocalDate roundDate) {
+        return roundDate.atTime(ROUND_START);
+    }
+
     public boolean isCertifying() {
         return status == RoundStatus.CERTIFYING;
     }

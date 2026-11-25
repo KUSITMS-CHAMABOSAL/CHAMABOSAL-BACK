@@ -5,11 +5,15 @@ import com.chamabosal.domain.nabal.entity.NabalLoss;
 import com.chamabosal.domain.nabal.repository.NabalLossRepository;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
+import com.chamabosal.domain.room.repository.RoomMemberStayRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalInt;
@@ -27,6 +31,7 @@ public class NabalLossService {
     private final UserRepository userRepository;
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
+    private final RoomMemberStayRepository roomMemberStayRepository;
     private final CertificationRepository certificationRepository;
     private final NabalLossRepository nabalLossRepository;
     private final NabalPicker nabalPicker;
@@ -75,8 +80,7 @@ public class NabalLossService {
 
     /**
      * 그 회차 날짜에 들어온 방은 세지 않는다 (CERT-05 2번과 같은 기준). 회차 행이 없는 방도 미인증이다.
-     * 판정 시점에 나 혼자인 방도 세지 않는다 (11번). 방 행 락을 잡은 뒤라 그 사이 인원이 바뀌지 않는다.
-     * 인원 수는 미인증일 때만 세서 03:00 배치가 락을 잡은 채 도는 쿼리를 줄인다.
+     * 회차 내내 다른 멤버가 있었던 방만 센다 (11번). 함께한 멤버는 미인증일 때만 조회해서 03:00 배치가 락을 잡은 채 도는 쿼리를 줄인다.
      */
     private boolean losesNabalIn(RoomMember member, LocalDate roundDate) {
         Long roomId = member.getRoom().getId();
@@ -85,6 +89,41 @@ public class NabalLossService {
                         roomId, roundDate, member.getId())) {
             return false;
         }
-        return roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId) >= 2;
+        return wasNeverAlone(member, roundDate);
+    }
+
+    /**
+     * 그 회차(그날 03:00부터 다음 날 03:00 전까지) 내내 나 말고 다른 멤버가 한 명 이상 있었는지 (11번).
+     * 다른 멤버가 있었던 구간을 시작 순서로 이어 붙여 빈틈 없이 회차 끝까지 닿으면 내내 함께였다.
+     * 멤버 행에는 마지막 구간만 남으므로 다시 들어오기 전 구간(room_member_stays)도 함께 본다.
+     * 판정 뒤에 나갔다 다시 들어와도 그 전 구간이 남아 있어 결과가 같다.
+     */
+    private boolean wasNeverAlone(RoomMember member, LocalDate roundDate) {
+        LocalDateTime from = Round.startOf(roundDate);
+        LocalDateTime to = Round.startOf(roundDate.plusDays(1));
+        Long roomId = member.getRoom().getId();
+        List<Stay> stays = new ArrayList<>();
+        roomMemberRepository.findOthersPresentBetween(roomId, member.getId(), from, to)
+                .forEach(other -> stays.add(new Stay(other.getJoinedAt(), other.getLeftAt() == null ? to : other.getLeftAt())));
+        roomMemberStayRepository.findOthersBetween(roomId, member.getId(), from, to)
+                .forEach(stay -> stays.add(new Stay(stay.getJoinedAt(), stay.getLeftAt())));
+        stays.sort(Comparator.comparing(Stay::joinedAt));
+
+        LocalDateTime coveredUntil = from;
+        for (Stay stay : stays) {
+            if (stay.joinedAt().isAfter(coveredUntil)) {
+                return false;
+            }
+            if (stay.leftAt().isAfter(coveredUntil)) {
+                coveredUntil = stay.leftAt();
+            }
+            if (!coveredUntil.isBefore(to)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private record Stay(LocalDateTime joinedAt, LocalDateTime leftAt) {
     }
 }
