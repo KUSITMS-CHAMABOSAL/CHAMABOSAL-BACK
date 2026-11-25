@@ -169,6 +169,15 @@ class NabalTest extends RoomTestSupport {
     }
 
     @Test
+    void NABAL_01_10_혼자인_방은_세지_않는다() {
+        leave(room1.getOwnerMemberId(), ROUND_DATE.atTime(12, 0), LeaveType.LEFT);
+
+        judge();
+
+        assertThat(nabalLossRepository.count()).isZero();
+    }
+
+    @Test
     void NABAL_02_1_안_본_빠진_나발은_빠진_나발과_안_본_나발에_모두_있다() throws Exception {
         NabalLoss loss = fallen(7, ROUND_DATE);
 

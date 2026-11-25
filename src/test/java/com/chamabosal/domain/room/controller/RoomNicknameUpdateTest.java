@@ -2,6 +2,7 @@ package com.chamabosal.domain.room.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.chamabosal.domain.pot.repository.PotContributionRepository;
@@ -14,11 +15,15 @@ import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.room.service.RoomService;
+import com.chamabosal.domain.round.entity.Round;
+import com.chamabosal.domain.round.entity.RoundStatus;
+import com.chamabosal.domain.round.repository.RoundRepository;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.global.config.ClockConfig;
 import com.chamabosal.global.security.jwt.JwtProvider;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +38,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,6 +78,9 @@ class RoomNicknameUpdateTest {
     private UserRepository userRepository;
 
     @Autowired
+    private RoundRepository roundRepository;
+
+    @Autowired
     private JwtProvider jwtProvider;
 
     private User userA;
@@ -89,6 +98,7 @@ class RoomNicknameUpdateTest {
 
     @AfterEach
     void tearDown() {
+        roundRepository.deleteAll();
         potContributionRepository.deleteAll();
         roomPotRepository.deleteAll();
         roomMemberRepository.deleteAll();
@@ -138,6 +148,55 @@ class RoomNicknameUpdateTest {
                 .andExpect(status().isOk());
 
         assertThat(nicknameOf(userA)).isEqualTo("민지");
+    }
+
+    @Test
+    void ROOM_04_7_투표_중이면_ROOM_012를_돌려주고_닉네임은_그대로다() throws Exception {
+        saveRound(NOW.toLocalDate(), RoundStatus.VOTING);
+
+        update(userA, "민지2")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ROOM_012"));
+
+        assertThat(nicknameOf(userA)).isEqualTo("민지");
+    }
+
+    @Test
+    void ROOM_04_8_어제_회차가_투표_중이면_ROOM_012를_돌려준다() throws Exception {
+        saveRound(NOW.toLocalDate().minusDays(1), RoundStatus.VOTING);
+
+        update(userA, "민지2")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ROOM_012"));
+
+        assertThat(nicknameOf(userA)).isEqualTo("민지");
+    }
+
+    @Test
+    void 인증이_마감됐는데_투표가_아직_안_열린_회차가_있으면_ROOM_012를_돌려준다() throws Exception {
+        saveRound(NOW.toLocalDate().minusDays(1), RoundStatus.CERTIFYING);
+
+        update(userA, "민지2")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ROOM_012"));
+
+        assertThat(nicknameOf(userA)).isEqualTo("민지");
+    }
+
+    @Test
+    void ROOM_04_9_투표_중이어도_지금과_같은_닉네임이면_성공한다() throws Exception {
+        saveRound(NOW.toLocalDate(), RoundStatus.VOTING);
+
+        update(userA, "민지")
+                .andExpect(status().isOk());
+
+        assertThat(nicknameOf(userA)).isEqualTo("민지");
+    }
+
+    private void saveRound(LocalDate roundDate, RoundStatus status) {
+        Round round = Round.create(room, roundDate);
+        ReflectionTestUtils.setField(round, "status", status);
+        roundRepository.save(round);
     }
 
     private ResultActions update(User user, String nickname) throws Exception {
