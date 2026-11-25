@@ -208,15 +208,14 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_02_2_지목된_사람을_뺀_멤버_중_투표한_사람만_톡톡_기회가_있다() throws Exception {
+    void RESULT_02_2_지목된_사람을_뺀_회차_멤버_전원에게_톡톡_기회가_있다() throws Exception {
         // B는 투표하지 않는다. C, D가 A를 골라 A가 지목된다.
         Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA, memberA, memberC));
 
-        for (User user : new User[] {userC, userD}) {
+        for (User user : new User[] {userB, userC, userD}) {
             result(user, round).andExpect(jsonPath("$.data.resultType").value("PICKED"))
                     .andExpect(jsonPath("$.data.canTap").value(true));
         }
-        result(userB, round).andExpect(jsonPath("$.data.canTap").value(false));
         result(userA, round).andExpect(jsonPath("$.data.isMePicked").value(true))
                 .andExpect(jsonPath("$.data.canTap").value(false));
     }
@@ -345,14 +344,21 @@ class ResultTapTest {
     }
 
     @Test
-    void RESULT_03_6_투표하지_않은_멤버는_보낼_수_없다() throws Exception {
-        // B는 투표하지 않았고, E는 투표 시작 뒤 들어왔다.
+    void RESULT_03_6_투표하지_않은_멤버도_보내고_5석을_받는다() throws Exception {
+        // B는 투표하지 않았다.
+        Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA, memberA, memberC));
+
+        tap(userB, round, 3).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(5));
+        assertThat(tapOf(round, memberB).getCount()).isEqualTo(3);
+    }
+
+    @Test
+    void RESULT_03_21_투표_시작_뒤_들어온_멤버는_보낼_수_없다() throws Exception {
         Round round = announced(NOV_4, picks(memberC, memberA, memberD, memberA, memberA, memberC));
         User userE = newUser();
         addMember(room, userE, "은우", BosalColor.PINK, AFTER_CLOSE.minusHours(1));
 
         tap(userE, round, 5).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_006"));
-        tap(userB, round, 5).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TAP_006"));
         assertThat(tapRepository.findAll()).isEmpty();
     }
 
