@@ -39,7 +39,7 @@ public class NabalLossService {
 
     /**
      * 사용자 하나를 판정한다. 나발 심기와 같은 사용자 행 락을 잡아 빠진 번호 목록을 바꾸는 일이 겹치지 않게 한다.
-     * 그 회차 날짜 전에 들어온 현재 방마다 삭제하지 않은 내 인증이 없으면 남은 번호 중 하나를 뺀다 (4·5·6·8번).
+     * 그 회차 날짜 전에 들어온 현재 방마다 삭제하지 않은 내 인증이 없으면 남은 번호 중 하나를 뺀다 (4·5·6·8·11번).
      * 같은 방·회차 날짜에 이미 기록이 있으면 넘어가서 다시 돌아도 한 번이다 (9번).
      * 02:59에 시작한 인증이 판정 뒤에 커밋되면 인증했는데도 빠지므로, 인증 등록과 같은 방 행 락을 잡고 READ COMMITTED로
      * 다시 읽어 커밋된 인증을 본다. 락 순서는 사용자 → 방으로 나가기·입장과 같다 (코드리뷰 반영).
@@ -60,7 +60,7 @@ public class NabalLossService {
         // 락 전에 읽은 사이 방장이 내보냈을 수 있어 다시 읽는다. 입장은 사용자 행 락에 막혀 방이 늘지 않는다 (코드리뷰 반영).
         List<RoomMember> members = roomMemberRepository.findCurrentWithRoom(userId);
         for (RoomMember member : members) {
-            if (!isUncertified(member, roundDate)
+            if (!losesNabalIn(member, roundDate)
                     || nabalLossRepository.existsByUser_IdAndRoom_IdAndRoundDate(userId, member.getRoom().getId(), roundDate)) {
                 continue;
             }
@@ -73,12 +73,18 @@ public class NabalLossService {
         }
     }
 
-    /** 그 회차 날짜에 들어온 방은 세지 않는다 (CERT-05 2번과 같은 기준). 회차 행이 없는 방도 미인증이다. */
-    private boolean isUncertified(RoomMember member, LocalDate roundDate) {
-        if (!Round.dateOf(member.getJoinedAt()).isBefore(roundDate)) {
+    /**
+     * 그 회차 날짜에 들어온 방은 세지 않는다 (CERT-05 2번과 같은 기준). 회차 행이 없는 방도 미인증이다.
+     * 판정 시점에 나 혼자인 방도 세지 않는다 (11번). 방 행 락을 잡은 뒤라 그 사이 인원이 바뀌지 않는다.
+     * 인원 수는 미인증일 때만 세서 03:00 배치가 락을 잡은 채 도는 쿼리를 줄인다.
+     */
+    private boolean losesNabalIn(RoomMember member, LocalDate roundDate) {
+        Long roomId = member.getRoom().getId();
+        if (!Round.dateOf(member.getJoinedAt()).isBefore(roundDate)
+                || certificationRepository.existsByRound_Room_IdAndRound_RoundDateAndMember_IdAndDeletedAtIsNull(
+                        roomId, roundDate, member.getId())) {
             return false;
         }
-        return !certificationRepository.existsByRound_Room_IdAndRound_RoundDateAndMember_IdAndDeletedAtIsNull(
-                member.getRoom().getId(), roundDate, member.getId());
+        return roomMemberRepository.countByRoom_IdAndLeftAtIsNull(roomId) >= 2;
     }
 }

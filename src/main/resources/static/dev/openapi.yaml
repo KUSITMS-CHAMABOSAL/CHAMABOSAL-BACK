@@ -534,6 +534,7 @@ paths:
         - 1~8자, 한글(완성형)·영문·숫자
         - 다른 멤버와 같은 닉네임도 쓸 수 있다 (중복 검사 없음).
         - 지금 닉네임과 같으면 저장하지 않고 성공한다.
+        - 투표 중인 회차가 있으면 `ROOM_012`. 어제 회차가 투표 중이어도 같다 (오늘 탭 `room.hasVotingRound`). 지금 닉네임과 같으면 투표 중이어도 성공한다.
       parameters:
       - *id001
       requestBody:
@@ -585,6 +586,15 @@ paths:
               examples:
                 ROOM_005:
                   $ref: '#/components/examples/ROOM_005'
+        '409':
+          description: ROOM_012
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ROOM_012:
+                  $ref: '#/components/examples/ROOM_012'
   /api/rooms/{roomId}/members/me/seen-result:
     put:
       tags:
@@ -4640,6 +4650,12 @@ components:
         success: false
         code: ROOM_011
         message: 목표 달성 뒤 선택할 차례가 아니에요.
+    ROOM_012:
+      summary: ROOM_012 (409)
+      value:
+        success: false
+        code: ROOM_012
+        message: 투표 중에는 닉네임을 바꿀 수 없어요.
     ROUND_001:
       summary: ROUND_001 (404)
       value:

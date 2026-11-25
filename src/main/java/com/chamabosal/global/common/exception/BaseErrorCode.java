@@ -39,6 +39,7 @@ public enum BaseErrorCode implements ErrorCode {
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "ROOM_009", "이 방에 없는 멤버예요."),
     CANNOT_KICK_OWNER(HttpStatus.BAD_REQUEST, "ROOM_010", "방장 본인은 내보낼 수 없어요."),
     POT_DECISION_NOT_PENDING(HttpStatus.CONFLICT, "ROOM_011", "목표 달성 뒤 선택할 차례가 아니에요."),
+    NICKNAME_CHANGE_DURING_VOTE(HttpStatus.CONFLICT, "ROOM_012", "투표 중에는 닉네임을 바꿀 수 없어요."),
 
     // Certification
     ALREADY_CERTIFIED(HttpStatus.CONFLICT, "CERT_001", "이미 인증했어요."),
