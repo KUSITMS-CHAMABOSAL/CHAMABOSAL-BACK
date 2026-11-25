@@ -37,7 +37,7 @@ public class StoreController {
     @GetMapping("/store")
     @Operation(summary = "곳간 조회 (STORE-01)",
             description = """
-                    공양미 표시 잔액, 방어권 상태, 꾸미기 아이템 목록(노출 순서)을 돌려줍니다.
+                    공양미 표시 잔액, 방어권 상태·보유 개수, 꾸미기 아이템 목록(노출 순서)을 돌려줍니다.
                     곳간 안의 구매·착용은 itemId를 쓰고, 보살 캐릭터를 그리는 다른 응답은 code(equippedItemCodes)를 씁니다.
                     """)
     @ApiResponses({

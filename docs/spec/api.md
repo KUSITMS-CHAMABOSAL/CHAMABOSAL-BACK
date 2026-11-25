@@ -509,18 +509,19 @@ INVITE-03. 방에 들어옵니다. 나간 지 6개월 안이면 예전 멤버 �
 
 ### GET /api/store
 
-STORE-01. 공양미 잔액, 방어권 상태, 꾸미기 아이템 목록입니다.
+STORE-01. 공양미 잔액, 방어권 상태·보유 개수, 꾸미기 아이템 목록입니다.
 
 ```json
 {
   "riceBalance": 120,
-  "defenseTicket": { "status": "OWNED", "isUsedThisWeek": false },
+  "defenseTicket": { "status": "OWNED", "count": 2, "isUsedThisWeek": false },
   "items": [
     { "itemId": 1, "code": "SANTA_HAT", "name": "산타 모자", "price": 100, "slot": "HAT", "isOwned": true, "isEquipped": true }
   ]
 }
 ```
 
+- `count`: 보유한 미사용 방어권 개수. 없으면 0 (`status`가 `NONE`)
 - `isUsedThisWeek`: 이번 주(회차 날짜 기준 월~일)에 방어권을 씀
 
 ### POST /api/items/{itemId}/purchases

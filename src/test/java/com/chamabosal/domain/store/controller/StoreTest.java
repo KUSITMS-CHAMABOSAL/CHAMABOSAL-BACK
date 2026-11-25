@@ -123,11 +123,13 @@ class StoreTest {
     }
 
     @Test
-    void STORE_01_3_미사용_방어권이_있으면_OWNED다() throws Exception {
+    void STORE_01_3_미사용_방어권이_있으면_OWNED이고_보유_개수를_준다() throws Exception {
+        defenseTicketRepository.save(DefenseTicket.purchase(userA, NOW.minusDays(1)));
         defenseTicketRepository.save(DefenseTicket.purchase(userA, NOW.minusDays(1)));
 
         store(userA)
                 .andExpect(jsonPath("$.data.defenseTicket.status").value("OWNED"))
+                .andExpect(jsonPath("$.data.defenseTicket.count").value(2))
                 .andExpect(jsonPath("$.data.defenseTicket.isUsedThisWeek").value(false));
     }
 
@@ -137,6 +139,7 @@ class StoreTest {
 
         store(userA)
                 .andExpect(jsonPath("$.data.defenseTicket.status").value("NONE"))
+                .andExpect(jsonPath("$.data.defenseTicket.count").value(0))
                 .andExpect(jsonPath("$.data.defenseTicket.isUsedThisWeek").value(true));
     }
 
