@@ -7,6 +7,7 @@ Grafana 공식 차트 `grafana/k8s-monitoring`을 Helm으로 설치하고, 값�
 | 파일 | 내용 |
 |---|---|
 | `values.yaml` | 차트 값. 무엇을 모아 어디로 보낼지 정함. 비밀값은 없음 |
+| `dashboard.json` | API·JVM 대시보드. Grafana에서 import |
 
 ## 모으는 것
 
@@ -71,7 +72,13 @@ kubectl -n monitoring get pods   # alloy-logs, alloy-metrics, alloy-operator, ku
 
 ## 대시보드·알림
 
-Grafana Cloud의 Kubernetes Monitoring 앱이 노드·Pod 화면을 기본으로 보여줍니다. 앱 지표 대시보드는 아래 쿼리로 만듭니다.
+Grafana Cloud의 Kubernetes Monitoring 앱이 노드·Pod 화면을 기본으로 보여줍니다. 앱 지표 대시보드는 `dashboard.json`을 가져와 만듭니다.
+
+1. Grafana → Dashboards → New → Import
+2. `dashboard.json` 내용을 붙여넣고 Load
+3. Prometheus 데이터 소스로 `grafanacloud-<스택 이름>-prom`을 고르고 Import
+
+패널 쿼리는 아래와 같습니다. 쿼리를 바꾸면 `dashboard.json`도 함께 고칩니다.
 
 | 항목 | 쿼리 |
 |---|---|
