@@ -26,14 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 목탁 수행 완료 (RESULT-03 9번, RICE-01 6·7번). 지목된 사람이 받은 톡톡만큼 끝까지 두드리면 화면이 두드린 횟수와 함께 한 번 보내고,
- * 번뇌 완료 보상 +10석(개인만)을 준다. 두드린 횟수가 받은 톡톡 합계보다 적으면 주지 않는다.
+ * 번뇌 완료 보상 +2석(개인만)을 준다. 두드린 횟수가 받은 톡톡 합계보다 적으면 주지 않는다.
  * 방어와 겹치지 않게 방 행 락 안에서 결과가 아직 `PICKED`인지 확인한다.
  */
 @Service
 @RequiredArgsConstructor
 public class MoktakService {
 
-    public static final int BEONNOE_REWARD = 10;
+    public static final int BEONNOE_REWARD = 2;
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;

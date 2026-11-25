@@ -486,10 +486,10 @@ class DefenseMoktakTest {
         tap(userB, round, 5).andExpect(status().isCreated());
         clock.set(DELIVERED);
 
-        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(2));
 
         assertThat(beonnoe(userA)).singleElement().satisfies(history -> {
-            assertThat(history.getDelta()).isEqualTo(10);
+            assertThat(history.getDelta()).isEqualTo(2);
             assertThat(history.getRoom().getId()).isEqualTo(party.room().getId());
         });
         // 다시 보내도 보상은 한 번이다.
@@ -525,7 +525,7 @@ class DefenseMoktakTest {
         int before = roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(party.room().getId()).orElseThrow().getAmount();
         clock.set(DELIVERED);
 
-        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(10));
+        moktak(userA, round, 5).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(2));
 
         assertThat(roomPotRepository.findFirstByRoom_IdOrderBySeqDesc(party.room().getId()).orElseThrow().getAmount())
                 .isEqualTo(before);
