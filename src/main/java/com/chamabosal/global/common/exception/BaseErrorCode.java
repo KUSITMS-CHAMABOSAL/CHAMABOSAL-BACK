@@ -68,7 +68,7 @@ public enum BaseErrorCode implements ErrorCode {
     ALREADY_TAPPED(HttpStatus.CONFLICT, "TAP_003", "이미 톡톡했어요."),
     TAP_EXPIRED(HttpStatus.CONFLICT, "TAP_004", "톡톡 시간이 지났어요."),
     NOT_PICKED_MEMBER(HttpStatus.FORBIDDEN, "TAP_005", "지목된 사람만 받은 톡톡을 볼 수 있어요."),
-    TAP_NOT_VOTED(HttpStatus.FORBIDDEN, "TAP_006", "투표한 보살만 톡톡할 수 있어요."),
+    TAP_NOT_ROUND_MEMBER(HttpStatus.FORBIDDEN, "TAP_006", "이 회차를 함께한 보살만 톡톡할 수 있어요."),
 
     // Moktak
     MOKTAK_NOT_AVAILABLE(HttpStatus.CONFLICT, "MOKTAK_001", "번뇌 완료 보상이 없는 결과예요."),

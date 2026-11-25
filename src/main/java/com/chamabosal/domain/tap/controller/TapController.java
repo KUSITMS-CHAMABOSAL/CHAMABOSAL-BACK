@@ -46,7 +46,7 @@ public class TapController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "시작을 처음 남김"),
             @ApiResponse(responseCode = "200", description = "이미 시작함 (재요청)"),
-            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차에 투표하지 않음",
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차 멤버가 아님(투표 시작 뒤 들어옴)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
@@ -68,14 +68,14 @@ public class TapController {
     @Operation(summary = "이마 톡톡 보내기 (RESULT-03)",
             description = """
                     톡톡을 끝낼 때(다 침·건너뛰기·화면 나가기) 친 횟수를 한 번만 보냅니다. 0번(건너뛰기)도 보냅니다. 횟수 상한은 없습니다.
-                    그 회차에 투표한 사람만 보낼 수 있습니다.
+                    투표·인증과 상관없이 지목된 사람을 뺀 그 회차 멤버면 보낼 수 있습니다. 투표 시작 뒤 들어온 멤버는 TAP_006입니다.
                     지목된 사람의 방어 시간 중에도 보낼 수 있습니다. 방어된 뒤에는 방어 전에 taps/start를 보낸 사람만 보낼 수 있고, 톡톡은 전달되지 않지만 공양미는 받습니다. 1번 이상이면 개인 공양미 5석(riceEarned)을 받고 한 솥에도 5석(potEarned)이 들어갑니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "저장 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON_002 횟수가 0보다 작음 (field: count)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차에 투표하지 않음",
+            @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_002 지목된 본인 / TAP_006 그 회차 멤버가 아님(투표 시작 뒤 들어옴)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "ROUND_001 없는 회차",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
@@ -112,7 +112,7 @@ public class TapController {
     @PostMapping("/rounds/{roundId}/moktak")
     @Operation(summary = "목탁 수행 완료 (RESULT-03, RICE-01)",
             description = """
-                    지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보냅니다. 번뇌 완료 보상 10석(riceEarned)을 받습니다.
+                    지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보냅니다. 번뇌 완료 보상 2석(riceEarned)을 받습니다.
                     [종료하기]로 중간에 나갈 때도 두드린 횟수와 함께 보냅니다. 두드린 횟수(count)가 받은 톡톡 합계보다 적으면 보상 없이(riceEarned 0) 끝납니다. 어느 쪽이든 그 회차 목탁 수행은 끝나서 투표 탭에 MOKTAK이 더 나오지 않습니다.
                     수행 중에 톡톡이 더 와서 거부되면 받은 톡톡을 다시 불러와 이어서 두드립니다.
                     이미 완료한 회차면 보상 없이 riceEarned 0으로 성공합니다. 받은 톡톡이 0번이거나 다음 투표가 열리면 보상이 없습니다(Q-92). 톡톡이 전달되기 전(투표 마감 후 5시간 전)이면 MOKTAK_005입니다.
