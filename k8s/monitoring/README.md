@@ -1,6 +1,6 @@
 # k8s/monitoring
 
-Grafana Cloud(무료 플랜)로 클러스터·앱 지표와 로그를 보내는 설정입니다. (K8s 전환 Phase 6, 담당: 송현빈, #205)
+Grafana Cloud(무료 플랜)로 클러스터·앱 지표와 로그를 보내는 설정입니다.
 
 Grafana 공식 차트 `grafana/k8s-monitoring`을 Helm으로 설치하고, 값은 `values.yaml`에 둡니다. 수집기는 Grafana Alloy입니다.
 

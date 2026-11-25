@@ -1,6 +1,6 @@
 # k8s/deploy
 
-GitHub Actions가 k3s에 배포할 때 쓰는 계정입니다. (K8s 전환 Phase 4)
+GitHub Actions가 k3s에 배포할 때 쓰는 계정입니다.
 
 | 파일 | 내용 |
 |---|---|

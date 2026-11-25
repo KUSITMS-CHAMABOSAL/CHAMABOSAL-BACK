@@ -1,6 +1,6 @@
 # k8s/backup
 
-클러스터 안 MySQL을 매일 S3로 백업하는 CronJob입니다. (K8s 전환 Phase 3, 담당: 송현빈)
+클러스터 안 MySQL을 매일 S3로 백업하는 CronJob입니다.
 
 MySQL 데이터는 서버 디스크(local-path PVC)에만 있어서, 서버가 망가지면 데이터도 같이 사라집니다. 그래서 하루 한 번 덤프를 S3에 올립니다.
 
