@@ -61,6 +61,14 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
     long countByRoom_IdAndLeftAtIsNull(Long roomId);
 
+    /** 나발 판정(NABAL-01 11번): 이 방에서 나 말고 [from, to) 동안 한 번이라도 있었던 멤버. 순서는 호출하는 쪽에서 정한다. */
+    @Query("""
+            select m from RoomMember m
+            where m.room.id = :roomId and m.id <> :memberId
+              and m.joinedAt < :to and (m.leftAt is null or m.leftAt > :from)
+            """)
+    List<RoomMember> findOthersPresentBetween(Long roomId, Long memberId, LocalDateTime from, LocalDateTime to);
+
     /** 방장을 넘겨받을 멤버. 들어온 시각이 같으면 먼저 저장된 행. 다시 들어온 멤버는 예전 행이라 id만으로는 들어온 순서가 아니다. */
     Optional<RoomMember> findFirstByRoom_IdAndLeftAtIsNullAndIdNotOrderByJoinedAtAscIdAsc(Long roomId, Long excludeMemberId);
 

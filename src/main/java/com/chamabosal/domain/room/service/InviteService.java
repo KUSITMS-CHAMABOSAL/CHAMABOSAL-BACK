@@ -10,8 +10,10 @@ import com.chamabosal.domain.room.entity.KickBlock;
 import com.chamabosal.domain.room.entity.LeaveType;
 import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
+import com.chamabosal.domain.room.entity.RoomMemberStay;
 import com.chamabosal.domain.room.repository.KickBlockRepository;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
+import com.chamabosal.domain.room.repository.RoomMemberStayRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
 import com.chamabosal.domain.round.entity.Round;
 import com.chamabosal.domain.round.entity.RoundStatus;
@@ -36,6 +38,7 @@ public class InviteService {
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository roomMemberRepository;
+    private final RoomMemberStayRepository roomMemberStayRepository;
     private final KickBlockRepository kickBlockRepository;
     private final UserRepository userRepository;
     private final RoundRepository roundRepository;
@@ -152,6 +155,8 @@ public class InviteService {
         if (previous.isPresent()) {
             member = previous.get();
             BosalColor color = usedColors.contains(member.getColor()) ? bosalColorPicker.pick(usedColors) : member.getColor();
+            // 다시 쓰면 들어온 시각이 덮어써져서, 회차 내내 함께였는지(NABAL-01 11번) 볼 수 있게 지난 구간을 남긴다.
+            roomMemberStayRepository.save(RoomMemberStay.of(member));
             member.rejoin(nickname, color, now);
         } else {
             member = roomMemberRepository.save(

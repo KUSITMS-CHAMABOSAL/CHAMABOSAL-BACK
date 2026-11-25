@@ -123,6 +123,7 @@ public class RoomController {
                     이 방에서 쓰는 내 닉네임을 바꿉니다.
                     앞뒤 띄어쓰기는 지우고, 다른 멤버와 같은 닉네임도 쓸 수 있습니다.
                     지금 닉네임과 같으면 저장하지 않고 성공합니다.
+                    투표 중인 회차가 있으면(어제 회차 포함) 바꿀 수 없습니다.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "수정 성공"),
@@ -153,6 +154,14 @@ public class RoomController {
             @ApiResponse(
                     responseCode = "404",
                     description = "ROOM_005 없거나 삭제된 방",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "ROOM_012 투표 중 닉네임 수정",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)

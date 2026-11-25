@@ -87,9 +87,15 @@ public class RoomService {
         return RoomCreateResponse.from(owner);
     }
 
-    @Transactional
+    /**
+     * 이 방에서 쓰는 내 닉네임을 바꾼다 (ROOM-04).
+     * 투표 중인 회차가 있으면 막는다. 내보내기와 같이 03:00이 지났는데 배치가 아직 투표를 열지 않은 회차도 투표 시간으로 본다 (5번).
+     * 지금 닉네임과 같으면 투표 중이어도 바꾸는 게 없어 성공한다 (4번).
+     * 투표 시작과 겹쳐도 시작 뒤에 바뀌지 않도록 투표 시작과 같은 방 행 락을 잡고, 락 뒤에 커밋된 회차를 보도록 READ COMMITTED로 읽는다 (내보내기와 같음).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void updateNickname(Long userId, Long roomId, RoomNicknameUpdateRequest request) {
-        Room room = roomRepository.findById(roomId)
+        Room room = roomRepository.findWithLockById(roomId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROOM_NOT_FOUND));
         RoomMember me = roomMemberRepository.findByRoom_IdAndUser_IdAndLeftAtIsNull(room.getId(), userId)
@@ -98,6 +104,10 @@ public class RoomService {
         String nickname = request.nickname();
         if (me.getNickname().equals(nickname)) {
             return;
+        }
+        if (roundRepository.existsVotingTime(room.getId(), Round.dateOf(LocalDateTime.now(clock)),
+                RoundStatus.VOTING, RoundStatus.CERTIFYING)) {
+            throw new BaseException(BaseErrorCode.NICKNAME_CHANGE_DURING_VOTE);
         }
         me.changeNickname(nickname);
     }

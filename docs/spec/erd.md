@@ -20,6 +20,7 @@
 erDiagram
     users ||--o{ room_members : "참여"
     rooms ||--o{ room_members : "멤버"
+    room_members ||--o{ room_member_stays : "지난 구간"
     rooms ||--o{ rounds : "회차"
     rooms ||--o{ room_pots : "한 솥"
 
@@ -121,6 +122,21 @@ erDiagram
 
 - 방 인원 수는 `room_members`에서 `left_at IS NULL`인 행 수로 계산
 
+### room_member_stays
+
+다시 들어오기 전에 방에 있었던 구간. `room_members`는 다시 들어오면 행을 다시 써서 마지막 구간만 남으므로, 덮어쓰기 전 구간을 따로 남긴다 (INVITE-03 6번)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| room_id | BIGINT | FK rooms, NOT NULL | |
+| room_member_id | BIGINT | FK room_members, NOT NULL | |
+| joined_at | DATETIME | NOT NULL | 그 구간에 들어온 시각 |
+| left_at | DATETIME | NOT NULL | 그 구간에 나간 시각 |
+
+- 나발 판정(NABAL-01 11번)에서 회차 내내 다른 멤버가 있었는지 볼 때 `room_members`의 현재 구간과 함께 본다
+- 인덱스: `(room_id, left_at)`
+
 ### room_members
 
 | 컬럼 | 타입 | 제약 | 설명 |
@@ -138,6 +154,7 @@ erDiagram
 | seen_pot_count | INT | NOT NULL, 기본 0 | 한 솥 축하를 몇 번째 솥까지 봤는지 |
 
 - 나간 지 6개월 안에 다시 들어오면 예전 행을 다시 씀: `left_at`·`leave_type`을 비우고 `joined_at`을 새로 기록
+  - 덮어쓰기 전 구간은 `room_member_stays`에 남김 (NABAL-01 11번)
   - 이번 달 지목 횟수는 저장하지 않고 `rounds`에서 집계 (`picked_user_id` + 회차 월 + `result_type = PICKED`)
   - 다시 들어올 때 닉네임 입력(WF 03)에 예전 닉네임을 기본값으로 채워 보여주고 그대로 쓰거나 수정 (기획 확정). 다른 멤버가 같은 닉네임을 써도 됨
   - 색이 겹치면 남은 색 중 랜덤 (기획 확정). `rooms` 행 락 안에서 현재 멤버의 색을 보고 정함
