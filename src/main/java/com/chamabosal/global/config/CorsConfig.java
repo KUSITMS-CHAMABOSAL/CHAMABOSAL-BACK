@@ -19,7 +19,9 @@ public class CorsConfig {
             "https://chamabosal.web.tossmini.com",
             "https://chamabosal.private-web.tossmini.com",
             // 프론트 로컬 개발 서버
-            "http://localhost:5173"
+            "http://localhost:5173",
+            // 운영 Swagger (nginx 뒤라 같은 도메인 요청도 CORS로 검사함)
+            "https://api.chamabosal.com"
     );
     private static final long PREFLIGHT_MAX_AGE_SECONDS = 1800;
 

@@ -1,6 +1,7 @@
 package com.chamabosal.global.config;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -26,7 +27,8 @@ class CorsConfigTest {
             "https://chamabosal.private-apps.tossmini.com",
             "https://chamabosal.web.tossmini.com",
             "https://chamabosal.private-web.tossmini.com",
-            "http://localhost:5173"
+            "http://localhost:5173",
+            "https://api.chamabosal.com"
     })
     void 허용된_Origin의_사전_요청을_통과시킨다(String origin) throws Exception {
         mockMvc.perform(options("/v3/api-docs")
@@ -36,6 +38,14 @@ class CorsConfigTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, origin))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_MAX_AGE, "1800"));
+    }
+
+    @Test
+    void 운영_Swagger에서_보낸_POST는_CORS로_막히지_않는다() throws Exception {
+        mockMvc.perform(post("/api/demo/reset").param("slot", "1")
+                        .header(HttpHeaders.ORIGIN, "https://api.chamabosal.com"))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://api.chamabosal.com"));
     }
 
     @Test
