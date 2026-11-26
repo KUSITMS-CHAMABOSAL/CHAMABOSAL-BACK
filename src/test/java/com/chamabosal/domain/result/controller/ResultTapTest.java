@@ -243,7 +243,7 @@ class ResultTapTest {
 
         clock.set(NOV_3.atTime(15, 1));
         result(userA, round)
-                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T15:03:00"))
+                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-03T15:02:00"))
                 .andExpect(jsonPath("$.data.defenseTicketCount").value(2))
                 .andExpect(jsonPath("$.data.canUseDefense").value(true));
         result(userB, round)

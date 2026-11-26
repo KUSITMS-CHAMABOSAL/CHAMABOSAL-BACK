@@ -284,34 +284,6 @@ class DefenseMoktakTest {
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_002"));
     }
 
-    /** 결과를 열지 않고 방어를 눌러 미인증으로 거절돼도 그 시각은 처음 연 시각으로 남아, 2분 뒤에는 고민 중이 아니다 (코드리뷰 반영). */
-    @Test
-    void 미인증으로_거절된_방어_요청도_처음_연_시각을_남긴다() throws Exception {
-        giveTickets(userA, 1);
-        Round round = announced(party, NOV_4, false);
-
-        clock.set(NOV_5.atTime(16, 0));
-        defend(userA, round).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("DEFENSE_011"));
-
-        assertThat(reload(round).getPickedSeenAt()).isEqualTo(NOV_5.atTime(16, 0));
-        clock.set(NOV_5.atTime(16, 3));
-        result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(false));
-    }
-
-    /** 방어 요청은 이미 남은 처음 연 시각을 덮어쓰지 않는다 (코드리뷰 반영). */
-    @Test
-    void 방어_요청은_먼저_남은_처음_연_시각을_바꾸지_않는다() throws Exception {
-        giveTickets(userA, 1);
-        Round round = pickedA(party);
-        clock.set(NOV_5.atTime(16, 0));
-        result(userA, round);
-
-        clock.set(NOV_5.atTime(16, 1));
-        defend(userA, round).andExpect(status().isCreated());
-
-        assertThat(reload(round).getPickedSeenAt()).isEqualTo(NOV_5.atTime(16, 0));
-    }
-
     @Test
     void SHIELD_02_6_인증하지_않은_지목자는_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
@@ -407,51 +379,51 @@ class DefenseMoktakTest {
     }
 
     @Test
-    void RESULT_02_6_톡톡_마감_뒤_처음_조회하면_방어권을_쓸_수_없다() throws Exception {
+    void RESULT_02_6_투표_마감_2분_뒤_처음_조회하면_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
 
-        clock.set(DELIVERED);
+        clock.set(AFTER_CLOSE.plusMinutes(5));
         result(userA, round)
-                .andExpect(jsonPath("$.data.defenseUsableUntil").isEmpty())
+                .andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-05T15:02:00"))
                 .andExpect(jsonPath("$.data.canUseDefense").value(false));
         defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
     }
 
     @Test
-    void SHIELD_02_13_늦게_처음_열어도_그때부터_2분_동안_쓸_수_있다() throws Exception {
+    void SHIELD_02_13_늦게_처음_열면_방어권을_쓸_수_없다() throws Exception {
         giveTickets(userA, 1);
         Round round = pickedA(party);
 
-        clock.set(NOV_5.atTime(19, 0));
-        result(userA, round).andExpect(jsonPath("$.data.defenseUsableUntil").value("2026-11-05T19:02:00"));
-        clock.set(NOV_5.atTime(19, 1));
+        clock.set(AFTER_CLOSE.plusMinutes(5));
+        result(userA, round);
+        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
+
+        assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.PICKED);
+        assertThat(ticketCount(userA)).isEqualTo(1);
+    }
+
+    @Test
+    void SHIELD_02_14_투표_마감_2분이_되는_순간까지_쓸_수_있다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+
+        clock.set(AFTER_CLOSE.plusMinutes(2));
         defend(userA, round).andExpect(status().isCreated());
 
         assertThat(reload(round).getResultType()).isEqualTo(RoundResultType.DEFENDED);
     }
 
     @Test
-    void SHIELD_02_14_톡톡_마감_뒤에_처음_열면_방어권을_쓸_수_없다() throws Exception {
-        giveTickets(userA, 1);
+    void RESULT_02_9_투표_마감_뒤_2분_동안만_방어권_고민_중이다() throws Exception {
         Round round = pickedA(party);
 
-        clock.set(DELIVERED);
-        defend(userA, round).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFENSE_009"));
-
-        assertThat(ticketCount(userA)).isEqualTo(1);
-    }
-
-    @Test
-    void RESULT_02_9_지목된_사람이_열기_전과_연_뒤_2분_동안만_방어권_고민_중이다() throws Exception {
-        Round round = pickedA(party);
-
-        clock.set(NOV_5.atTime(16, 0));
+        // 지목된 사람이 결과를 열었는지와 상관없다.
+        clock.set(AFTER_CLOSE.plusMinutes(1));
         result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(true));
-        result(userA, round);
-        clock.set(NOV_5.atTime(16, 1));
+        clock.set(AFTER_CLOSE.plusMinutes(2));
         result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(true));
-        clock.set(NOV_5.atTime(16, 3));
+        clock.set(AFTER_CLOSE.plusMinutes(3));
         result(userB, round).andExpect(jsonPath("$.data.isDefensePending").value(false));
     }
 
