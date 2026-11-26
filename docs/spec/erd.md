@@ -195,7 +195,7 @@ erDiagram
 | result_type | VARCHAR(20) | NULL | `PICKED` / `ALL_BOSAL` / `ALL_SAFE` / `DEFENDED` |
 | picked_member_id | BIGINT | FK room_members, NULL | 지목된 멤버 (`PICKED`, `DEFENDED`) |
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
-| picked_seen_at | DATETIME | NULL | 더 쓰지 않음. 방어 마감이 투표 마감 + 2분으로 바뀌어(2026-11-27) 값을 남기지 않음. 운영 DB에 칼럼만 남음 |
+| picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준, 톡톡 마감 뒤면 방어 불가 (SHIELD-02) |
 | moktak_ended_at | DATETIME | NULL | 지목된 사람이 목탁 수행을 끝낸 시각(완료 또는 [종료하기]). 있으면 다시 수행할 수 없음 (RESULT-03 9번) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
@@ -388,7 +388,7 @@ erDiagram
 - 같은 회차에 두 번 쓰지 않게: `UNIQUE (used_round_id)` (NULL은 여러 개 허용)
 - 사용할 때 보유 중인 방어권 하나를 잠그고(`SELECT ... FOR UPDATE`) 소모 → 방어권 하나로 두 방에서 동시에 쓰지 못함
 - 인덱스: `(user_id, used_at)` → 보유 개수 조회
-- 사용 조건(그 회차 `PICKED`의 지목된 본인, `rounds.vote_closed_at` + 2분 안)은 서버에서 검증 (SHIELD-02)
+- 사용 조건(그 회차 `PICKED`의 지목된 본인, `rounds.picked_seen_at` + 2분 안)은 서버에서 검증 (SHIELD-02)
 - 사용하면 같은 트랜잭션에서 회차 `result_type`을 `DEFENDED`로 바꿈
 
 ### items (꾸미기 카탈로그)

@@ -27,10 +27,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 결과 화면 (RESULT-02).
+ * 결과 화면 (RESULT-02). 지목된 사람이 처음 열면 그 시각을 남겨서 읽기 전용이 아니다.
  * 지목된 본인에게는 보유한 미사용 방어권 개수와 지금 쓰면 성공하는지를 담는다 (SHIELD-02와 같은 기한 판단).
  */
 @Service
@@ -48,7 +49,11 @@ public class RoundResultService {
     private final StoreService storeService;
     private final Clock clock;
 
-    @Transactional(readOnly = true)
+    /**
+     * 지목된 사람이 처음 열면 그 시각을 남겨서 읽기 전용이 아니다 (RESULT-02 6번). 동시에 처음 열면 뒤 요청의 조건부 UPDATE는 0건이 된다.
+     * REPEATABLE READ면 다시 읽어도 첫 조회의 스냅샷(비어 있는 처음 연 시각)을 보므로, 먼저 커밋된 시각을 읽도록 READ COMMITTED로 읽는다.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RoundResultResponse getResult(Long userId, Long roundId) {
         Round round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new BaseException(BaseErrorCode.ROUND_NOT_FOUND));
@@ -64,6 +69,15 @@ public class RoundResultService {
         boolean isMePicked = picked != null && picked.getId().equals(me.getId());
         boolean isPicked = resultType == RoundResultType.PICKED;
         LocalDateTime now = LocalDateTime.now(clock);
+        if (isMePicked && isPicked && round.getPickedSeenAt() == null) {
+            roundRepository.markPickedSeen(roundId, now);
+            // 동시에 연 다른 요청이 먼저 남겼으면 그 값을 쓴다. 조건부 UPDATE가 영속성 컨텍스트를 비워 DB에서 다시 읽는다.
+            // 그사이 방어가 커밋됐으면 DEFENDED로 바뀌어 있다.
+            round = roundRepository.findById(roundId).orElseThrow();
+            picked = round.getPickedMember();
+            resultType = round.getResultType();
+            isPicked = resultType == RoundResultType.PICKED;
+        }
 
         boolean isTapExpired = isPicked && !round.isTapOpen(now);
         List<Vote> votes = voteRepository.findWithTargetByRound_Id(roundId);
