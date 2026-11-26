@@ -34,6 +34,7 @@
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | 인증 사진 S3 접근 키 |
 | `AWS_S3_BUCKET`, `AWS_REGION` | 비밀은 아니지만 지금 GitHub Secrets로 관리해서 함께 둠 |
 | `AUTH_TEST_TOKEN_ENABLED`, `AUTH_TEST_TOKEN_KEY` | 프론트 연동용 테스트 토큰. 출시 전에 끔 |
+| `DEMO_ENABLED`, `DEMO_KEY`, `DEMO_SLOTS` | 전시 시연 모드 (선택, `docs/spec/demo.md`). 없으면 꺼짐 |
 
 ```bash
 kubectl -n chamabosal create secret generic chamabosal-app-env \

@@ -17,6 +17,13 @@ auth:
     enabled: ${AUTH_TEST_TOKEN_ENABLED:false}
     key: ${AUTH_TEST_TOKEN_KEY:}
 
+# 전시 시연 모드 (docs/spec/demo.md). 전시가 끝나면 끈다.
+demo:
+  enabled: ${DEMO_ENABLED:false}
+  key: ${DEMO_KEY:}
+  # 시연 번호:userId:닉네임 을 쉼표로 잇는다. 예) 1:12:보살이,2:34:참는중
+  slots: ${DEMO_SLOTS:}
+
 storage:
   s3:
     # 비어 있으면 로컬·테스트용 메모리 저장소를 쓴다. 운영은 application-prod.yml에서 필수로 받는다.

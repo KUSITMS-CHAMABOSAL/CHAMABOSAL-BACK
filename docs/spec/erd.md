@@ -326,9 +326,9 @@ erDiagram
 |---|---|---|---|
 | id | BIGINT | PK | |
 | user_id | BIGINT | FK users, NOT NULL | |
-| room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)는 NULL |
+| room_id | BIGINT | FK rooms, NULL | 적립·회수·차감이 일어난 방. 구매(`PURCHASE`)·시연 리셋(`DEMO_RESET`)은 NULL |
 | delta | INT | NOT NULL | +10, +5, +1, +30, -50, -100, -10 … |
-| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) |
+| reason | VARCHAR(20) | NOT NULL | `CERTIFICATION` / `VOTE` / `TAP`(톡톡 완료) / `REACTION` / `BEONNOE`(번뇌 완료) / `POT`(목표 달성 보너스) / `PURCHASE` / `RECALL` / `LEAVE`(방 나가기 차감) / `DEMO_RESET`(시연 리셋으로 200석 맞춤, DEMO-01) |
 | ref_type | VARCHAR(20) | NULL | `CERTIFICATION` / `VOTE` / `TAP` / `ROUND` / `ROOM_POT` / `ITEM` / `DEFENSE` / `NABAL`. 나가기 차감은 NULL |
 | ref_id | BIGINT | NULL | 원인 행 ID. 리액션은 리액션을 남긴 인증 ID(`CERTIFICATION`), 번뇌 완료는 회차 ID, 나가기 차감(`LEAVE`)은 NULL (다시 들어오면 같은 멤버 행이라 멤버 ID로는 구분 못 함, RICE-03 7번) |
 

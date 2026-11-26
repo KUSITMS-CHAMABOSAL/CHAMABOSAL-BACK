@@ -1,6 +1,7 @@
 package com.chamabosal.domain.vote.service;
 
 import com.chamabosal.domain.certification.repository.CertificationRepository;
+import com.chamabosal.domain.demo.service.DemoPlayService;
 import com.chamabosal.domain.reaction.entity.ReactionType;
 import com.chamabosal.domain.reaction.repository.ReactionRepository;
 import com.chamabosal.domain.room.entity.Room;
@@ -40,6 +41,7 @@ public class VoteStartService {
     private final RoundParticipantRepository roundParticipantRepository;
     private final CertificationRepository certificationRepository;
     private final ReactionRepository reactionRepository;
+    private final DemoPlayService demoPlayService;
 
     /**
      * 방 행 락을 잡은 트랜잭션 안에서 부른다. 현재 멤버 전원이 인증했으면 시작하고, 투표가 열렸으면 true.
@@ -115,6 +117,7 @@ public class VoteStartService {
                 .toList();
         roundParticipantRepository.saveAll(participants);
         round.startVote(now);
+        demoPlayService.onVoteStarted(round);
         return true;
     }
 
