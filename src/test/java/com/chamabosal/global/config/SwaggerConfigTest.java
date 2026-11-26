@@ -26,6 +26,15 @@ class SwaggerConfigTest {
     }
 
     @Test
+    void 요청_주소와_상관없이_서버_주소는_상대_경로다() throws Exception {
+        // 프록시 뒤 운영에서는 앱이 http 요청으로 받아 절대 주소가 http로 잡혔다 (#225).
+        mockMvc.perform(get("http://api.chamabosal.com/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.servers.length()").value(1))
+                .andExpect(jsonPath("$.servers[0].url").value("/"));
+    }
+
+    @Test
     void Swagger_UI에_접속할_수_있다() throws Exception {
         mockMvc.perform(get("/swagger-ui/index.html"))
                 .andExpect(status().isOk());
