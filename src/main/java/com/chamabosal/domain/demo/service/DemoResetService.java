@@ -106,7 +106,7 @@ public class DemoResetService {
                 .map(RoomMember::getRoom)
                 .toList();
         boolean hasRegularRoom = rooms.stream().anyMatch(room -> !roomMemberRepository
-                .existsByRoom_IdAndLeftAtIsNullAndUser_TossAnonKeyStartingWith(room.getId(), DemoSettings.FAKE_KEY_PREFIX));
+                .existsByRoom_IdAndUser_TossAnonKeyStartingWith(room.getId(), DemoSettings.FAKE_KEY_PREFIX));
         if (hasRegularRoom) {
             throw new BaseException(BaseErrorCode.DEMO_ACCOUNT_IN_REGULAR_ROOM);
         }

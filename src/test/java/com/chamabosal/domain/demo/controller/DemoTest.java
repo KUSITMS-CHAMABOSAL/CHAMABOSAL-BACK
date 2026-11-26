@@ -1,6 +1,7 @@
 package com.chamabosal.domain.demo.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -341,6 +342,24 @@ class DemoTest {
         assertThat(roomMemberRepository.findCurrentWithRoom(demo1.getId())).hasSize(2);
         assertThat(fakeUsers(1)).hasSize(3);
         assertThat(riceHistoryRepository.sumDeltaByUserId(demo1.getId())).isEqualTo(200);
+    }
+
+    @Test
+    void DEMO_01_10_가짜_팀원을_모두_내보낸_시연_방도_리셋한다() throws Exception {
+        DemoRooms before = resetOk(1);
+        for (String nickname : List.of("민서", "만재", "현빈")) {
+            mockMvc.perform(delete("/api/rooms/{roomId}/members/{memberId}", before.main(),
+                            member(before.main(), nickname).getId())
+                            .header("Authorization", bearer(demo1)))
+                    .andExpect(status().is2xxSuccessful());
+        }
+        assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(before.main())).hasSize(1);
+
+        DemoRooms after = resetOk(1);
+
+        assertThat(roomRepository.findById(before.main()).orElseThrow().isDeleted()).isTrue();
+        assertThat(roomMemberRepository.findCurrentWithRoom(demo1.getId())).extracting(m -> m.getRoom().getId())
+                .containsExactlyInAnyOrder(after.main(), after.moktak());
     }
 
     // ---------- DEMO-02 가짜 팀원 자동 투표 ----------

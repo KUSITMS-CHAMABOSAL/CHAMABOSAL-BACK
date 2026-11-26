@@ -17,6 +17,9 @@ public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
     /** 시연 방인지 (docs/spec/demo.md 공통). 가짜 팀원은 토스 식별키가 시연 접두어로 시작한다. */
     boolean existsByRoom_IdAndLeftAtIsNullAndUser_TossAnonKeyStartingWith(Long roomId, String keyPrefix);
 
+    /** 시연 리셋(DEMO-01 4번): 가짜 팀원이 한 번이라도 들어왔던 방. 가짜 팀원을 모두 내보낸 시연 방도 시연 방으로 본다. */
+    boolean existsByRoom_IdAndUser_TossAnonKeyStartingWith(Long roomId, String keyPrefix);
+
     long countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(Long userId);
 
     Optional<RoomMember> findByRoom_IdAndUser_IdAndLeftAtIsNull(Long roomId, Long userId);
