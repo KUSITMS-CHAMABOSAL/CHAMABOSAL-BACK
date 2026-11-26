@@ -107,6 +107,10 @@ public enum BaseErrorCode implements ErrorCode {
     DEFENSE_AFTER_MOKTAK(HttpStatus.CONFLICT, "DEFENSE_010", "목탁 수행을 마친 결과는 방어할 수 없어요."),
     DEFENSE_NOT_CERTIFIED(HttpStatus.FORBIDDEN, "DEFENSE_011", "인증하지 않은 방에서는 방어권을 쓸 수 없어요."),
 
+    // Demo
+    DEMO_SLOT_NOT_FOUND(HttpStatus.NOT_FOUND, "DEMO_001", "설정에 없는 시연 번호예요."),
+    DEMO_ACCOUNT_IN_REGULAR_ROOM(HttpStatus.CONFLICT, "DEMO_002", "시연 계정이 일반 방에 참여 중이에요."),
+
     // 새 도메인 구역은 이 줄 위에 추가한다. 마지막 상수도 쉼표로 끝내 추가할 때 다른 줄을 건드리지 않는다.
     ;
 

@@ -9,5 +9,6 @@ public enum RiceReason {
     POT,
     PURCHASE,
     RECALL,
-    LEAVE
+    LEAVE,
+    DEMO_RESET
 }

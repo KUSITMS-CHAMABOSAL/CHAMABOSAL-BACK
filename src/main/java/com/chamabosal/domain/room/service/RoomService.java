@@ -261,7 +261,15 @@ public class RoomService {
     @Transactional
     public void close(Long userId, Long roomId) {
         Room room = lockPotDecision(userId, roomId);
-        LocalDateTime now = LocalDateTime.now(clock);
+        closeLocked(room, LocalDateTime.now(clock));
+    }
+
+    /**
+     * 방 행 락을 잡은 트랜잭션에서 방을 닫는다. [방 닫기]와 시연 리셋(DEMO-01 5번)이 같이 쓴다.
+     * 현재 멤버 전원을 `ROOM_CLOSED`로 나가게 하고 방을 지운 뒤, 이 방에 있었던 멤버 전원의 사진·한 줄·쓴 금액을 바로 지운다.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void closeLocked(Room room, LocalDateTime now) {
         roomMemberRepository.findByRoom_IdAndLeftAtIsNull(room.getId())
                 .forEach(member -> member.leave(now, LeaveType.ROOM_CLOSED));
         room.delete(now);

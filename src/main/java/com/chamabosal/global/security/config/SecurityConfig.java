@@ -22,6 +22,8 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/api/auth/login",
             "/api/auth/test-token",
+            // 시연 키로 보호한다. 시연 설정이 꺼져 있으면 없는 API처럼 거부한다 (DEMO-01).
+            "/api/demo/reset",
             "/actuator/health/**",
             // 수집기(Alloy)가 관리 포트에서 읽는다. 앱 포트에는 노출하지 않는다 (k8s/app/config.env).
             "/actuator/prometheus",

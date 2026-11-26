@@ -1,5 +1,6 @@
 package com.chamabosal.domain.tap.service;
 
+import com.chamabosal.domain.demo.service.DemoPlayService;
 import com.chamabosal.domain.pot.entity.PotReason;
 import com.chamabosal.domain.pot.service.PotService;
 import com.chamabosal.domain.rice.entity.RiceReason;
@@ -44,6 +45,7 @@ public class TapService {
     private final MoktakService moktakService;
     private final RiceService riceService;
     private final PotService potService;
+    private final DemoPlayService demoPlayService;
     private final Clock clock;
 
     /**
@@ -88,6 +90,7 @@ public class TapService {
                 ? riceService.accrue(room, me, RiceReason.TAP, RiceRefType.TAP, tap.getId(), TAP_REWARD)
                 : 0;
         int potEarned = potService.accrue(room, me, PotReason.TAP, tap.getId(), riceEarned);
+        demoPlayService.onTapSent(round, me);
         return new TapSendResponse(riceEarned, potEarned);
     }
 

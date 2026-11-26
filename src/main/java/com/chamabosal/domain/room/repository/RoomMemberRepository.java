@@ -14,6 +14,9 @@ import java.util.Optional;
 
 public interface RoomMemberRepository extends JpaRepository<RoomMember, Long> {
 
+    /** 시연 방인지 (docs/spec/demo.md 공통). 가짜 팀원은 토스 식별키가 시연 접두어로 시작한다. */
+    boolean existsByRoom_IdAndLeftAtIsNullAndUser_TossAnonKeyStartingWith(Long roomId, String keyPrefix);
+
     long countByUser_IdAndLeftAtIsNullAndRoom_DeletedAtIsNull(Long userId);
 
     Optional<RoomMember> findByRoom_IdAndUser_IdAndLeftAtIsNull(Long roomId, Long userId);
