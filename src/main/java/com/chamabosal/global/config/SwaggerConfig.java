@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -18,6 +19,8 @@ import org.springframework.context.annotation.Configuration;
                         """,
                 version = "v1.0.0"
         ),
+        // 프록시 뒤에서 http로 잡히지 않게 상대 경로로 둔다.
+        servers = @Server(url = "/", description = "Swagger를 연 서버"),
         security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
