@@ -19,6 +19,7 @@ import com.chamabosal.domain.room.entity.Room;
 import com.chamabosal.domain.room.entity.RoomMember;
 import com.chamabosal.domain.room.repository.RoomMemberRepository;
 import com.chamabosal.domain.room.repository.RoomRepository;
+import com.chamabosal.domain.tap.service.TapService;
 import com.chamabosal.domain.user.entity.User;
 import com.chamabosal.domain.user.repository.UserRepository;
 import com.chamabosal.domain.vote.service.VoteCloseService;
@@ -54,6 +55,7 @@ public class RoomService {
     private final BosalColorPicker bosalColorPicker;
     private final VoteStartService voteStartService;
     private final VoteCloseService voteCloseService;
+    private final TapService tapService;
     private final RiceService riceService;
     private final RoundRepository roundRepository;
     private final CertificationRepository certificationRepository;
@@ -243,6 +245,7 @@ public class RoomService {
         }
         voteStartService.startIfAllCertified(room.getId(), now);
         voteCloseService.closeIfAllVoted(room.getId(), now);
+        tapService.completeTapsIfAll(room.getId(), now);
     }
 
     /** 목표 달성 뒤 [더 수행하기] (ROOM-09 5번). 선택 대기를 끝내고 방은 그대로 둔다. */

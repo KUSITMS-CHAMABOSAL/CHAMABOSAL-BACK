@@ -20,12 +20,14 @@ import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Getter
 @Entity
+@DynamicUpdate // 처음 연 시각은 조건부 update로 따로 남겨서, 다른 변경을 저장할 때 바뀐 컬럼만 써야 옛 값으로 덮어쓰지 않는다.
 @Table(name = "rounds", uniqueConstraints = {
         @UniqueConstraint(name = "uk_rounds_room_round_date", columnNames = {"room_id", "round_date"})
 })
@@ -77,6 +79,9 @@ public class Round extends BaseEntity {
 
     /** 지목된 사람이 목탁 수행을 끝낸 시각(끝까지 했거나 [종료하기]). 있으면 다시 수행할 수 없다 (RESULT-03 9번). */
     private LocalDateTime moktakEndedAt;
+
+    /** 지목된 사람을 뺀 회차 멤버 전원이 톡톡을 보낸 시각. 있으면 방어 시간 뒤 일찍 전달한다 (RESULT-03 5·11번). */
+    private LocalDateTime tapsCompletedAt;
 
     /** 전원 인증·투표 이벤트와 03:00·15:00 배치가 같은 회차를 동시에 바꾸면 나중 쪽을 실패시킨다. */
     @Version
@@ -161,6 +166,36 @@ public class Round extends BaseEntity {
             return null;
         }
         return pickedSeenAt.plusMinutes(DEFENSE_MINUTES);
+    }
+
+    /** 전원이 톡톡을 보낸 시각을 남긴다. 이미 남았으면 처음 시각을 그대로 둔다 (RESULT-03 11번). */
+    public void completeTaps(LocalDateTime completedAt) {
+        if (tapsCompletedAt == null) {
+            tapsCompletedAt = completedAt;
+        }
+    }
+
+    /**
+     * 받은 톡톡을 전달하는 시각 (RESULT-03 5·6번). 전원이 보냈고 지목된 사람의 방어 시간이 정해졌으면 둘 중 늦은 시각,
+     * 아니면 톡톡 마감 시각이다.
+     */
+    public LocalDateTime getTapDeliveredAt() {
+        LocalDateTime defenseClosesAt = getDefenseClosesAt();
+        if (tapsCompletedAt == null || defenseClosesAt == null) {
+            return getTapClosesAt();
+        }
+        LocalDateTime early = tapsCompletedAt.isAfter(defenseClosesAt) ? tapsCompletedAt : defenseClosesAt;
+        return early.isBefore(getTapClosesAt()) ? early : getTapClosesAt();
+    }
+
+    /** 받은 톡톡이 전달됐는지. 방어는 방어 마감 시각까지 되므로(isAfter) 일찍 전달은 그 시각을 넘긴 뒤부터다. */
+    public boolean isTapDelivered(LocalDateTime now) {
+        if (!isTapOpen(now)) {
+            return true;
+        }
+        LocalDateTime defenseClosesAt = getDefenseClosesAt();
+        return tapsCompletedAt != null && defenseClosesAt != null
+                && now.isAfter(defenseClosesAt) && !now.isBefore(tapsCompletedAt);
     }
 
     /** 지목된 사람이 아직 방어권을 쓸 수 있는지. 다른 멤버의 `방어권 고민 중` 표시에 쓴다 (RESULT-02 10번). */

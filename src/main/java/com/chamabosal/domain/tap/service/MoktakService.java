@@ -65,7 +65,7 @@ public class MoktakService {
         if (isEnded(userId, round)) {
             return new MoktakCompleteResponse(0);
         }
-        if (round.isTapOpen(LocalDateTime.now(clock))) {
+        if (!round.isTapDelivered(LocalDateTime.now(clock))) {
             throw new BaseException(BaseErrorCode.MOKTAK_NOT_DELIVERED);
         }
         if (!tapRepository.existsByRound_IdAndCountGreaterThan(roundId, 0)) {
@@ -93,7 +93,7 @@ public class MoktakService {
     public boolean isMoktakDue(Long userId, Round round, RoomMember me, LocalDateTime now) {
         return round.getResultType() == RoundResultType.PICKED
                 && round.getPickedMember() != null && round.getPickedMember().getId().equals(me.getId())
-                && !round.isTapOpen(now)
+                && round.isTapDelivered(now)
                 && tapRepository.existsByRound_IdAndCountGreaterThan(round.getId(), 0)
                 && !isEnded(userId, round)
                 && !isExpired(round)

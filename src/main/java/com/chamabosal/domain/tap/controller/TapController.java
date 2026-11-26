@@ -94,7 +94,7 @@ public class TapController {
 
     @GetMapping("/rounds/{roundId}/taps/received")
     @Operation(summary = "받은 톡톡 (RESULT-03)",
-            description = "지목된 본인이 아직 재생하지 않은 받은 톡톡입니다. 건너뛴(0번) 톡톡은 빼고, 방어된 회차는 빈 목록입니다.")
+            description = "지목된 본인이 받은 톡톡입니다. 건너뛴(0번) 톡톡은 빼고, 방어된 회차는 빈 목록입니다. 투표 마감 후 5시간에 전달되고, 지목된 사람을 뺀 회차 멤버 전원이 보냈으면 지목된 사람의 방어 시간(결과를 처음 연 뒤 2분) 뒤 바로 전달됩니다. 전달 전에는 빈 목록과 전달 시각(deliveredAt)을 줍니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "403", description = "ROOM_002 이 방 멤버가 아님 / TAP_005 지목된 사람이 아님",
@@ -115,7 +115,7 @@ public class TapController {
                     지목된 사람이 받은 톡톡만큼 목탁을 끝까지 두드렸을 때 한 번 보냅니다. 번뇌 완료 보상 2석(riceEarned)을 받습니다.
                     [종료하기]로 중간에 나갈 때도 두드린 횟수와 함께 보냅니다. 두드린 횟수(count)가 받은 톡톡 합계보다 적으면 보상 없이(riceEarned 0) 끝납니다. 어느 쪽이든 그 회차 목탁 수행은 끝나서 투표 탭에 MOKTAK이 더 나오지 않습니다.
                     수행 중에 톡톡이 더 와서 거부되면 받은 톡톡을 다시 불러와 이어서 두드립니다.
-                    이미 완료한 회차면 보상 없이 riceEarned 0으로 성공합니다. 받은 톡톡이 0번이거나 다음 투표가 열리면 보상이 없습니다(Q-92). 톡톡이 전달되기 전(투표 마감 후 5시간 전)이면 MOKTAK_005입니다.
+                    이미 완료한 회차면 보상 없이 riceEarned 0으로 성공합니다. 받은 톡톡이 0번이거나 다음 투표가 열리면 보상이 없습니다(Q-92). 톡톡이 전달되기 전이면 MOKTAK_005입니다. 전달은 보통 투표 마감 후 5시간이고, 지목된 사람을 뺀 회차 멤버 전원이 보냈으면 지목된 사람의 방어 시간 뒤 바로입니다.
                     확인 순서: ROUND_001 → ROOM_002 → TAP_005 → MOKTAK_001 → 이미 끝냄(성공) → MOKTAK_005 → MOKTAK_002 → MOKTAK_003
                     """)
     @ApiResponses({

@@ -197,6 +197,7 @@ erDiagram
 | picked_user_id | BIGINT | FK users, NULL | 지목 횟수 집계용 (멤버가 나가도 유지) |
 | picked_seen_at | DATETIME | NULL | 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준, 톡톡 마감 뒤면 방어 불가 (SHIELD-02) |
 | moktak_ended_at | DATETIME | NULL | 지목된 사람이 목탁 수행을 끝낸 시각(완료 또는 [종료하기]). 있으면 다시 수행할 수 없음 (RESULT-03 9번) |
+| taps_completed_at | DATETIME | NULL | 지목된 사람을 뺀 회차 멤버 전원이 톡톡을 보낸 시각. 있으면 방어 시간 뒤 톡톡을 일찍 전달 (RESULT-03 5·11번) |
 | version | BIGINT | NOT NULL | 낙관적 락 (배치와 이벤트가 동시에 상태를 바꾸는 것 방지) |
 
 - `UNIQUE (room_id, round_date)`

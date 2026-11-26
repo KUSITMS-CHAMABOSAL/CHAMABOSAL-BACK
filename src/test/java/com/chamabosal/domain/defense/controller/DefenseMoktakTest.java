@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.chamabosal.domain.room.service.RoomService;
 import com.chamabosal.domain.certification.entity.Certification;
 import com.chamabosal.domain.certification.entity.CertificationResult;
 import com.chamabosal.domain.certification.repository.CertificationRepository;
@@ -95,6 +96,7 @@ class DefenseMoktakTest {
     @Autowired TapStartRepository tapStartRepository;
     @Autowired RiceHistoryRepository riceHistoryRepository;
     @Autowired DefenseTicketRepository defenseTicketRepository;
+    @Autowired RoomService roomService;
 
     private int userSequence;
     private long refSequence = 1;
@@ -595,6 +597,172 @@ class DefenseMoktakTest {
         moktak(userA, round, 8).andExpect(jsonPath("$.data.riceEarned").value(0));
     }
 
+    // ---------- RESULT-03 전원이 보내면 일찍 전달 ----------
+
+    @Test
+    void RESULT_03_22_전원이_보내면_방어_시간이_지난_뒤_바로_전달된다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        clock.set(AFTER_CLOSE.plusMinutes(1));
+        tapAll(round, 5, 3, 2);
+
+        clock.set(AFTER_CLOSE.plusMinutes(2));
+        received(userA, round).andExpect(jsonPath("$.data.isDelivered").value(false));
+        moktak(userA, round, 10).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_005"));
+
+        clock.set(AFTER_CLOSE.plusMinutes(2).plusSeconds(1));
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T15:02:00"))
+                .andExpect(jsonPath("$.data.totalCount").value(10));
+        moktak(userA, round, 10).andExpect(status().isCreated()).andExpect(jsonPath("$.data.riceEarned").value(2));
+    }
+
+    @Test
+    void RESULT_03_23_방어_시간_뒤_마지막_사람이_보내면_그_순간_전달된다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+
+        clock.set(AFTER_CLOSE.plusMinutes(10));
+        tap(party.d().getUser(), round, 2).andExpect(status().isCreated());
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T15:10:00"));
+    }
+
+    @Test
+    void RESULT_03_24_전원이_보냈어도_지목된_사람이_결과를_열지_않으면_전달되지_않는다() throws Exception {
+        Round round = pickedA(party);
+        clock.set(AFTER_CLOSE.plusMinutes(5));
+        tapAll(round, 5, 3, 2);
+
+        clock.set(NOV_5.atTime(16, 0));
+        received(userA, round).andExpect(jsonPath("$.data.isDelivered").value(false));
+
+        result(userA, round);
+        clock.set(NOV_5.atTime(16, 2));
+        received(userA, round).andExpect(jsonPath("$.data.isDelivered").value(false));
+        clock.set(NOV_5.atTime(16, 2, 1));
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T16:02:00"));
+    }
+
+    @Test
+    void RESULT_03_25_한_명이라도_안_보내면_5시간까지_전달되지_않는다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+
+        clock.set(DELIVERED.minusMinutes(1));
+        received(userA, round).andExpect(jsonPath("$.data.isDelivered").value(false));
+        clock.set(DELIVERED);
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T20:00:00"));
+    }
+
+    @Test
+    void RESULT_03_26_안_보낸_사람이_나가면_그_순간_전달된다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+
+        clock.set(AFTER_CLOSE.plusMinutes(10));
+        roomService.leave(party.d().getUser().getId(), party.room().getId());
+
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.deliveredAt").value("2026-11-05T15:10:00"));
+    }
+
+    @Test
+    void 안_보낸_사람이_내보내져도_그_순간_전달된다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+        Room room = roomRepository.findById(party.room().getId()).orElseThrow();
+        room.assignOwner(party.b().getId());
+        roomRepository.save(room);
+
+        clock.set(AFTER_CLOSE.plusMinutes(10));
+        roomService.kick(userB.getId(), party.room().getId(), party.d().getId());
+
+        received(userA, round).andExpect(jsonPath("$.data.isDelivered").value(true));
+    }
+
+    @Test
+    void RESULT_03_27_건너뛰기도_보낸_것으로_센다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        tapAll(round, 5, 3, 0);
+
+        clock.set(AFTER_CLOSE.plusMinutes(3));
+        received(userA, round)
+                .andExpect(jsonPath("$.data.isDelivered").value(true))
+                .andExpect(jsonPath("$.data.taps.length()").value(2))
+                .andExpect(jsonPath("$.data.totalCount").value(8));
+    }
+
+    @Test
+    void RESULT_03_28_방어하면_전원이_보냈어도_받은_톡톡과_목탁이_없다() throws Exception {
+        giveTickets(userA, 1);
+        Round round = pickedA(party);
+        result(userA, round);
+        tapAll(round, 5, 3, 2);
+
+        clock.set(AFTER_CLOSE.plusMinutes(1));
+        defend(userA, round).andExpect(status().isCreated());
+
+        clock.set(AFTER_CLOSE.plusMinutes(3));
+        received(userA, round).andExpect(jsonPath("$.data.taps").isEmpty());
+        moktak(userA, round, 10).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MOKTAK_001"));
+    }
+
+    @Test
+    void RESULT_03_29_마지막_두_명이_동시에_보내도_전원이_보낸_시각은_하나다() {
+        Round round = pickedA(party);
+        statusOf(() -> tap(userB, round, 5));
+
+        List<Integer> statuses = concurrently(
+                () -> statusOf(() -> tap(userC(), round, 3)),
+                () -> statusOf(() -> tap(party.d().getUser(), round, 2)));
+
+        assertThat(statuses).containsOnly(201);
+        assertThat(reload(round).getTapsCompletedAt()).isEqualTo(AFTER_CLOSE);
+    }
+
+    @Test
+    void RESULT_03_30_지목된_사람이_나간_결과는_전원이_보낸_시각을_남기지_않는다() throws Exception {
+        Round round = pickedA(party);
+        tap(userB, round, 5).andExpect(status().isCreated());
+        tap(userC(), round, 3).andExpect(status().isCreated());
+        roomService.leave(userA.getId(), party.room().getId());
+
+        roomService.leave(party.d().getUser().getId(), party.room().getId());
+
+        assertThat(reload(round).getTapsCompletedAt()).isNull();
+    }
+
+    @Test
+    void VOTE_05_24_전원이_톡톡하면_방어_시간_뒤_지목된_사람의_투표_탭은_목탁_수행이다() throws Exception {
+        Round round = pickedA(party);
+        result(userA, round);
+        seenResult(userA, round);
+        tapAll(round, 5, 3, 2);
+
+        clock.set(AFTER_CLOSE.plusMinutes(3));
+        voteTab(userA, party)
+                .andExpect(jsonPath("$.data.status").value("MOKTAK"))
+                .andExpect(jsonPath("$.data.moktakCount").value(10));
+    }
+
     @Test
     void RICE_01_16_전달_전에는_번뇌_보상_없음() throws Exception {
         Round round = pickedA(party);
@@ -733,6 +901,25 @@ class DefenseMoktakTest {
                 .header("Authorization", bearer(user))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"count\": " + count + "}"));
+    }
+
+    /** B·C·D가 차례로 보낸다. 0번은 건너뛰기다. */
+    private void tapAll(Round round, int b, int c, int d) throws Exception {
+        tap(userB, round, b).andExpect(status().isCreated());
+        tap(userC(), round, c).andExpect(status().isCreated());
+        tap(party.d().getUser(), round, d).andExpect(status().isCreated());
+    }
+
+    private void seenResult(User user, Round round) throws Exception {
+        mockMvc.perform(put("/api/rooms/{roomId}/members/me/seen-result", round.getRoom().getId())
+                        .header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roundId\": " + round.getId() + "}"))
+                .andExpect(status().isOk());
+    }
+
+    private ResultActions voteTab(User user, Party target) throws Exception {
+        return mockMvc.perform(get("/api/rooms/{roomId}/vote", target.room().getId()).header("Authorization", bearer(user)));
     }
 
     private ResultActions result(User user, Round round) throws Exception {
