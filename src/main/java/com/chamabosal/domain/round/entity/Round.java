@@ -72,6 +72,9 @@ public class Round extends BaseEntity {
     @JoinColumn(name = "picked_user_id")
     private User pickedUser;
 
+    /** 지목된 사람이 결과를 처음 연 시각. 방어 마감(+2분) 기준이다 (SHIELD-02 3번). */
+    private LocalDateTime pickedSeenAt;
+
     /** 지목된 사람이 목탁 수행을 끝낸 시각(끝까지 했거나 [종료하기]). 있으면 다시 수행할 수 없다 (RESULT-03 9번). */
     private LocalDateTime moktakEndedAt;
 
@@ -149,14 +152,23 @@ public class Round extends BaseEntity {
         return voteStartedAt != null && member.getJoinedAt().isAfter(voteStartedAt);
     }
 
-    /** 방어권은 투표 마감(결과 발표) 직후 2분 안에 쓴다. 결과를 언제 열었는지는 보지 않는다 (SHIELD-02 3번, Q-75). */
+    /**
+     * 방어권은 지목된 사람이 결과를 처음 연 순간부터 2분 안에 쓴다. 아직 열지 않았거나, 톡톡 마감 뒤에 처음 열었으면
+     * 쓸 수 있는 시각이 없어 null이다 (SHIELD-02 3번, Q-75·Q-77).
+     */
     public LocalDateTime getDefenseClosesAt() {
-        return voteClosedAt.plusMinutes(DEFENSE_MINUTES);
+        if (pickedSeenAt == null || !pickedSeenAt.isBefore(getTapClosesAt())) {
+            return null;
+        }
+        return pickedSeenAt.plusMinutes(DEFENSE_MINUTES);
     }
 
     /** 지목된 사람이 아직 방어권을 쓸 수 있는지. 다른 멤버의 `방어권 고민 중` 표시에 쓴다 (RESULT-02 10번). */
     public boolean isDefensePending(LocalDateTime now) {
-        return resultType == RoundResultType.PICKED && !now.isAfter(getDefenseClosesAt());
+        if (resultType != RoundResultType.PICKED || !isTapOpen(now)) {
+            return false;
+        }
+        return pickedSeenAt == null || !now.isAfter(pickedSeenAt.plusMinutes(DEFENSE_MINUTES));
     }
 
     /** 목탁 수행을 끝낸 것으로 남긴다. 이미 끝났으면 처음 시각을 그대로 둔다. */
