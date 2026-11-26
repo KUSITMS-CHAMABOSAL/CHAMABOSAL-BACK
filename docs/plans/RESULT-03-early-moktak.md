@@ -77,15 +77,15 @@
   - 조회 전용 메서드(`getReceived`)는 쓰기가 없어 그대로 `readOnly`다.
 
 ## 할 일
-- [ ] 명세: RESULT-03 5·6·9번, RICE-01 6번, VOTE-05 목탁 수행 상태, common, api, erd, 시나리오 RESULT-03-22~30·VOTE-05 1개 (Q-92는 계획서 확정 때 덧붙임)
-- [ ] 테스트 먼저 작성하고 실패 확인
-- [ ] `Round`: `tapsCompletedAt`, `completeTaps`, `getTapDeliveredAt`, `isTapDelivered`
-- [ ] `TapService.completeTapsIfAll` (회차·방 두 가지)과 `send`에서 호출
-- [ ] `RoomService.removeMember`에서 호출 (나가기·내보내기·내 데이터 삭제)
-- [ ] 읽는 쪽 교체: `getReceived`, `MoktakService.complete`, `isMoktakDue`
-- [ ] Swagger 설명, `openapi.yaml` 초안 (`deliveredAt` 설명)
-- [ ] 테스트: RESULT-03-22 ~ 30, VOTE-05 추가 시나리오, 기존 RESULT-03·VOTE-05·RICE-01 회귀
-- [ ] 프론트 전달 목록: "전원이 톡톡하면 목탁이 5시간보다 일찍 열릴 수 있음, `deliveredAt`이 이를 수 있음, 프론트 수정 없음"
+- [x] 명세: RESULT-03 5·6·9번, RICE-01 6번, VOTE-05 목탁 수행 상태, common, api, erd, 시나리오 RESULT-03-22~30·VOTE-05 1개 (Q-92는 계획서 확정 때 덧붙임)
+- [x] 테스트 먼저 작성하고 실패 확인
+- [x] `Round`: `tapsCompletedAt`, `completeTaps`, `getTapDeliveredAt`, `isTapDelivered`
+- [x] `TapService.completeTapsIfAll` (회차·방 두 가지)과 `send`에서 호출
+- [x] `RoomService.removeMember`에서 호출 (나가기·내보내기·내 데이터 삭제)
+- [x] 읽는 쪽 교체: `getReceived`, `MoktakService.complete`, `isMoktakDue`
+- [x] Swagger 설명, `openapi.yaml` 초안 (`deliveredAt` 설명)
+- [x] 테스트: RESULT-03-22 ~ 30, VOTE-05 추가 시나리오, 기존 RESULT-03·VOTE-05·RICE-01 회귀
+- [x] 프론트 전달 목록: "전원이 톡톡하면 목탁이 5시간보다 일찍 열릴 수 있음, `deliveredAt`이 이를 수 있음, 프론트 수정 없음"
 
 ### 추가할 시나리오 (번호만, 문장은 명세에 씀)
 - RESULT-03-22 A가 결과를 연 뒤 2분 안에 전원이 보냄 → 연 시각 + 2분을 넘기면 전달 (그 전에는 빈 목록, `MOKTAK_005`)
@@ -103,4 +103,27 @@
 - 없음. 정책 두 가지(전원이 보내면 지목된 사람의 방어 시간이 끝난 뒤 바로 전달, 건너뛰기도 보낸 것으로 셈)는 기획 확인 완료 (2026-11-27). Q-92 결정 칸에 덧붙임 (사람 확인 2026-11-27).
 
 ## 자기 점검
-`/spec-build`가 구현 후 작성합니다.
+
+### 처리 규칙 · 시나리오 · 테스트 (`DefenseMoktakTest`)
+
+| 처리 규칙 | 시나리오 | 테스트 |
+|---|---|---|
+| RESULT-03 5번 (전원이 보내면 방어 시간 뒤 일찍 전달) | 22, 23, 24, 25 | `RESULT_03_22_…`, `RESULT_03_23_…`, `RESULT_03_24_…`, `RESULT_03_25_…` |
+| RESULT-03 6번 (전달 시각) | 22, 23, 24, 25, 26 | 위 테스트와 `RESULT_03_26_…`의 `deliveredAt` 확인 |
+| RESULT-03 7번 (방어하면 전달 없음) | 28 | `RESULT_03_28_…` |
+| RESULT-03 9번 (목탁은 전달 뒤부터) | 22 | `RESULT_03_22_…` (전달 전 `MOKTAK_005`, 전달 뒤 2석) |
+| RESULT-03 11번 (전원 완료 기록: 보내기·나가기·내보내기, 건너뛰기 포함, 동시 요청, 지목된 사람이 나감) | 26, 27, 29, 30 | `RESULT_03_26_…`, `안_보낸_사람이_내보내져도_그_순간_전달된다`, `RESULT_03_27_…`, `RESULT_03_29_…`, `RESULT_03_30_…` |
+| VOTE-05 목탁 수행 상태 (전달 기준) | VOTE-05-24 | `VOTE_05_24_…` |
+
+기존 RESULT-03·RESULT-02·VOTE-05·RICE-01·SHIELD-02 테스트는 그대로 통과 (`./gradlew test` 643개 통과).
+
+### 테스트가 없는 시나리오
+- 없음
+
+### 시나리오가 없는 처리 규칙
+- RESULT-03 11번 중 "톡톡 마감 뒤에는 남기지 않는다", "보낼 사람이 남지 않았으면 그대로 남긴다": 결과가 톡톡 마감 시각 전달과 같거나(마감 뒤) 받은 톡톡이 없어 목탁이 열리지 않아 화면 동작이 바뀌지 않음. 별도 시나리오는 두지 않음.
+- 내 데이터 삭제로 멤버가 빠지는 경로: 나가기·내보내기와 같은 `RoomService.removeMember`를 거쳐 따로 시나리오를 두지 않음.
+
+### 명세에 없는 규칙을 만든 곳
+- 없음. 정한 방식은 명세에 `[구현 결정]`으로 적음 (RESULT-03 5·6·11번).
+- 참고: 일찍 전달될 때 `deliveredAt`은 방어 마감 시각을 그대로 주지만, 실제 전달은 그 시각을 넘긴 뒤부터다 (방어가 그 시각까지 허용돼서). 차이는 1초 미만이라 화면 표시에는 영향이 없다.

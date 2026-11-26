@@ -2452,7 +2452,7 @@ paths:
       operationId: getReceivedTaps
       summary: 받은 톡톡
       description: |-
-        지목된 사람이 받은 톡톡이다. 투표 마감 후 5시간(톡톡 마감 시각)이 지나면 한 번에 전달된다.
+        지목된 사람이 받은 톡톡이다. 투표 마감 후 5시간(톡톡 마감 시각)이 지나면 한 번에 전달된다. 지목된 사람을 뺀 회차 멤버 전원이 보냈으면(건너뛰기 포함) 지목된 사람의 방어 시간(결과를 처음 연 뒤 2분)이 지난 뒤 바로 전달된다 (RESULT-03 5번).
 
         - 전달 전(`isDelivered`가 `false`)에는 `taps`가 빈 목록이고 `totalCount`는 0이다.
         - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보낸다. 방어된 회차는 빈 목록이다.
@@ -3466,12 +3466,12 @@ components:
       properties:
         isDelivered:
           type: boolean
-          description: 톡톡이 전달됐는지 (투표 마감 후 5시간이 지났는지)
+          description: 톡톡이 전달됐는지 (투표 마감 후 5시간이 지났거나, 전원이 보내고 지목된 사람의 방어 시간이 지났는지)
           example: true
         deliveredAt:
           type: string
           format: date-time
-          description: 전달 시각 (투표 마감 + 5시간)
+          description: 전달 시각. 보통 투표 마감 + 5시간, 전원이 보냈으면 전원이 보낸 시각과 방어 시간이 끝나는 시각 중 늦은 시각
           example: '2026-11-05T20:00:00'
         totalCount:
           type: integer

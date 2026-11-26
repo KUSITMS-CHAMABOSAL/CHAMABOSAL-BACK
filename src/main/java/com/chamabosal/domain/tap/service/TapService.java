@@ -24,10 +24,13 @@ import com.chamabosal.global.common.exception.BaseErrorCode;
 import com.chamabosal.global.common.exception.BaseException;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 이마 톡톡 (RESULT-03). 지목된 사람에게 회차당 한 세트, 투표 마감 후 5시간 동안 보내고 그 뒤 한 번에 전달한다. */
@@ -91,7 +94,35 @@ public class TapService {
                 : 0;
         int potEarned = potService.accrue(room, me, PotReason.TAP, tap.getId(), riceEarned);
         demoPlayService.onTapSent(round, me);
+        completeTapsIfAll(round, LocalDateTime.now(clock));
         return new TapSendResponse(riceEarned, potEarned);
+    }
+
+    /** 멤버가 빠질 때(나가기·내보내기·내 데이터 삭제) 방 행 락 안에서 부른다. 가장 최근 발표 회차를 본다 (RESULT-03 11번). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void completeTapsIfAll(Long roomId, LocalDateTime now) {
+        roundRepository.findFirstByRoom_IdAndStatusOrderByRoundDateDesc(roomId, RoundStatus.ANNOUNCED)
+                .ifPresent(round -> completeTapsIfAll(round, now));
+    }
+
+    /**
+     * 방 행 락 안에서 부른다. 지목된 사람을 뺀 회차 멤버 전원(투표 시작 전부터 있던 지금 방 멤버)이 보냈으면(건너뛰기 포함)
+     * 그 시각을 회차에 한 번 남긴다. 받은 톡톡은 지목된 사람의 방어 시간 뒤 일찍 전달된다 (RESULT-03 5·11번).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void completeTapsIfAll(Round round, LocalDateTime now) {
+        RoomMember picked = round.getPickedMember();
+        if (round.getStatus() != RoundStatus.ANNOUNCED || round.getResultType() != RoundResultType.PICKED
+                || round.getTapsCompletedAt() != null || !round.isTapOpen(now) || !picked.isCurrent()) {
+            return;
+        }
+        Set<Long> sent = new HashSet<>(tapRepository.findFromMemberIdsByRoundId(round.getId()));
+        boolean isAllSent = roomMemberRepository.findByRoom_IdAndLeftAtIsNull(round.getRoom().getId()).stream()
+                .filter(member -> !member.getId().equals(picked.getId()) && !round.isJoinedAfterVoteStart(member))
+                .allMatch(member -> sent.contains(member.getId()));
+        if (isAllSent) {
+            round.completeTaps(now);
+        }
     }
 
     /**
@@ -140,12 +171,12 @@ public class TapService {
     @Transactional(readOnly = true)
     public ReceivedTapsResponse getReceived(Long userId, Long roundId) {
         Round round = findMinePicked(userId, roundId);
-        boolean isDelivered = !round.isTapOpen(LocalDateTime.now(clock));
+        boolean isDelivered = round.isTapDelivered(LocalDateTime.now(clock));
         // 전달 전이거나 방어돼 무효가 된 톡톡은 보여주지 않는다 (RESULT-03 6·7번).
         List<Tap> taps = isDelivered && round.getResultType() == RoundResultType.PICKED
                 ? tapRepository.findReceivedWithSender(roundId) : List.of();
         boolean isMoktakDone = moktakService.isEnded(userId, round);
-        return ReceivedTapsResponse.of(isDelivered, round.getTapClosesAt(), isMoktakDone, taps);
+        return ReceivedTapsResponse.of(isDelivered, round.getTapDeliveredAt(), isMoktakDone, taps);
     }
 
     /** 받은 톡톡은 그 회차에 지목된 본인만 볼 수 있다 (TAP_005). */
