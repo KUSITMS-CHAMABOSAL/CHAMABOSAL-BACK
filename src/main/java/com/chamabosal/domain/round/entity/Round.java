@@ -20,12 +20,14 @@ import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Getter
 @Entity
+@DynamicUpdate // 처음 연 시각은 조건부 update로 따로 남겨서, 다른 변경을 저장할 때 바뀐 컬럼만 써야 옛 값으로 덮어쓰지 않는다.
 @Table(name = "rounds", uniqueConstraints = {
         @UniqueConstraint(name = "uk_rounds_room_round_date", columnNames = {"room_id", "round_date"})
 })
