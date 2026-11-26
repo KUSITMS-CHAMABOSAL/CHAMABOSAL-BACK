@@ -8,7 +8,7 @@
 
 ### 인증
 
-- `POST /api/auth/login`, `POST /api/auth/test-token`과 문서·상태 확인 경로(Swagger, `/docs/error-codes`, `/actuator/health`)를 뺀 모든 요청은 `Authorization: Bearer {accessToken}` 헤더가 필요합니다. (AUTH-02)
+- `POST /api/auth/login`, `POST /api/auth/test-token`, `POST /api/demo/reset`과 문서·상태 확인 경로(Swagger, `/docs/error-codes`, `/actuator/health`)를 뺀 모든 요청은 `Authorization: Bearer {accessToken}` 헤더가 필요합니다. (AUTH-02)
 - 토큰이 없거나 만료되면 `COMMON_008` (401)을 돌려줍니다. 클라이언트는 인증 코드를 다시 받아 로그인합니다.
 
 ### 응답 형식
@@ -119,6 +119,7 @@
 | 한 솥 | GET | `/api/rooms/{roomId}/pots/{seq}` | POT-01 |  |
 | 방어권 | POST | `/api/defense-tickets` | SHIELD-01 |  |
 | 방어권 | POST | `/api/rounds/{roundId}/defenses` | SHIELD-02 |  |
+| 시연 | POST | `/api/demo/reset` | DEMO-01 | ✅ |
 
 ## 2. 인증
 
@@ -971,3 +972,23 @@ SHIELD-02. 지목된 사람이 결과 발표 뒤 그 결과를 처음 연 순간
 - 목탁 수행을 마친 회차에는 방어할 수 없음 (받은 보상을 되돌리지 않음)
 - 확인 순서: `ROUND_001` → `ROOM_002` → `RESULT_001` → 이미 방어함(성공) → `DEFENSE_008` → `DEFENSE_011` → `DEFENSE_010` → `DEFENSE_009` → `DEFENSE_002` (고칠 수 없는 사유부터)
 - 에러: `ROUND_001` (404), `ROOM_002` (403), `RESULT_001` (409, 발표 전), `DEFENSE_008` (403, 지목된 사람 아님), `DEFENSE_011` (403, 그 회차에 인증하지 않음), `DEFENSE_010` (409, 목탁 수행을 마침), `DEFENSE_009` (409, 방어 시간 지남), `DEFENSE_002` (409, 방어권 없음)
+
+## 13. 전시 시연
+
+시연 설정이 켜져 있을 때만 동작합니다. 시연 방에서의 자동 처리(DEMO-02 가짜 팀원 자동 투표, DEMO-03 톡톡 뒤 나발 빠짐)는 기존 API 응답을 바꾸지 않습니다. ([`demo.md`](demo.md))
+
+### POST /api/demo/reset
+
+DEMO-01. 시연 번호의 시연 계정을 방문객 맞이 전 상태로 되돌리고 시연 방 2개를 새로 만듭니다. 팀원이 방문객마다 Swagger에서 실행합니다. 로그인 없이 시연 키로 보호합니다.
+
+```json
+// request (헤더 X-Demo-Key: 시연 키, 쿼리 slot: 시연 번호)
+POST /api/demo/reset?slot=1
+
+// response 201
+{ "mainRoomId": 12, "moktakRoomId": 13 }
+```
+
+- `mainRoomId`: 시연 방 1 (인증 → 투표 → 이마 톡톡 → 나발 · 코스튬)
+- `moktakRoomId`: 시연 방 2 (목탁 체험)
+- 에러: `COMMON_001` (404, 시연 설정 꺼짐), `COMMON_008` (401, 시연 키 불일치), `DEMO_001` (404, 설정에 없는 시연 번호), `DEMO_002` (409, 시연 계정이 일반 방에 참여 중)
