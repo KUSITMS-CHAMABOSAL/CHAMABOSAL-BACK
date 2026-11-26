@@ -883,7 +883,7 @@ RESULT-03. 지목된 사람이 받은 톡톡입니다. 투표 마감 후 5시간
 ```
 
 - `taps`: `count`가 0인 행(건너뛰기)은 빼고 보냄
-- `isDelivered`, `deliveredAt`: 전달 여부와 전달 시각(투표 마감 + 5시간). 전달 전에는 `taps`가 빈 목록이고 `totalCount`는 0
+- `isDelivered`, `deliveredAt`: 전달 여부와 전달 시각. 보통 투표 마감 + 5시간이고, 전원이 보냈으면 더 일찍(전원이 보낸 시각과 지목된 사람의 방어 시간이 끝나는 시각 중 늦은 시각) (RESULT-03 5·6번). 전달 전에는 `taps`가 빈 목록이고 `totalCount`는 0
 - `totalCount`: 받은 톡톡 합계. 목탁 수행에서 두드려야 하는 횟수
 - `isMoktakDone`: 그 회차 목탁 수행을 끝냈는지 (끝까지 했거나 [종료하기]로 나감)
 - 방어된 회차(`DEFENDED`)는 빈 목록, `totalCount` 0
