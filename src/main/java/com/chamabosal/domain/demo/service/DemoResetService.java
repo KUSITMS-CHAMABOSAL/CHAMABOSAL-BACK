@@ -128,7 +128,7 @@ public class DemoResetService {
     /** 시연 방 1: 지금 회차가 인증 중이고 가짜 팀원 3명만 인증해 있다 (10번). 시연 계정이 인증하면 전원 인증으로 투표가 시작된다. */
     private Room createMainRoom(User user, Slot slot, Map<DemoFakeMember, User> fakes, LocalDateTime now) {
         LocalDate today = Round.dateOf(now);
-        DemoRoom demoRoom = createRoom(user, slot, fakes, now, today);
+        DemoRoom demoRoom = createRoom(RoomGoal.ETC, user, slot, fakes, now, today);
         Round round = roundRepository.save(Round.create(demoRoom.room(), today));
         demoRoom.fakeMembers().forEach((fake, member) -> certificationRepository.save(Certification.create(
                 round, member, fake.result(), fake.memo(), fake.spentAmount(), now)));
@@ -146,7 +146,7 @@ public class DemoResetService {
         LocalDateTime joinedAt = Round.startOf(previous).minusMinutes(1);
         LocalDateTime certifiedAt = joinedAt.plusHours(12);
 
-        DemoRoom demoRoom = createRoom(user, slot, fakes, joinedAt, previous);
+        DemoRoom demoRoom = createRoom(RoomGoal.DELIVERY, user, slot, fakes, joinedAt, previous);
         RoomMember demoMember = demoRoom.demoMember();
         Round round = roundRepository.save(Round.create(demoRoom.room(), previous));
         // 톡톡 마감이 지나도록 5시간 1분 전에 마감하되, 그 회차 투표 마감 시각(다음 날 15:00)을 넘기지 않는다 (코드리뷰 반영).
@@ -171,10 +171,10 @@ public class DemoResetService {
         return demoRoom.room();
     }
 
-    /** 두 방 모두 "자율 절약 방", 목표 300석, 함께할 인원 4명이고 시연 계정이 방장이다 (9번). */
-    private DemoRoom createRoom(User user, Slot slot, Map<DemoFakeMember, User> fakes, LocalDateTime joinedAt,
-                               LocalDate togetherDate) {
-        Room room = roomRepository.save(Room.create(RoomGoal.ETC.title(), RoomGoal.ETC, MEMBER_LIMIT, POT_GOAL));
+    /** 방 1은 "자율 절약 방", 방 2는 "배달 끊기 방"이다. 두 방 모두 목표 300석, 함께할 인원 4명이고 시연 계정이 방장이다 (9번). */
+    private DemoRoom createRoom(RoomGoal goal, User user, Slot slot, Map<DemoFakeMember, User> fakes,
+                               LocalDateTime joinedAt, LocalDate togetherDate) {
+        Room room = roomRepository.save(Room.create(goal.title(), goal, MEMBER_LIMIT, POT_GOAL));
         RoomMember demoMember = roomMemberRepository.save(
                 RoomMember.create(room, user, slot.nickname(), DEMO_ACCOUNT_COLOR, joinedAt));
         room.assignOwner(demoMember.getId());
