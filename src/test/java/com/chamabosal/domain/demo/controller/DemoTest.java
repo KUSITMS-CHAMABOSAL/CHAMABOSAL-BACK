@@ -222,6 +222,10 @@ class DemoTest {
         assertThat(main.getName()).isEqualTo("자율 절약 방");
         assertThat(main.getGoal()).isEqualTo(RoomGoal.ETC);
         assertThat(main.getPotGoalAmount()).isEqualTo(300);
+        Room moktak = roomRepository.findById(rooms.moktak()).orElseThrow();
+        assertThat(moktak.getName()).isEqualTo("배달 끊기 방");
+        assertThat(moktak.getGoal()).isEqualTo(RoomGoal.DELIVERY);
+        assertThat(moktak.getPotGoalAmount()).isEqualTo(300);
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(rooms.main())).hasSize(4);
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(rooms.moktak())).hasSize(4);
 
