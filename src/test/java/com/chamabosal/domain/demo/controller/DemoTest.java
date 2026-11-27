@@ -246,6 +246,9 @@ class DemoTest {
         assertThat(hyunbin.getSpentAmount()).isEqualTo(49_210);
 
         assertThat(riceHistoryRepository.sumDeltaByUserId(demo1.getId())).isEqualTo(200);
+        mockMvc.perform(get("/api/users/me").header("Authorization", bearer(demo1)))
+                .andExpect(jsonPath("$.data.rooms[0].roomId").value(rooms.main()))
+                .andExpect(jsonPath("$.data.rooms[1].roomId").value(rooms.moktak()));
     }
 
     @Test

@@ -129,7 +129,10 @@ public class DemoResetService {
     /** 시연 방 1: 지금 회차가 인증 중이고 가짜 팀원 3명만 인증해 있다 (10번). 시연 계정이 인증하면 전원 인증으로 투표가 시작된다. */
     private Room createMainRoom(User user, Slot slot, Map<DemoFakeMember, User> fakes, LocalDateTime now) {
         LocalDate today = Round.dateOf(now);
-        DemoRoom demoRoom = createRoom(RoomGoal.ETC, DemoFakeMember::mainNickname, user, slot, fakes, now, today);
+        // 방 목록은 입장 순서라, 시연 방 2(지난 회차 시작 1분 전 입장)보다 먼저 보이도록 1분 더 일찍 입장시킨다 (9번).
+        LocalDateTime joinedAt = moktakJoinedAt(now).minusMinutes(1);
+        DemoRoom demoRoom = createRoom(RoomGoal.ETC, DemoFakeMember::mainNickname, user, slot, fakes, joinedAt,
+                today);
         Round round = roundRepository.save(Round.create(demoRoom.room(), today));
         demoRoom.fakeMembers().forEach((fake, member) -> certificationRepository.save(Certification.create(
                 round, member, fake.result(), fake.memo(), fake.spentAmount(), now)));
@@ -143,8 +146,7 @@ public class DemoResetService {
      */
     private Room createMoktakRoom(User user, Slot slot, Map<DemoFakeMember, User> fakes, LocalDateTime now) {
         LocalDate previous = Round.dateOf(now).minusDays(1);
-        // 회차 시작(03:00) 정각이면 그 회차 날짜에 들어온 멤버로 보여서(CERT-05 2번) 1분 전으로 둔다 (코드리뷰 반영).
-        LocalDateTime joinedAt = Round.startOf(previous).minusMinutes(1);
+        LocalDateTime joinedAt = moktakJoinedAt(now);
         LocalDateTime certifiedAt = joinedAt.plusHours(12);
 
         DemoRoom demoRoom = createRoom(RoomGoal.DELIVERY, DemoFakeMember::moktakNickname, user, slot, fakes, joinedAt,
@@ -185,6 +187,11 @@ public class DemoResetService {
                 RoomMember.create(room, fakeUser, fakeNickname.apply(fake), fake.color(), joinedAt))));
         room.startTogether(togetherDate);
         return new DemoRoom(room, demoMember, fakeMembers);
+    }
+
+    /** 회차 시작(03:00) 정각이면 그 회차 날짜에 들어온 멤버로 보여서(CERT-05 2번) 지난 회차 시작 1분 전으로 둔다. */
+    private static LocalDateTime moktakJoinedAt(LocalDateTime now) {
+        return Round.startOf(Round.dateOf(now).minusDays(1)).minusMinutes(1);
     }
 
     private static LocalDateTime min(LocalDateTime first, LocalDateTime second) {
