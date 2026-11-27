@@ -360,7 +360,7 @@ ROOM-02. 오늘 탭입니다. 지금 회차 날짜(03:00 전이면 전날)의 �
 - `pot.amount`: 지금 쌓고 있는 솥의 진행도. 첫 적립 전에는 0. `pot.goalAmount`는 그 솥의 목표 석. 목표를 채우면 넘친 석으로 다음 솥이 바로 시작됨 (POT-01 6·7번)
 - `pot.rewardAmount`: 지금 솥을 다 채우면 멤버 전원이 받는 개인 공양미. 한 솥 축하(`GET /api/rooms/{roomId}/pots/{seq}`)의 `rewardAmount`와 같은 값 (목표의 10%를 10석 단위로 반올림, 350석이면 40석. Q-81)
 - `entry`: 앱을 열거나 방에 들어올 때 홈보다 먼저 띄울 화면. 미인증 투표 팝업·탈모 → 결과 → 한 솥 축하 → 방장 선택 팝업(`me.isPotDecisionPending`) → 방 홈 순서 (Q-107). 이마 톡톡·목탁은 앱을 열 때 띄우지 않고 투표 탭에서만 진행
-  - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`
+  - `unseenResultRoundId`가 있으면 `GET /api/rounds/{roundId}/result` → 본 뒤 `PUT …/seen-result`. 투표 중인 회차가 있으면 지난 결과는 비어 있음 (ROOM-02 13번)
   - `hasUnseenPotCelebration`이 `true`면 `GET /api/rooms/{roomId}/pots/{room.potCompletedCount}` → 본 뒤 `PUT …/seen-pot`
 - 에러: `ROOM_002` (403), `ROOM_005` (404)
 
