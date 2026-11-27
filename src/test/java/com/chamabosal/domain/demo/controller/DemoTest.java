@@ -227,7 +227,8 @@ class DemoTest {
         assertThat(moktak.getGoal()).isEqualTo(RoomGoal.DELIVERY);
         assertThat(moktak.getPotGoalAmount()).isEqualTo(300);
         assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(rooms.main())).hasSize(4);
-        assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(rooms.moktak())).hasSize(4);
+        assertThat(roomMemberRepository.findByRoom_IdAndLeftAtIsNull(rooms.moktak())).extracting(RoomMember::getNickname)
+                .containsExactlyInAnyOrder("참는보살", "예나", "예은", "윤지");
 
         Round round = roundRepository.findByRoom_IdAndRoundDate(rooms.main(), NOV_28).orElseThrow();
         assertThat(round.getStatus()).isEqualTo(RoundStatus.CERTIFYING);
@@ -236,9 +237,9 @@ class DemoTest {
                 .filter(certification -> certification.getRound().getId().equals(round.getId()))
                 .toList();
         assertThat(certifications).extracting(certification -> nicknames.get(certification.getMember().getId()))
-                .containsExactlyInAnyOrder("민서", "만재", "현빈");
+                .containsExactlyInAnyOrder("민서", "만재", "용선");
         Certification hyunbin = certifications.stream()
-                .filter(certification -> nicknames.get(certification.getMember().getId()).equals("현빈"))
+                .filter(certification -> nicknames.get(certification.getMember().getId()).equals("용선"))
                 .findFirst().orElseThrow();
         assertThat(hyunbin.getResult()).isEqualTo(CertificationResult.FAILED);
         assertThat(hyunbin.getMemo()).isEqualTo("세일 문자 보고 결국 못 참고 질러버렸어요");
@@ -351,7 +352,7 @@ class DemoTest {
     @Test
     void DEMO_01_10_가짜_팀원을_모두_내보낸_시연_방도_리셋한다() throws Exception {
         DemoRooms before = resetOk(1);
-        for (String nickname : List.of("민서", "만재", "현빈")) {
+        for (String nickname : List.of("민서", "만재", "용선")) {
             mockMvc.perform(delete("/api/rooms/{roomId}/members/{memberId}", before.main(),
                             member(before.main(), nickname).getId())
                             .header("Authorization", bearer(demo1)))
@@ -378,9 +379,9 @@ class DemoTest {
         assertThat(round.getStatus()).isEqualTo(RoundStatus.VOTING);
         Map<String, String> votes = votesOf(round);
         assertThat(votes).containsExactlyInAnyOrderEntriesOf(Map.of(
-                "민서", "현빈",
-                "만재", "현빈",
-                "현빈", "ALL_BOSAL"));
+                "민서", "용선",
+                "만재", "용선",
+                "용선", "ALL_BOSAL"));
         for (User fake : fakeUsers(1)) {
             assertThat(riceHistoryRepository.sumDeltaByUserId(fake.getId())).isZero();
         }
@@ -398,7 +399,7 @@ class DemoTest {
         assertThat(closed.getStatus()).isEqualTo(RoundStatus.ANNOUNCED);
         assertThat(closed.getResultType()).isEqualTo(RoundResultType.PICKED);
         assertThat(roomMemberRepository.findById(closed.getPickedMember().getId()).orElseThrow().getNickname())
-                .isEqualTo("현빈");
+                .isEqualTo("용선");
     }
 
     @Test
@@ -485,7 +486,7 @@ class DemoTest {
     private record DemoRooms(Long main, Long moktak) {
     }
 
-    /** 방문객이 인증하고 민서에게 투표해 C(현빈)가 지목된 시연 방 1 회차. */
+    /** 방문객이 인증하고 민서에게 투표해 C(용선)가 지목된 시연 방 1 회차. */
     private Round visitorPicksC(Long mainRoomId) throws Exception {
         certify(demo1, mainRoomId).andExpect(status().isCreated());
         Round round = roundRepository.findByRoom_IdAndRoundDate(mainRoomId, NOV_28).orElseThrow();

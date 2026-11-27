@@ -5,13 +5,14 @@ import com.chamabosal.domain.room.entity.BosalColor;
 import java.util.Arrays;
 import java.util.Optional;
 
-/** 시연 번호마다 만드는 가짜 팀원 3명과 시연 방 1의 인증 내용 (docs/spec/demo.md 공통 표). */
+/** 시연 번호마다 만드는 가짜 팀원 3명과 시연 방 1의 인증 내용 (docs/spec/demo.md 공통 표). 닉네임은 방마다 다르다. */
 public enum DemoFakeMember {
-    A("민서", BosalColor.PINK, CertificationResult.ENDURED, "편의점 앞에서 고민하다가 그냥 집에 왔어요", null, 3),
-    B("만재", BosalColor.PURPLE, CertificationResult.FAILED, "추워서 퇴근길에 붕어빵이랑 어묵 사 먹었어요", 6_000, 3),
-    C("현빈", BosalColor.MINT, CertificationResult.FAILED, "세일 문자 보고 결국 못 참고 질러버렸어요", 49_210, 4);
+    A("민서", "예나", BosalColor.PINK, CertificationResult.ENDURED, "편의점 앞에서 고민하다가 그냥 집에 왔어요", null, 3),
+    B("만재", "예은", BosalColor.PURPLE, CertificationResult.FAILED, "추워서 퇴근길에 붕어빵이랑 어묵 사 먹었어요", 6_000, 3),
+    C("용선", "윤지", BosalColor.MINT, CertificationResult.FAILED, "세일 문자 보고 결국 못 참고 질러버렸어요", 49_210, 4);
 
-    private final String nickname;
+    private final String mainNickname;
+    private final String moktakNickname;
     private final BosalColor color;
     private final CertificationResult result;
     private final String memo;
@@ -19,9 +20,10 @@ public enum DemoFakeMember {
     /** 시연 방 2에서 시연 계정에게 보낸 톡톡 수. 합계 10회 (DEMO-01 11번). */
     private final int tapCount;
 
-    DemoFakeMember(String nickname, BosalColor color, CertificationResult result, String memo, Integer spentAmount,
+    DemoFakeMember(String mainNickname, String moktakNickname, BosalColor color, CertificationResult result, String memo, Integer spentAmount,
                    int tapCount) {
-        this.nickname = nickname;
+        this.mainNickname = mainNickname;
+        this.moktakNickname = moktakNickname;
         this.color = color;
         this.result = result;
         this.memo = memo;
@@ -42,8 +44,12 @@ public enum DemoFakeMember {
         return Arrays.stream(values()).filter(member -> member.name().equals(role)).findFirst();
     }
 
-    public String nickname() {
-        return nickname;
+    public String mainNickname() {
+        return mainNickname;
+    }
+
+    public String moktakNickname() {
+        return moktakNickname;
     }
 
     public BosalColor color() {
