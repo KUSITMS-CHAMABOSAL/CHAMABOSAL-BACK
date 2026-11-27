@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,7 +129,7 @@ public class DemoResetService {
     /** 시연 방 1: 지금 회차가 인증 중이고 가짜 팀원 3명만 인증해 있다 (10번). 시연 계정이 인증하면 전원 인증으로 투표가 시작된다. */
     private Room createMainRoom(User user, Slot slot, Map<DemoFakeMember, User> fakes, LocalDateTime now) {
         LocalDate today = Round.dateOf(now);
-        DemoRoom demoRoom = createRoom(RoomGoal.ETC, user, slot, fakes, now, today);
+        DemoRoom demoRoom = createRoom(RoomGoal.ETC, DemoFakeMember::mainNickname, user, slot, fakes, now, today);
         Round round = roundRepository.save(Round.create(demoRoom.room(), today));
         demoRoom.fakeMembers().forEach((fake, member) -> certificationRepository.save(Certification.create(
                 round, member, fake.result(), fake.memo(), fake.spentAmount(), now)));
@@ -146,7 +147,8 @@ public class DemoResetService {
         LocalDateTime joinedAt = Round.startOf(previous).minusMinutes(1);
         LocalDateTime certifiedAt = joinedAt.plusHours(12);
 
-        DemoRoom demoRoom = createRoom(RoomGoal.DELIVERY, user, slot, fakes, joinedAt, previous);
+        DemoRoom demoRoom = createRoom(RoomGoal.DELIVERY, DemoFakeMember::moktakNickname, user, slot, fakes, joinedAt,
+                previous);
         RoomMember demoMember = demoRoom.demoMember();
         Round round = roundRepository.save(Round.create(demoRoom.room(), previous));
         // 톡톡 마감이 지나도록 5시간 1분 전에 마감하되, 그 회차 투표 마감 시각(다음 날 15:00)을 넘기지 않는다 (코드리뷰 반영).
@@ -172,7 +174,7 @@ public class DemoResetService {
     }
 
     /** 방 1은 "자율 절약 방", 방 2는 "배달 끊기 방"이다. 두 방 모두 목표 300석, 함께할 인원 4명이고 시연 계정이 방장이다 (9번). */
-    private DemoRoom createRoom(RoomGoal goal, User user, Slot slot, Map<DemoFakeMember, User> fakes,
+    private DemoRoom createRoom(RoomGoal goal, Function<DemoFakeMember, String> fakeNickname, User user, Slot slot, Map<DemoFakeMember, User> fakes,
                                LocalDateTime joinedAt, LocalDate togetherDate) {
         Room room = roomRepository.save(Room.create(goal.title(), goal, MEMBER_LIMIT, POT_GOAL));
         RoomMember demoMember = roomMemberRepository.save(
@@ -180,7 +182,7 @@ public class DemoResetService {
         room.assignOwner(demoMember.getId());
         Map<DemoFakeMember, RoomMember> fakeMembers = new EnumMap<>(DemoFakeMember.class);
         fakes.forEach((fake, fakeUser) -> fakeMembers.put(fake, roomMemberRepository.save(
-                RoomMember.create(room, fakeUser, fake.nickname(), fake.color(), joinedAt))));
+                RoomMember.create(room, fakeUser, fakeNickname.apply(fake), fake.color(), joinedAt))));
         room.startTogether(togetherDate);
         return new DemoRoom(room, demoMember, fakeMembers);
     }
