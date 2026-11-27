@@ -177,11 +177,16 @@ public class RoomTodayService {
                 .orElseGet(() -> new Pot(0, room.getPotGoalAmount(), RoomPot.rewardOf(room.getPotGoalAmount())));
     }
 
-    /** 결과 → 한 솥 축하 순서로 클라이언트가 띄운다. 이마 톡톡은 앱을 열 때 띄우지 않고 투표 탭에서만 진행한다 (13번, Q-107). */
+    /**
+     * 결과 → 한 솥 축하 순서로 클라이언트가 띄운다. 이마 톡톡은 앱을 열 때 띄우지 않고 투표 탭에서만 진행한다 (13번, Q-107).
+     * 투표 중이면 투표 탭이 투표를 먼저 보여줘(VOTE-05 5번) 지난 결과는 띄우지 않는다.
+     */
     private Entry entry(Room room, RoomMember me) {
+        boolean isVoting = roundRepository
+                .findFirstByRoom_IdAndStatusOrderByRoundDateDesc(room.getId(), RoundStatus.VOTING).isPresent();
         Long unseenResultRoundId = roundRepository
                 .findFirstByRoom_IdAndStatusOrderByRoundDateDesc(room.getId(), RoundStatus.ANNOUNCED)
-                .filter(latest -> me.hasUnseenResult(latest.getRoundDate()))
+                .filter(latest -> !isVoting && me.hasUnseenResult(latest.getRoundDate()))
                 .map(Round::getId)
                 .orElse(null);
         return new Entry(unseenResultRoundId, me.hasUnseenPot());
