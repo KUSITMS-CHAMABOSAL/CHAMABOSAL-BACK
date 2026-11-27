@@ -417,6 +417,17 @@ class RoomTodayTest extends RoomTestSupport {
                 .andExpect(jsonPath("$.data.entry.hasUnseenPotCelebration").value(true));
     }
 
+
+    @Test
+    void ROOM_02_23_투표_중에는_안_본_지난_결과를_띄우지_않는다() throws Exception {
+        Round previous = saveRound(room, TODAY.minusDays(2), RoundStatus.VOTING);
+        previous.announce(NOW.minusDays(1), RoundResultType.PICKED, memberA);
+        roundRepository.save(previous);
+        saveRound(room, TODAY.minusDays(1), RoundStatus.VOTING);
+
+        // 투표 탭이 투표 중을 먼저 보여줘서 지난 결과를 띄울 곳이 없다 (13번, VOTE-05 5번).
+        today(userA).andExpect(jsonPath("$.data.entry.unseenResultRoundId").doesNotExist());
+    }
     @Test
     void ROOM_02_22_한_솥_보상은_첫_적립_전후_모두_목표의_10퍼센트를_10석_단위로_반올림한다() throws Exception {
         ReflectionTestUtils.setField(room, "potGoalAmount", 350);
